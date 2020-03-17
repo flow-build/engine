@@ -1,0 +1,30 @@
+version: "3"
+
+services:
+  postgres:
+    image: postgres:11.4
+    container_name: workflow_postgres
+    restart: always
+    env_file:
+      - ./.env.docker
+    ports:
+      - 5432:5432
+
+  app:
+    container_name: workflow_app
+    image: node:lts
+    restart: on-failure:10 # necessary due to possibility of postgres not being ready when service runs
+    env_file:
+      - ./.env.docker
+    environment:
+      NODE_ENV: docker
+    tty: true
+    ports:
+      - 9229:9229
+    depends_on:
+      - postgres
+    volumes:
+      - .:/usr/app
+      - /usr/app/node_modules
+    working_dir: /usr/app
+    command: ./scripts/run_tests.sh

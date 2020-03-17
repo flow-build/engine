@@ -1,0 +1,41 @@
+{
+  "name": "@flow-build/engine",
+  "version": "2.0.0",
+  "description": "workflow engine from flow-build to work in multiple plataforms",
+  "dependencies": {
+    "ajv": "^6.11.0",
+    "axios": "^0.19.0",
+    "delegates": "^1.0.0",
+    "knex": "^0.19.5",
+    "lodash": "latest",
+    "minimal-lisp": "^1.0.3",
+    "mustache": "^4.0.0",
+    "pg": "^7.11.0",
+    "readline-sync": "^1.4.9",
+    "sleep": "^6.1.0",
+    "uuid": "^3.3.2"
+  },
+  "devDependencies": {
+    "jest": "^24.9.0"
+  },
+  "moduleNameMapper": {
+    "axios": "./__mocks__/axios/index.js"
+  },
+  "scripts": {
+    "test": "npm run seeds && jest --coverage",
+    "test-memory": "jest --coverage",
+    "db": "knex",
+    "tests": "export test_persist_option='knex' && npm -- test -i",
+    "tests-memory": "export test_persist_option='memory' && npm run test-memory -i",
+    "seeds": "knex --env ${NODE_ENV} --knexfile knexfile.js seed:run",
+    "migrations": "knex --env ${NODE_ENV} --knexfile knexfile.js migrate:latest"
+  },
+  "keywords": [],
+  "author": "FDTE-DSD",
+  "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/flow-build/engine.git"
+  },
+  "homepage": "https://github.com/flow-build/engine#readme"
+}
