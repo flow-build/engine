@@ -4,7 +4,7 @@ about: Suggest an enhancement or new feature
 labels: feature
 ---
 <!-- Please read our Rules of Conduct: https://github.com/flow-build/community -->
-<!-- Please check if your issue is not a duplicate by [searching existing issues](https://github.com/flow-builder/admin/search?type=Issues) -->
+<!-- Please check if your issue is not a duplicate by [searching existing issues](https://github.com/flow-builder/engine/search?type=Issues) -->
 
 **What would you like to be added**:
 

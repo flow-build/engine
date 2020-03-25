@@ -4,7 +4,7 @@ about: Create a report to help us improve
 labels: bug
 ---
 <!-- Please read our Rules of Conduct: https://github.com/flow-build/community -->
-<!-- Please check if your issue is not a duplicate by [searching existing issues](https://github.com/flow-builder/admin/search?type=Issues) -->
+<!-- Please check if your issue is not a duplicate by [searching existing issues](https://github.com/flow-builder/engine/search?type=Issues) -->
 
 **What happened**:
 
