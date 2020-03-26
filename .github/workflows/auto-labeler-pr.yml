@@ -1,4 +1,3 @@
-# Workflow to associate labels automatically
 name: Labeler
 
 on:

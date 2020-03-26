@@ -1,9 +1,9 @@
 # Contributing to flow-build/engine
 
-We'd love for you to contribute to our source code and to flowbuild-core even better than it is
+We'd love for you to contribute to our source code and to flowbuild-engine even better than it is
 today!
 
-Check out the Developer's Guide on the [documentation](https://flow-build.gitpage.io) for setup instructions.
+Check out the Developer's Guide on the [documentation](https://flow-build.github.io/#/) for setup instructions.
 
 Here are the guidelines we'd like you to follow:
 
@@ -37,7 +37,7 @@ quickly:
 ### Submitting a Pull Request
 Before you submit your pull request consider the following guidelines:
 
-- Search [GitHub](https://github.com/runelite/runelite/pulls) for an open or closed Pull Request
+- Search [GitHub](https://github.com/flow-build/engine/pulls) for an open or closed Pull Request
   that relates to your submission. You don't want to duplicate effort.
 - [Fork](https://help.github.com/articles/fork-a-repo/) this repo.
 - [Clone](https://help.github.com/articles/cloning-a-repository/) your copy.
@@ -129,4 +129,4 @@ from the main (upstream) repository:
 To ensure consistency throughout the source code, review our [code conventions](https://github.com/flow-build/flow-build/wiki/Branch-Pattern).
 
 
-[github]: https://github.com/runelite/runelite
+[github]: https://github.com/flow-build/flow=build
