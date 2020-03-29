@@ -1,3 +1,10 @@
+## [2.1.0](https://github.com/flow-build/engine/compare/v2.0.0...v2.1.0) (2020-03-29)
+
+
+### Features
+
+* update package for tests ([b2017a7](https://github.com/flow-build/engine/commit/b2017a71c56bb618c20532b9b356f012a02c2d19))
+
 ## [2.0.0](https://github.com/flow-build/engine/compare/v1.0.0...v2.0.0) (2020-03-29)
 
 
