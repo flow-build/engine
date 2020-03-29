@@ -1,6 +1,6 @@
 {
   "name": "@flowbuild/engine",
-  "version": "1.0.0",
+  "version": "0.0.0",
   "description": "workflow engine from flow-build to work in multiple plataforms",
   "dependencies": {
     "ajv": "^6.12.0",
@@ -34,6 +34,7 @@
     "tests-memory": "export test_persist_option='memory' && npm run test-memory -i",
     "seeds": "knex --env ${NODE_ENV} --knexfile knexfile.js seed:run",
     "migrations": "knex --env ${NODE_ENV} --knexfile knexfile.js migrate:latest",
+    "get-version": "echo $npm_package_version",
     "release": "semantic-release"
   },
   "keywords": [],
