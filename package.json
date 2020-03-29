@@ -39,6 +39,9 @@
   "keywords": [],
   "author": "FDTE-DSD",
   "license": "Apache-2.0",
+  "publishConfig": {
+    "access": "public"
+  },
   "repository": {
     "type": "git",
     "url": "https://github.com/flow-build/engine.git"
