@@ -1,3 +1,10 @@
+### [1.0.2](https://github.com/flow-build/engine/compare/v1.0.1...v1.0.2) (2020-03-29)
+
+
+### Bug Fixes
+
+* add github package ([ddea737](https://github.com/flow-build/engine/commit/ddea737e9f56911bc0dc75aa973c0dddbbf52cfc))
+
 ### [1.0.1](https://github.com/flow-build/engine/compare/v1.0.0...v1.0.1) (2020-03-29)
 
 
