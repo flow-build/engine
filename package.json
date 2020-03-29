@@ -31,7 +31,8 @@
     "tests": "export test_persist_option='knex' && npm -- test -i",
     "tests-memory": "export test_persist_option='memory' && npm run test-memory -i",
     "seeds": "knex --env ${NODE_ENV} --knexfile knexfile.js seed:run",
-    "migrations": "knex --env ${NODE_ENV} --knexfile knexfile.js migrate:latest"
+    "migrations": "knex --env ${NODE_ENV} --knexfile knexfile.js migrate:latest",
+    "release": "semantic-release"
   },
   "keywords": [],
   "author": "FDTE-DSD",
