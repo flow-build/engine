@@ -16,10 +16,12 @@
     "uuid": "^3.4.0"
   },
   "devDependencies": {
-    "jest": "^24.9.0",
-    "semantic-release": "^17.0.4",
     "@semantic-release/changelog": "^5.0.1",
-    "@semantic-release/git": "^9.0.0"
+    "@semantic-release/commit-analyzer": "^8.0.1",
+    "@semantic-release/git": "^9.0.0",
+    "conventional-changelog-conventionalcommits": "^4.2.3",
+    "jest": "^24.9.0",
+    "semantic-release": "^17.0.4"
   },
   "moduleNameMapper": {
     "axios": "./__mocks__/axios/index.js"
