@@ -4,7 +4,7 @@
 [![semantic-release](https://img.shields.io/badge/%20%20%F0%9F%93%A6%F0%9F%9A%80-semantic--release-e10079.svg)](https://github.com/semantic-release/semantic-release)
 [![codecov](https://codecov.io/gh/flow-build/engine/branch/master/graph/badge.svg)](https://codecov.io/gh/flow-build/engine)
 [![npm](https://img.shields.io/npm/dw/@flowbuild/engine)](https://www.npmjs.com/package/@flowbuild/engine)
-[![github actions](https://img.shields.io/github/workflow/status/flow-build/engine/Node.js CI)](https://github.com/flow-build/engine/actions?query=workflow%3A%22Node.js+CI%22)
+[![github actions](https://img.shields.io/github/workflow/status/flow-build/engine/Node.js%20CI)](https://github.com/flow-build/engine/actions?query=workflow%3A%22Node.js+CI%22)
 
 ## Dependencies:
 
