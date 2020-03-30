@@ -1,3 +1,10 @@
+### [1.0.1](https://github.com/flow-build/engine/compare/v1.0.0...v1.0.1) (2020-03-30)
+
+
+### Bug Fixes
+
+* Merge branch 'feature/update' of https://github.com/flow-build/engine into feature/update ([a0c8686](https://github.com/flow-build/engine/commit/a0c868619fde1899189b301d3c693be1022957d7))
+
 ## 1.0.0 (2020-03-29)
 
 
