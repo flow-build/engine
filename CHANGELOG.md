@@ -1,3 +1,10 @@
+### [1.0.2](https://github.com/flow-build/engine/compare/v1.0.1...v1.0.2) (2020-03-30)
+
+
+### Bug Fixes
+
+* semantic npm package isntalled ([056f32b](https://github.com/flow-build/engine/commit/056f32b4dd3fa5d3b33b7dd5d14f3de326ba0f30))
+
 ### [1.0.1](https://github.com/flow-build/engine/compare/v1.0.0...v1.0.1) (2020-03-30)
 
 
