@@ -65,6 +65,4 @@ class Workflow extends PersistedEntity {
   }
 }
 
-module.exports = {
-  Workflow: Workflow
-};
+module.exports.Workflow = Workflow;

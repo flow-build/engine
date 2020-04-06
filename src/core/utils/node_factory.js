@@ -24,6 +24,10 @@ function getServiceTask(node_spec) {
             resultNode = new nodes.TimerSystemTaskNode(node_spec);
             break;
         }
+        case "startprocess": {
+            resultNode = new nodes.StartProcessSystemTaskNode(node_spec);
+            break;
+        }
         default: {
             const customClass = extra_system_category_map[node_category];
             if (customClass) {

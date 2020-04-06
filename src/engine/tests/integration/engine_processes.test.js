@@ -255,6 +255,261 @@ test("run process using environment", async () => {
   }
 });
 
+test("run process that creaters another process", async () => {
+  const engine = new Engine(...settings.persist_options);
+  try {
+    const minimal_workflow = await engine.saveWorkflow("minimal", "minimal", blueprints_.minimal);
+    const create_process_workflow = await engine.saveWorkflow("create_process_minimal", "create process minimal", blueprints_.create_process_minimal);
+
+    let process_state_history = [];
+    engine.setProcessStateNotifier((process_state) => process_state_history.push(process_state));
+
+    let workflow_process = await engine.createProcess(create_process_workflow.id, actors_.simpleton);
+    expect(workflow_process.state.status).toEqual("unstarted");
+
+    workflow_process = await engine.runProcess(workflow_process.id, actors_.simpleton);
+    expect(workflow_process.state.status).toEqual("finished");
+
+    const minimal_process_list = await engine.fetchProcessList({workflow_id: minimal_workflow.id});
+    expect(minimal_process_list).toHaveLength(1);
+
+    const create_process_process_list = await engine.fetchProcessList({workflow_id: create_process_workflow.id});
+    expect(create_process_process_list).toHaveLength(1);
+  } finally {
+    engine.setProcessStateNotifier();
+  }
+});
+
+describe("User task timeout", () => {
+  const engine = new Engine(...settings.persist_options);
+  let actualTimeout;
+  function wait() {
+    return new Promise((resolve) => {
+      actualTimeout(resolve, 300);
+    });
+  }
+  
+  beforeEach(async () => {
+    await engine.saveWorkflow("user_timeout", "user_timeout", blueprints_.user_timeout);
+    actualTimeout = setTimeout;
+    jest.useFakeTimers();
+  });
+
+  afterEach(() => {
+    jest.useRealTimers();
+  })
+  
+  test("finish after timeout", async () => {
+    const process = await engine.createProcessByWorkflowName("user_timeout", actors_.simpleton);
+    await engine.runProcess(process.id);
+    
+    jest.runAllTimers();
+    await wait();
+
+    const process_state_history = await engine.fetchProcessStateHistory(process.id);
+
+    expect(process_state_history).toHaveLength(5);
+    let process_state = process_state_history[0];
+    expect(process_state).toMatchObject({
+      step_number: 5,
+      node_id: "99",
+      status: ProcessStatus.FINISHED,
+      next_node_id: null,
+    });
+
+    process_state = process_state_history[1];
+    expect(process_state).toMatchObject({
+      step_number: 4,
+      node_id: "2",
+      status: ProcessStatus.RUNNING,
+      next_node_id: "99",
+      result: { is_continue: true},
+    });
+
+    process_state = process_state_history[2];
+    expect(process_state).toMatchObject({
+      step_number: 3,
+      node_id: "2",
+      status: ProcessStatus.WAITING,
+      next_node_id: "2",
+      result: {},
+    });
+
+    const activity_managers = await engine.fetchAvailableActivitiesForActor(actors_.simpleton);
+    expect(activity_managers).toHaveLength(0);
+  });
+
+  test("commit reset timeout", async () => {
+    const process = await engine.createProcessByWorkflowName("user_timeout", actors_.simpleton);
+    await engine.runProcess(process.id);
+
+    jest.advanceTimersByTime(0.6  * 1000);
+    await wait();
+
+    await engine.commitActivity(process.id, actors_.simpleton, { activity_data: 'example_activity_data' });
+
+    jest.advanceTimersByTime(0.6 * 1000);
+    await wait();
+
+    let process_state_history = await engine.fetchProcessStateHistory(process.id);
+    expect(process_state_history).toHaveLength(3);
+    let process_state = process_state_history[0];
+    expect(process_state).toMatchObject({
+      step_number: 3,
+      node_id: "2",
+      status: ProcessStatus.WAITING,
+      next_node_id: "2",
+      result: {},
+    });
+
+    jest.runAllTimers();
+    await wait();
+
+    process_state_history = await engine.fetchProcessStateHistory(process.id);
+    expect(process_state_history).toHaveLength(5);
+    process_state = process_state_history[0];
+    expect(process_state).toMatchObject({
+      step_number: 5,
+      node_id: "99",
+      status: ProcessStatus.FINISHED,
+      next_node_id: null,
+      result: {},
+    });
+    process_state = process_state_history[1];
+    expect(process_state).toMatchObject({
+      step_number: 4,
+      node_id: "2",
+      status: ProcessStatus.RUNNING,
+      next_node_id: "99",
+      result: {
+        is_continue: true
+      },
+    });
+    const activities = process_state.result.activities;
+    expect(activities).toHaveLength(1);
+    process_state = process_state_history[2];
+    expect(process_state).toMatchObject({
+      step_number: 3,
+      node_id: "2",
+      status: ProcessStatus.WAITING,
+      next_node_id: "2",
+      result: {},
+    });
+
+    const activity_managers = await engine.fetchAvailableActivitiesForActor(actors_.simpleton);
+    expect(activity_managers).toHaveLength(0);
+  });
+
+  test("finish before timeout", async () => {
+    const process = await engine.createProcessByWorkflowName("user_timeout", actors_.simpleton);
+    await engine.runProcess(process.id);
+
+    await engine.commitActivity(process.id, actors_.simpleton, { activity_data: "example_activity_data" });
+    await engine.pushActivity(process.id, actors_.simpleton);
+    
+    function validateProcessStateHistory(process_state_history) {
+      expect(process_state_history).toHaveLength(5);
+      let process_state = process_state_history[0];
+      expect(process_state).toMatchObject({
+        step_number: 5,
+        node_id: "99",
+        status: ProcessStatus.FINISHED,
+        next_node_id: null,
+      });
+
+      process_state = process_state_history[1];
+      expect(process_state).toMatchObject({
+        step_number: 4,
+        node_id: "2",
+        status: ProcessStatus.RUNNING,
+        next_node_id: "99",
+        result: {},
+      });
+      const activities = process_state.result.activities;
+      expect(activities).toHaveLength(1);
+      expect(activities[0].data).toEqual({ activity_data: "example_activity_data" });
+
+      process_state = process_state_history[2];
+      expect(process_state).toMatchObject({
+        step_number: 3,
+        node_id: "2",
+        status: ProcessStatus.WAITING,
+        next_node_id: "2",
+        result: {},
+      });
+    }
+
+    let process_state_history = await engine.fetchProcessStateHistory(process.id);
+    validateProcessStateHistory(process_state_history);
+
+    let activity_managers = await engine.fetchAvailableActivitiesForActor(actors_.simpleton);
+    expect(activity_managers).toHaveLength(0);
+    
+    jest.runAllTimers();
+    await wait();
+    
+    process_state_history = await engine.fetchProcessStateHistory(process.id);
+    validateProcessStateHistory(process_state_history);
+
+    activity_managers = await engine.fetchAvailableActivitiesForActor(actors_.simpleton);
+    expect(activity_managers).toHaveLength(0);
+  });
+
+  test("run process before timeout", async () => {
+    const process = await engine.createProcessByWorkflowName("user_timeout", actors_.simpleton);
+    await engine.runProcess(process.id);
+
+    await engine.runProcess(process.id, actors_.simpleton, { activity_data: "example_activity_data" });
+    
+    function validateProcessStateHistory(process_state_history) {
+      expect(process_state_history).toHaveLength(5);
+      let process_state = process_state_history[0];
+      expect(process_state).toMatchObject({
+        step_number: 5,
+        node_id: "99",
+        status: ProcessStatus.FINISHED,
+        next_node_id: null,
+      });
+
+      process_state = process_state_history[1];
+      expect(process_state).toMatchObject({
+        step_number: 4,
+        node_id: "2",
+        status: ProcessStatus.RUNNING,
+        next_node_id: "99",
+        result: {},
+      });
+      const activities = process_state.result.activities;
+      expect(activities).toBeUndefined();
+      expect(process_state.result).toEqual({ activity_data: "example_activity_data" });
+
+      process_state = process_state_history[2];
+      expect(process_state).toMatchObject({
+        step_number: 3,
+        node_id: "2",
+        status: ProcessStatus.WAITING,
+        next_node_id: "2",
+        result: {},
+      });
+    }
+
+    let process_state_history = await engine.fetchProcessStateHistory(process.id);
+    validateProcessStateHistory(process_state_history);
+
+    let activity_managers = await engine.fetchAvailableActivitiesForActor(actors_.simpleton);
+    expect(activity_managers).toHaveLength(1);
+    
+    jest.runAllTimers();
+    await wait();
+    
+    process_state_history = await engine.fetchProcessStateHistory(process.id);
+    validateProcessStateHistory(process_state_history);
+
+    activity_managers = await engine.fetchAvailableActivitiesForActor(actors_.simpleton);
+    expect(activity_managers).toHaveLength(0);
+  });
+})
+
 test('Commit activity only on type \'commit\' activity manager', async () => {
   const engine = new Engine(...settings.persist_options);
   const workflow = await engine.saveWorkflow("sample", "sample", blueprints_.notify_and_user_task);

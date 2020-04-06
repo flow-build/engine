@@ -71,6 +71,26 @@ class WorkflowMemoryPersist extends MemoryPersist {
     WorkflowMemoryPersist.instance = this;
   }
 
+  async getAll() {
+    const workflows_by_name = _.groupBy(Object.values(this._store), "name");
+    return Object.values(workflows_by_name).map(
+      (workflows) => _.maxBy(workflows, (workflow) => workflow["version"])
+    );
+  }
+
+  async save(workflow) {
+    const version = Object.values(this._store).reduce((current_version, item) => {
+      if (workflow.name === item.name && item.version > current_version) {
+        current_version = item.version;
+      }
+      return current_version;
+    }, 0)
+    const saved_workflow = _.cloneDeep(workflow);
+    saved_workflow.version = version + 1;
+    this._store[workflow.id] = saved_workflow;
+    return "create";
+  }
+
   async getByName(obj_name) {
     return Object.values(this._store).find( (workflow) => {
       return workflow.name === obj_name

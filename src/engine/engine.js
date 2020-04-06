@@ -11,6 +11,7 @@ const { ActivityManager } = require("../core/workflow/activity_manager");
 const { ActivityStatus } = require("../core/workflow/activity");
 const { setProcessStateNotifier, setActivityManagerNotifier } = require("../core/notifier_manager");
 const { addSystemTaskCategory } = require("../core/utils/node_factory");
+const process_manager = require("../core/workflow/process_manager");
 
 class Engine {
   static get instance() {
@@ -125,11 +126,7 @@ class Engine {
   }
 
   async createProcessByWorkflowName(workflow_name, actor_data, initial_bag = {}) {
-    const workflow = await Workflow.fetchWorkflowByName(workflow_name);
-    if (workflow) {
-      return await workflow.createProcess(actor_data, initial_bag);
-    }
-    return undefined;
+    return process_manager.createProcessByWorkflowName(workflow_name, actor_data, initial_bag);
   }
 
   async createProcess(workflow_id, actor_data, initial_bag = {}) {
@@ -141,11 +138,7 @@ class Engine {
   }
 
   async runProcess(process_id, actor_data, external_input)  {
-    const process = await Process.fetch(process_id);
-    if (process) {
-      return await process.run(actor_data, external_input);
-    }
-    return undefined;
+    return process_manager.runProcess(process_id, actor_data, external_input);
   }
 
   async fetchProcess(process_id) {

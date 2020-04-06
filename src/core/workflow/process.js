@@ -132,17 +132,43 @@ class Process extends PersistedEntity {
       await this.save();
       await this._notifyProcessState();
 
-      while (this.status === ProcessStatus.RUNNING) {
-        const node_result = await this._runNode(this.next_node, null, custom_lisp, actor_data);
-        this._state = await this._createStateFromNodeResult(node_result);
-        await this.save();
-        await this._notifyProcessState();
-        await this._createActivityManager(node_result);
-      }
+      await this._executionLoop(custom_lisp, actor_data);
 
       return this;
     } else {
       return this._forbiddenState();
+    }
+  }
+
+  async continue(result_data) {
+    this._state = await this.getPersist().getLastStateByProcess(this._id);
+    const current_node = this._blueprint.fetchNode(this._state.node_id);
+    if (current_node && this.status !== ProcessStatus.FINISHED) {
+      const next_node_id = current_node.next();
+      const step_number = await this.getNextStepNumber();
+      this._state = new ProcessState(
+        this.id,
+        step_number,
+        current_node.id,
+        this.bag,
+        null,
+        {
+          ...this.state.result,
+          ...result_data,
+        },
+        null,
+        ProcessStatus.RUNNING,
+        next_node_id
+      );
+      await this.save();
+      await this._notifyProcessState();
+
+      const custom_lisp = await Packages._fetchPackages(
+        this._blueprint_spec.requirements,
+        this._blueprint_spec.prepare
+      );
+
+      await this._executionLoop(custom_lisp, {});
     }
   }
 
@@ -183,6 +209,16 @@ class Process extends PersistedEntity {
 
   async getNextStepNumber() {
     return await this.getPersist().getNextStepNumber(this._id);
+  }
+
+  async _executionLoop(custom_lisp, actor_data) {
+    while (this.status === ProcessStatus.RUNNING) {
+      const node_result = await this._runNode(this.next_node, null, custom_lisp, actor_data);
+      this._state = await this._createStateFromNodeResult(node_result);
+      await this.save();
+      await this._notifyProcessState();
+      await this._createActivityManager(node_result);
+    }
   }
 
   async _notifyProcessState() {
@@ -259,6 +295,4 @@ class Process extends PersistedEntity {
   }
 }
 
-module.exports = {
-  Process: Process
-};
+module.exports.Process = Process;

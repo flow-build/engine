@@ -23,32 +23,36 @@ const blueprint_spec = {
       next: "3",
       lane_id: "1",
       parameters: {
-        input: {},
+        input: {
+          is_authorized: { $ref: "bag.is_authorized" }
+        },
         script: {
-          function: ["fn", ["bag", "in", "ex", "&", "args"],
-               ["do",
-                ["println", ["`", "AUTHORIZED TO USE LANE 2? "],
-                 ["or", ["get", "bag", ["`", "is_authorized"]], false]],
-                ["list", "in", "bag"]]]
+          function: [
+            "fn",
+            ["input", "&", "args"],
+            [
+              "do",
+              [
+                "println",
+                ["`", "AUTHORIZED TO USE LANE 2? "],
+                ["or", ["get", "input", ["`", "is_authorized"]], ["`", "none"]]
+              ]
+            ]
+          ]
         }
       },
     },
     {
       id: "3",
-      type: "ScriptTask",
-      name: "Scrip Task node",
+      type: "SystemTask",
+      category: "setToBag",
+      name: "set to bag node",
       next: "4",
       lane_id: "1",
       parameters: {
-        input: {},
-        script: {
-          function: ["fn", ["bag", "in", "ex", "&", "args"],
-               ["let", ["key", ["get", "args", 0], "value", ["get", "args", 1]],
-                ["list",
-                 null,
-                 ["set", "bag", "key", "value"]]]],
-          args: [["`", "is_authorized"], true]
-        }
+        input: {
+          is_authorized: {$ref: "actor_data"}
+        },
       }
     },
     {
@@ -58,13 +62,15 @@ const blueprint_spec = {
       next: "5",
       lane_id: "1",
       parameters: {
-        input: {},
+        input: {
+          is_authorized: { $ref: "bag.is_authorized" }
+        },
         script: {
-          function: ["fn", ["bag", "in", "ex", "&", "args"],
-               ["do",
-                ["println", ["`", "AUTHORIZED TO USE LANE 2? "],
-                 ["or", ["get", "bag", ["`", "is_authorized"]], false]],
-                ["list", "in", "bag"]]]
+          function: ["fn", ["input", "&", "args"],
+            ["do",
+              ["println", ["`", "AUTHORIZED TO USE LANE 2? "],
+                ["or", ["get", "input", ["`", "is_authorized"]], ["`", "none"]]],
+              ]]
         }
       },
     },
@@ -96,24 +102,50 @@ const blueprint_spec = {
     {
       id: "2",
       name: "restricted",
-      rule: ["fn", ["actor_data", "bag"], ["contains?", "bag", ["`", "is_authorized"]]]
+      rule: ["fn", ["actor_data", "bag"],
+              ["=",
+              ["get", ["get", "bag", ["`", "is_authorized"]],
+                [
+                  "`",
+                  "id"
+                ]
+              ],
+              ["get", "actor_data",
+                [
+                  "`",
+                  "id"
+                ]
+              ]
+            ]
+          ]
     }
   ],
   environment: {},
 };
 
-const actor_data = {
+const actor_data_1 = {
   id: "1",
-  claims: []
+  claims: ["simpleton"]
+};
+
+const actor_data_2 = {
+  id: "2",
+  claims: ["simpleton"]
 };
 
 const run_example = async() => {
   console.log("===  RUNNING latched_lane_example  ===");
   const engine = new Engine(...settings.persist_options);
   const workflow = await engine.saveWorkflow("latched lane_example", "latched lane showcase", blueprint_spec);
-  const process = await engine.createProcess(workflow.id, actor_data);
+  const process = await engine.createProcess(workflow.id, actor_data_1);
   const process_id = process.id;
-  await engine.runProcess(process_id, actor_data);
+  await engine.runProcess(process_id, actor_data_1);
+
+  let run_try = await engine.runProcess(process_id, actor_data_2, {});
+  console.log("\n Run try actor 2: ", run_try);
+  run_try = await engine.runProcess(process_id, actor_data_1, {});
+  console.log("\n Run try actor 1: ", run_try);
+
   const state_history = await engine.fetchProcessStateHistory(process_id);
   return state_history;
 }
