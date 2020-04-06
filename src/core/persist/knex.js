@@ -60,11 +60,30 @@ class WorkflowKnexPersist extends KnexPersist {
     super(db, Workflow, "workflow");
   }
 
+  async getAll() {
+    return await this._db
+      .select("*")
+      .from(`${this._table} as w1`)
+      .whereRaw(`w1.version = (select max(version) from ${this._table} as w2 where w1.name = w2.name)`)
+  }
+
+  async save(workflow) {
+    await this._db.transaction(async trx => {
+      const current_version = (await this._db(this._table).transacting(trx).max("version").where({name: workflow.name}).first()).max
+      return await this._db(this._table).transacting(trx).insert({
+        ...workflow,
+        version: current_version + 1,
+      })
+    });
+    return 'create';
+  }
+
   async getByName(obj_name) {
     return await this._db
       .select("*")
       .from(this._table)
       .where("name", "=", obj_name)
+      .orderBy("version", "desc")
       .first();
   }
 }

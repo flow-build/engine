@@ -7,6 +7,7 @@ const settings = require("../../../../../settings/tests/settings");
 const { Packages } = require("../../../workflow/packages");
 const { PersistorProvider } = require("../../../persist/provider");
 const { ProcessStatus } = require("../../../workflow/process_state");
+const process_manager = require("../../process_manager");
 const { nodes_, results_ } = require("./node_samples");
 const axios = require("axios");
 
@@ -37,6 +38,7 @@ describe("Constraints test", () => {
       { node_spec: nodes_.http_system_task, node: nodes.HttpSystemTaskNode },
       { node_spec: nodes_.set_to_bag_system_task, node: nodes.SetToBagSystemTaskNode },
       { node_spec: nodes_.timer_system_task, node: nodes.TimerSystemTaskNode },
+      { node_spec: nodes_.start_process_system_task, node: nodes.StartProcessSystemTaskNode },
     ];
 
     for (const { node_spec, node } of spec_base_node_constraint) {
@@ -123,6 +125,7 @@ describe("Constraints test", () => {
       { node_spec: nodes_.http_system_task, nodeClass: nodes.HttpSystemTaskNode },
       { node_spec: nodes_.set_to_bag_system_task, nodeClass: nodes.SetToBagSystemTaskNode },
       { node_spec: nodes_.timer_system_task, nodeClass: nodes.TimerSystemTaskNode },
+      { node_spec: nodes_.start_process_system_task, nodeClass: nodes.StartProcessSystemTaskNode },
     ];
 
     for (const { node_spec, nodeClass } of specs_with_parameter_input) {
@@ -227,7 +230,79 @@ describe("Constraints test", () => {
       expect(is_valid).toEqual(false);
       expect(error).toBe("parameters_has_action");
     });
-  })
+
+    describe("timeout_has_valid_type constraint works", () => {
+      test("fails with string", () => {
+        const spec = _.cloneDeep(nodes_.user_task);
+        spec.parameters.timeout = "22";
+        const [is_valid, error] = nodes.UserTaskNode.validate(spec);
+        expect(is_valid).toEqual(false);
+        expect(error).toEqual("timeout_has_valid_type");
+      });
+
+      test("fails with null", () => {
+        const spec = _.cloneDeep(nodes_.user_task);
+        spec.parameters.timeout = null;
+        const [is_valid, error] = nodes.UserTaskNode.validate(spec);
+        expect(is_valid).toEqual(false);
+        expect(error).toEqual("timeout_has_valid_type");
+      });
+
+      test("valid with undefined", () => {
+        const spec = _.cloneDeep(nodes_.user_task);
+        spec.parameters.timeout = undefined;
+        const [is_valid, error] = nodes.UserTaskNode.validate(spec);
+        expect(is_valid).toEqual(true);
+      });
+
+      test("valid with number", () => {
+        const spec = _.cloneDeep(nodes_.user_task);
+        spec.parameters.timeout = 10;
+        const [is_valid, error] = nodes.UserTaskNode.validate(spec);
+        expect(is_valid).toEqual(true);
+      });
+    });
+
+    describe("channels_has_valid_type constraint works", () => {
+      test("fails with string", () => {
+        const spec = _.cloneDeep(nodes_.user_task);
+        spec.parameters.channels = "1";
+        
+        const [is_valid, error] = nodes.UserTaskNode.validate(spec);
+
+        expect(is_valid).toEqual(false);
+        expect(error).toEqual("channels_has_valid_type");
+      });
+
+      test("fails with null", () => {
+        const spec = _.cloneDeep(nodes_.user_task);
+        spec.parameters.channels = null;
+        
+        const [is_valid, error] = nodes.UserTaskNode.validate(spec);
+
+        expect(is_valid).toEqual(false);
+        expect(error).toEqual("channels_has_valid_type");
+      });
+
+      test("valid with undefined", () => {
+        const spec = _.cloneDeep(nodes_.user_task);
+        spec.parameters.channels = undefined;
+        
+        const [is_valid, error] = nodes.UserTaskNode.validate(spec);
+
+        expect(is_valid).toEqual(true);
+      });
+
+      test("valid with array", () => {
+        const spec = _.cloneDeep(nodes_.user_task);
+        spec.parameters.channels = [];
+        
+        const [is_valid, error] = nodes.UserTaskNode.validate(spec);
+
+        expect(is_valid).toEqual(true);
+      });
+    });
+  });
 
   describe("ScriptTaskNode", () => {
     test("ScriptTaskNode parameters_has_script constraint works", () => {
@@ -322,6 +397,38 @@ describe("Constraints test", () => {
       expect(is_valid).toEqual(false);
       expect(error).toBe("request_header_has_valid_type");
     });
+
+    describe("parameters_valid_response_codes_has_valid_type constraint works", () => {
+      test("valid undefined value", () => {
+        const node_spec = _.cloneDeep(nodes_.http_system_task);
+        delete node_spec.parameters.valid_response_codes;
+
+        const [is_valid, error] = nodes.HttpSystemTaskNode.validate(node_spec);
+
+        expect(is_valid).toEqual(true);
+        expect(error).toBeNull();
+      });
+
+      test("valid array value", () => {
+        const node_spec = _.cloneDeep(nodes_.http_system_task);
+        node_spec.parameters.valid_response_codes = [];
+
+        const [is_valid, error] = nodes.HttpSystemTaskNode.validate(node_spec);
+
+        expect(is_valid).toEqual(true);
+        expect(error).toBeNull();
+      });
+
+      test("invalid object value", () => {
+        const node_spec = _.cloneDeep(nodes_.http_system_task);
+        node_spec.parameters.valid_response_codes = {};
+
+        const [is_valid, error] = nodes.HttpSystemTaskNode.validate(node_spec);
+
+        expect(is_valid).toEqual(false);
+        expect(error).toEqual("parameters_valid_response_codes_has_valid_type");
+      });
+    });
   });
 
   describe("TimerSystemTaskNode", () => {
@@ -354,6 +461,7 @@ describe("Constraints test", () => {
       { node_spec_name: "http_system_task", node_class: nodes.HttpSystemTaskNode },
       { node_spec_name: "set_to_bag_system_task", node_class: nodes.SetToBagSystemTaskNode },
       { node_spec_name: "timer_system_task", node_class: nodes.TimerSystemTaskNode },
+      { node_spec_name: "start_process_system_task", node_class: nodes.StartProcessSystemTaskNode },
     ];
 
     for (const { node_spec_name, node_class } of nodes_samples_spec_class) {
@@ -531,7 +639,8 @@ describe("UserTaskNode", () => {
     const bag = { identity_user_data: "bag" };
     const input = { data: "result" };
     const external_input = null;
-    const result = await node.run({ bag, input, external_input });
+    const actor_data = {};
+    const result = await node.run({ bag, input, external_input, actor_data });
     expect(result).toEqual(
       expect.objectContaining(results_.success_waiting_user_task_result));
   });
@@ -542,10 +651,39 @@ describe("UserTaskNode", () => {
     const bag = { identity_user_data: "bag" };
     const input = { identity_user_data: "bag" };
     const external_input = { data: "external" };
-    await node.run({ bag, input, external_input });
-    const result = await node.run({ bag, input, external_input });
+    const actor_data = {};
+    await node.run({ bag, input, external_input, actor_data });
+    const result = await node.run({ bag, input, external_input, actor_data });
     expect(result).toStrictEqual(
       results_.success_user_task_result);
+  });
+
+  test("Creates activity manager with parameter timeout", async () => {
+    const node_spec = _.cloneDeep(nodes_.user_task);
+    node_spec.parameters.timeout = 10;
+
+    const node = new nodes.UserTaskNode(node_spec);
+
+    const bag = { identity_user_data: "bag" };
+    const input = { identity_user_data: "bag" };
+    const actor_data = {};
+    const result = await node.run({ bag, input, actor_data });
+    expect(result.activity_manager).toBeDefined();
+    expect(result.activity_manager.parameters).toEqual({ timeout: 10 });
+  });
+
+  test("Creates activity manager with parameter timeout", async () => {
+    const node_spec = _.cloneDeep(nodes_.user_task);
+    node_spec.parameters.channels = ["1"];
+
+    const node = new nodes.UserTaskNode(node_spec);
+
+    const bag = { identity_user_data: "example_bag_data" };
+    const input = { identity_user_data: "example_input_data" };
+    const actor_data = {};
+    const result = await node.run({ bag, input, actor_data });
+    expect(result.activity_manager).toBeDefined();
+    expect(result.activity_manager.parameters).toEqual({ channels: ["1"] });
   });
 
   test("Can reference actor_data on input", async () => {
@@ -782,6 +920,22 @@ describe("HttpSystemTaskNode", () => {
       axios.__clearCustomResponse("post");
     }
   });
+
+  test("Invalid response code", async () => {
+    const node_spec = _.cloneDeep(nodes_.http_system_task);
+    node_spec.parameters.valid_response_codes = [202];
+    node_spec.parameters.request.verb = "GET";
+
+    const node = new nodes.HttpSystemTaskNode(node_spec);
+
+    const bag = { payload: { dummy: 'payload' } };
+    const input = {};
+    const external_input = {};
+    const node_result = await node.run({ bag, input, external_input});
+
+    expect(node_result.status).toEqual(ProcessStatus.ERROR);
+    expect(node_result.result).toBeNull();
+  });
 });
 
 describe("SetToBagSystemTaskNode", () => {
@@ -932,4 +1086,268 @@ describe("TimerSystemTaskNode", () => {
     });
     expect(endTime.getTime() - startTime.getTime()).toBeGreaterThanOrEqual(node_spec.parameters.timeout * 1000);
   })
+});
+
+describe("StartProcessSystemTaskNode", () => {
+  describe("Validations", () => {
+    let node_spec;
+    beforeEach(() => {
+      node_spec = _.cloneDeep(nodes_.start_process_system_task);
+    });
+
+    test("parameters_has_workflow_name", () => {
+      delete node_spec.parameters.workflow_name;
+
+      const node = new nodes.StartProcessSystemTaskNode(node_spec);
+
+      const [is_valid, reason] = node.validate();
+
+      expect(is_valid).toEqual(false);
+      expect(reason).toEqual("parameters_has_workflow_name");
+    });
+
+    test("parameters_workflow_name_has_valid_type", () => {
+      node_spec.parameters.workflow_name = 22;
+
+      const node = new nodes.StartProcessSystemTaskNode(node_spec);
+
+      const [is_valid, reason] = node.validate();
+
+      expect(is_valid).toEqual(false);
+      expect(reason).toEqual("parameters_workflow_name_has_valid_type");
+    });
+
+    test("parameters_has_actor_data", () => {
+      delete node_spec.parameters.actor_data;
+
+      const node = new nodes.StartProcessSystemTaskNode(node_spec);
+
+      const [is_valid, reason] = node.validate();
+
+      expect(is_valid).toEqual(false);
+      expect(reason).toEqual("parameters_has_actor_data");
+    });
+
+    test("parameters_actor_data_has_valid_type", () => {
+      node_spec.parameters.actor_data = "1";
+
+      const node = new nodes.StartProcessSystemTaskNode(node_spec);
+
+      const [is_valid, reason] = node.validate();
+
+      expect(is_valid).toEqual(false);
+      expect(reason).toEqual("parameters_actor_data_has_valid_type");
+    });
+  });
+
+  test("creates and run process by engine", async () => {
+    let original_createProcessByWorkflowName = process_manager.createProcessByWorkflowName;
+    let original_runProcess = process_manager.runProcess;
+    try {
+      const process_id = "9090"
+      const mock_createProcessByWorkflowName = jest.fn().mockResolvedValue({
+        id: process_id
+      });
+      const mock_runProcess = jest.fn();
+  
+      process_manager.createProcessByWorkflowName = mock_createProcessByWorkflowName;
+      process_manager.runProcess = mock_runProcess;
+  
+      const node_spec = nodes_.start_process_system_task;
+      const node = new nodes.StartProcessSystemTaskNode(node_spec);
+
+      const result = await node.run({});
+
+      expect(result).toBeDefined();
+      expect(result.status).toEqual(ProcessStatus.RUNNING);
+      expect(result.result).toEqual({process_id: process_id});
+
+      const expected_workflow_name = node_spec.parameters.workflow_name;
+      const expected_workflow_actor_data = {};
+      const expected_workfow_input = {};
+
+      expect(mock_createProcessByWorkflowName).toBeCalledTimes(1);
+      expect(mock_createProcessByWorkflowName).toBeCalledWith(
+        expected_workflow_name,
+        expected_workflow_actor_data,
+        expected_workfow_input
+      );
+
+      expect(mock_runProcess).toBeCalledTimes(1);
+      expect(mock_runProcess).toBeCalledWith(
+        process_id,
+        expected_workflow_actor_data
+      );
+    } finally {
+      process_manager.createProcessByWorkflowName = original_createProcessByWorkflowName;
+      process_manager.runProcess = original_runProcess;
+    }
+  });
+
+  describe("preProcess workflow data", () => {
+    let original_createProcessByWorkflowName = process_manager.createProcessByWorkflowName;
+    let original_runProcess = process_manager.runProcess;
+    let mock_createProcessByWorkflowName = jest.fn().mockResolvedValue(
+      {
+        id: '1239',
+      }
+    );
+    let mock_runProcess = jest.fn();
+    let node_spec = nodes_.start_process_system_task;
+
+    beforeEach(() => {
+      mock_createProcessByWorkflowName.mockClear();
+      mock_runProcess.mockClear();
+
+      process_manager.createProcessByWorkflowName = mock_createProcessByWorkflowName;
+      process_manager.runProcess = mock_runProcess;
+
+      node_spec = _.cloneDeep(nodes_.start_process_system_task);
+    });
+
+    afterEach(() => {
+      process_manager.createProcessByWorkflowName = original_createProcessByWorkflowName;
+      process_manager.runProcess = original_runProcess;
+    });
+
+    describe("workflow_name", () => {
+      test("$ref bag", async () => {
+        node_spec.parameters.workflow_name = { $ref: "bag.workflow_name" };
+
+        const node = new nodes.StartProcessSystemTaskNode(node_spec);
+        const result = await node.run({
+          bag: {
+            workflow_name: "bag_workflow_name",
+          }
+        });
+
+        expect(result).toBeDefined();
+        expect(result.status).toEqual(ProcessStatus.RUNNING);
+
+        expect(mock_createProcessByWorkflowName).toHaveBeenCalledWith("bag_workflow_name", {}, {})
+      });
+
+      test("$ref result", async () => {
+        node_spec.parameters.workflow_name = { $ref: "result.workflow_name" };
+
+        const node = new nodes.StartProcessSystemTaskNode(node_spec);
+        const result = await node.run({
+          input: {
+            workflow_name: "result_workflow_name",
+          }
+        });
+
+        expect(result).toBeDefined();
+        expect(result.status).toEqual(ProcessStatus.RUNNING);
+
+        expect(mock_createProcessByWorkflowName).toHaveBeenCalledWith("result_workflow_name", {}, {})
+      });
+
+      test("$mustache result", async () => {
+        node_spec.parameters.workflow_name = { $mustache: "ATV_{{result.workflow_name}}" };
+
+        const node = new nodes.StartProcessSystemTaskNode(node_spec);
+        const result = await node.run({
+          input: {
+            workflow_name: "result_workflow_name",
+          }
+        });
+
+        expect(result).toBeDefined();
+        expect(result.status).toEqual(ProcessStatus.RUNNING);
+
+        expect(mock_createProcessByWorkflowName).toHaveBeenCalledWith("ATV_result_workflow_name", {}, {})
+      });
+    });
+
+    describe("actor_data", () => {
+      test("$ref actor_data", async () => {
+        node_spec.parameters.actor_data = { $ref: "actor_data" };
+
+        const node = new nodes.StartProcessSystemTaskNode(node_spec);
+        const result = await node.run({
+          actor_data: {
+            id: "id_node_runner",
+          }
+        });
+
+        expect(result).toBeDefined();
+        expect(result.status).toEqual(ProcessStatus.RUNNING);
+
+        expect(mock_createProcessByWorkflowName).toHaveBeenCalledWith(
+          "example_workflow",
+          {
+            id: "id_node_runner",
+          },
+          {}
+        );
+      });
+
+      test("$ref environment", async () => {
+        node_spec.parameters.actor_data = { $ref: "environment.actor" };
+
+        const node = new nodes.StartProcessSystemTaskNode(node_spec);
+        const result = await node.run({
+          environment: {
+            actor: {
+              id: "id_environment",
+            }
+          }
+        });
+
+        expect(result).toBeDefined();
+        expect(result.status).toEqual(ProcessStatus.RUNNING);
+
+        expect(mock_createProcessByWorkflowName).toHaveBeenCalledWith(
+          "example_workflow",
+          {
+            id: "id_environment",
+          },
+          {}
+        );
+      });
+    });
+
+    test("input prepare", async () => {
+      node_spec.parameters.input = {
+        creator: { $ref: "actor_data.id" },
+        data: { $ref: "result.data" },
+        key: { $mustache: "user-{{bag.value}}" },
+        flag: { $ref: "environment.active" },
+        total: { $js: "() => 2 + 3" },
+      };
+
+      const node = new nodes.StartProcessSystemTaskNode(node_spec);
+      const result = await node.run({
+        bag: {
+          value: "example_bag_value",
+        },
+        actor_data: {
+          id: "id_node_runner",
+        },
+        input: {
+          data: "example_result_data"
+        },
+        environment: {
+          active: "true"
+        },
+      });
+
+      expect(result).toBeDefined();
+      expect(result.status).toEqual(ProcessStatus.RUNNING);
+
+      expect(mock_createProcessByWorkflowName).toHaveBeenCalledWith(
+        "example_workflow",
+        {},
+        {
+          creator: "id_node_runner",
+          data: "example_result_data",
+          key: "user-example_bag_value",
+          flag: "true",
+          total: 5
+        }
+      );
+    });
+
+  });
 });

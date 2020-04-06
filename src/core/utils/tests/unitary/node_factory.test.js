@@ -104,6 +104,18 @@ describe("node factory", () => {
                 expect(node).toBeInstanceOf(nodes.TimerSystemTaskNode);
             });
 
+            test("start process category", () => {
+                const node_spec = {
+                    ...base_service_task_node,
+                    category: "StartProcess"
+                };
+
+                const node = node_factory.getNode(node_spec);
+
+                expect(node).toBeDefined();
+                expect(node).toBeInstanceOf(nodes.StartProcessSystemTaskNode);
+            });
+
             test("unknow category", () => {
                 const node_spec = {
                     ...base_service_task_node,

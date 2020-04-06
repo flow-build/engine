@@ -1,3 +1,4 @@
+const uuid = require('uuid/v1');
 const _ = require("lodash");
 const assert = require("assert");
 const { PersistedEntity } = require("./base");
@@ -6,6 +7,7 @@ const { Lane } = require("./lanes");
 const { Activity,
         ActivityStatus } = require("./activity");
 const { getActivityManagerNotifier } = require("../notifier_manager");
+const process_manager = require("./process_manager");
 const activity_manager_factory = require("../utils/activity_manager_factory");
 
 class ActivityManager extends PersistedEntity {
@@ -56,7 +58,10 @@ class ActivityManager extends PersistedEntity {
       const lane_id = blueprint.nodes.filter((node) => node.id === node_id)[0].lane_id;
       const current_lane_spec = blueprint.lanes.filter((lane) => lane.id === lane_id)[0];
       const lisp = await Packages._fetchPackages(blueprint.requirements, blueprint.prepare);
-      const is_allowed = Lane.runRule(current_lane_spec, actor_data, activity_data.bag, lisp);
+      let is_allowed = Lane.runRule(current_lane_spec, actor_data, activity_data.bag, lisp);
+      if (is_allowed && activity_data.parameters.channels && activity_data.parameters.channels instanceof Array) {
+        is_allowed = activity_data.parameters.channels.indexOf(actor_data.channel) !== -1;
+      }
       if (is_allowed) {
         allowed_activities.push(activity_data);
       }
@@ -154,6 +159,11 @@ class ActivityManager extends PersistedEntity {
     this._activities = [];
   }
 
+  async save(...args) {
+    this._initTimeout();
+    return await super.save(...args);
+  }
+
   async beginActivity() {
     return this.props.result;
   }
@@ -164,6 +174,7 @@ class ActivityManager extends PersistedEntity {
                                         external_input,
                                         ActivityStatus.STARTED).save();
     this._activities.push(activity);
+    await this.save();
     await this._notifyActivityManager(process_id);
     return this;
   }
@@ -188,6 +199,28 @@ class ActivityManager extends PersistedEntity {
         ...this,
         _process_id: process_id
       });
+    }
+  }
+
+  _initTimeout() {
+    const timeout = this.parameters.timeout;
+    if (timeout && this.status !== ActivityStatus.COMPLETED) {
+      const timeout_id = uuid();
+      this.parameters.timeout_id = timeout_id;
+      setTimeout(async () => {
+        const activity_manager_data = await this.getPersist().getActivityDataFromId(this.id);
+        if (
+          activity_manager_data
+          && activity_manager_data.parameters.timeout_id === timeout_id
+          && activity_manager_data.activity_status === ActivityStatus.STARTED
+        ) {
+          const activity_manager = ActivityManager.deserialize(activity_manager_data);
+          activity_manager.status = ActivityStatus.COMPLETED;
+          await activity_manager.save();
+          await activity_manager._notifyActivityManager(activity_manager_data.process_id);
+          await process_manager.continueProcess(activity_manager_data.process_id, { is_continue: true, activities: this._activities });
+        }
+      }, (timeout * 1000));
     }
   }
 }

@@ -14,6 +14,32 @@ describe("prepare", () => {
             expect(result).toEqual("Fullname exampleName");
         });
 
+        it("mustache method use", () => {
+            const source = {
+                $mustache: "Fullname {{bag.values.length}}"
+            };
+            const bag = {
+                values: [
+                    '22'
+                ]
+            }
+            const result = prepare(source, { bag});
+            expect(result).toEqual("Fullname 1");
+        });
+
+        it("mustache array access by index", () => {
+            const source = {
+                $mustache: "Fullname {{bag.values.0}}"
+            };
+            const bag = {
+                values: [
+                    '22'
+                ]
+            }
+            const result = prepare(source, { bag});
+            expect(result).toEqual("Fullname 22");
+        });
+
         it("mustache missing value", () => {
             const source = {
                 $mustache: "Fullname {{bag.firstName}}"

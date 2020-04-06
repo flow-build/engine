@@ -137,6 +137,20 @@ nodes_.timer_system_task = {
   },
 }
 
+nodes_.start_process_system_task = {
+  id: "777",
+  type: "SystemTask",
+  category: "StartProcess",
+  name: "startProcess system task node",
+  next: "9",
+  lane_id: "1",
+  parameters: {
+    workflow_name: "example_workflow",
+    actor_data: {},
+    input: {},
+  },
+}
+
 nodes_.custom_system_task = {
   id: "7",
   type: "SystemTask",

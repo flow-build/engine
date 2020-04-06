@@ -1126,6 +1126,95 @@ blueprints_.multiple_finish = {
   environment: {},
 };
 
+blueprints_.create_process_minimal = {
+  requirements: ["core"],
+  prepare: [],
+  nodes: [
+    {
+      id: "1",
+      type: "Start",
+      name: "Start node",
+      parameters: {
+        input_schema: {},
+      },
+      next: "2",
+      lane_id: "1"
+    },
+    {
+      id: "2",
+      type: "SystemTask",
+      category: "startProcess",
+      name: "Start process node",
+      parameters: {
+        workflow_name: "minimal",
+        input: {},
+        actor_data: { $ref: "actor_data" }
+      },
+      next: "3",
+      lane_id: "1"
+    },
+    {
+      id: "3",
+      type: "Finish",
+      name: "Finish node",
+      next: null,
+      lane_id: "1"
+    }
+  ],
+  lanes: [
+    {
+      id: "1",
+      name: "the_only_lane",
+      rule: lisp.return_true()
+    }
+  ],
+  environment: {},
+};
+
+blueprints_.user_timeout = {
+  requirements: [],
+  prepare: [],
+  nodes: [
+    {
+      id: "1",
+      type: "Start",
+      name: "start  node",
+      parameters: {
+        input_schema: {},
+      },
+      next: "2",
+      lane_id: "1",
+    },
+    {
+      id: "2",
+      type: "UserTask",
+      name: "user task node",
+      parameters: {
+        action: "example_action",
+        input: {},
+        timeout: 1,
+      },
+      next: "99",
+      lane_id: "1",
+    },
+    {
+      id: "99",
+      type: "Finish",
+      name: "finish node",
+      next: null,
+      lane_id: "1",
+    },
+  ],
+  lanes: [
+    {
+      id: "1",
+      name: "only_lane",
+      rule: lisp.return_true(),
+    }
+  ],
+  environment: {},
+}
+
 actors_.sys_admin = {
   "actor_id": "1",
   "claims": ["sys_admin", "admin", "simpleton"]

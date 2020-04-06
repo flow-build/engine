@@ -9,6 +9,7 @@ const { request } = require('../utils/requests');
 const { ActivityStatus } = require("./activity");
 const { getActivityManager } = require("../utils/activity_manager_factory");
 const ajvValidator = require("../utils/ajvValidator");
+const process_manager = require("./process_manager");
 
 const writeJsFunction = (function_name) => {
   return ["fn", ["&", "args"],
@@ -261,7 +262,9 @@ class FlowNode extends ParameterizedNode {
 class UserTaskNode extends ParameterizedNode {
   static get rules() {
     const parameters_rules = {
-      "parameters_has_action": [obju.hasField, "action"]
+      "parameters_has_action": [obju.hasField, "action"],
+      "timeout_has_valid_type": [obju.isFieldTypeIn, "timeout", ["undefined", "number"]],
+      "channels_has_valid_type": [(obj, field) => obj[field] === undefined || obj[field] instanceof Array, "channels"]
     };
     return {
       ...super.rules,
@@ -285,6 +288,12 @@ class UserTaskNode extends ParameterizedNode {
           action: this._spec.parameters.action,
         }
         activity_manager.parameters = {};
+        if (this._spec.parameters.timeout) {
+          activity_manager.parameters.timeout = this._spec.parameters.timeout;
+        }
+        if (this._spec.parameters.channels) {
+          activity_manager.parameters.channels = this._spec.parameters.channels;
+        }
         let next_node_id = this.id;
         let status = ProcessStatus.WAITING;
         if (activity_manager.type === "notify") {
@@ -410,6 +419,7 @@ class HttpSystemTaskNode extends SystemTaskNode {
     const parameters_rules = {
       "parameters_has_request": [obju.hasField, "request"],
       "parameters_request_has_valid_type": [obju.isFieldOfType, "request", "object"],
+      "parameters_valid_response_codes_has_valid_type": [(obj, field) => obj[field] === undefined || obj[field] instanceof Array, "valid_response_codes"]
     };
     const request_rules = {
       "request_has_url": [obju.hasField, "url"],
@@ -437,6 +447,11 @@ class HttpSystemTaskNode extends SystemTaskNode {
         status: err.response.status,
         data: err.response.data,
       };
+    }
+    if (this._spec.parameters.valid_response_codes) {
+      if (!this._spec.parameters.valid_response_codes.includes(result.status)) {
+        throw new Error(`Invalid response status: ${result.status}`);
+      }
     }
     return [result, ProcessStatus.RUNNING];
   }
@@ -475,6 +490,48 @@ class TimerSystemTaskNode extends SystemTaskNode {
   }
 }
 
+class StartProcessSystemTaskNode extends SystemTaskNode {
+  static get rules() {
+    const parameters_rules = {
+      "parameters_has_workflow_name": [obju.hasField, "workflow_name"],
+      "parameters_workflow_name_has_valid_type": [obju.isFieldOfType, "workflow_name", "string"],
+      "parameters_has_actor_data": [obju.hasField, "actor_data"],
+      "parameters_actor_data_has_valid_type": [obju.isFieldOfType, "actor_data", "object"],
+    };
+
+    return {
+      ...super.rules,
+      "parameters_nested_validations": [new Validator(parameters_rules), "parameters"],
+    };
+  }
+
+  validate() {
+    return StartProcessSystemTaskNode.validate(this._spec);
+  }
+
+  _preProcessing({ bag, input, actor_data, environment }) {
+    const prepared_input = super._preProcessing({ bag: bag, input, actor_data: actor_data, environment: environment });
+    const prepared_workflow_name = prepare(this._spec.parameters.workflow_name, { bag: bag, result: input, actor_data: actor_data, environment: environment });
+    const prepared_actor_data = prepare(this._spec.parameters.actor_data, { bag: bag, result: input, actor_data: actor_data, environment: environment });
+    return {
+      workflow_name: prepared_workflow_name,
+      input: prepared_input,
+      actor_data: prepared_actor_data,
+    };
+  };
+
+  async _run(execution_data, lisp) {
+    const process = await process_manager.createProcessByWorkflowName(
+      execution_data.workflow_name,
+      execution_data.actor_data,
+      execution_data.input,
+    );
+    process_manager.runProcess(process.id, execution_data.actor_data);
+
+    return [{ process_id: process.id }, ProcessStatus.RUNNING];
+  }
+}
+
 module.exports = {
   Node: Node,
   StartNode: StartNode,
@@ -489,5 +546,6 @@ module.exports = {
   SystemTaskNode: SystemTaskNode,
   SetToBagSystemTaskNode: SetToBagSystemTaskNode,
   HttpSystemTaskNode: HttpSystemTaskNode,
-  TimerSystemTaskNode: TimerSystemTaskNode
+  TimerSystemTaskNode: TimerSystemTaskNode,
+  StartProcessSystemTaskNode: StartProcessSystemTaskNode,
 };
