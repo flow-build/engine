@@ -4,7 +4,7 @@
   "description": "workflow engine from flow-build to work in multiple plataforms",
   "dependencies": {
     "ajv": "^6.12.0",
-    "axios": "^0.19.2",
+    "axios": "^0.21.1",
     "delegates": "^1.0.0",
     "knex": "^0.19.5",
     "lodash": "latest",
