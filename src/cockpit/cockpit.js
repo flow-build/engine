@@ -36,7 +36,6 @@ class Cockpit {
       .method('fetchProcessList')
       .method("fetchProcessStateHistory")
       .method("abortProcess")
-      .method('setProcessState')
       .method("saveWorkflow")
       .method("fetchWorkflow")
       .method("deleteWorkflow")
@@ -48,24 +47,25 @@ class Cockpit {
     Cockpit.instance = this;
   }
 
-  async fetchWorkflowsWithProcessStatusCount(actor_data) {
-    const workflows_data = await Process.getPersist().getWorkflowWithProcesses();
-    const allowed_workflows = await this._filterForAllowedWorkflows(workflows_data, actor_data);
-    return allowed_workflows.reduce((accum, workflow) => {
-      const process_status = workflow.state.status;
-      const workflow_name = workflow.name;
-      if (accum[workflow_name]) {
-        if (accum[workflow_name][process_status]) {
-          accum[workflow_name][process_status] += 1;
+  async fetchWorkflowsWithProcessStatusCount(filters) {
+    const workflows_data = await Process.getPersist().getWorkflowWithProcesses(filters);
+    return workflows_data.reduce((accum, workflow) => {
+      const workflow_id = workflow.id;
+      if (!accum[workflow_id]) {
+        accum[workflow_id] = {
+          workflow_name: workflow.name,
+          workflow_description: workflow.description,
+          workflow_version: workflow.version,
+        }
+      }
+
+      if (workflow.state) {
+        const process_status = workflow.state.status;
+        if (accum[workflow_id][process_status]) {
+          accum[workflow_id][process_status] += 1;
         } else {
-          accum[workflow_name][process_status] = 1;
+          accum[workflow_id][process_status] = 1;
         }
-      } else {
-        accum[workflow_name] = {
-          description: workflow.description,
-          blueprint_spec: workflow.blueprint_spec
-        }
-        accum[workflow_name][process_status] = 1;
       }
       return accum;
     }, {});
@@ -78,6 +78,25 @@ class Cockpit {
   async getWorkflowsForActor(actor_data) {
     const workflows_data = await Workflow.getPersist().getAll();
     return await this._filterForAllowedWorkflows(workflows_data, actor_data);
+  }
+
+  async runPendingProcess(process_id, actor_data) {
+    const process = await Process.fetch(process_id);
+    if (!process) {
+      throw new Error("Process not found");
+    }
+    const result = await process.runPendingProcess(actor_data);
+    return result;
+  }
+
+  async setProcessState(process_id, state_data) {
+    let process = await Process.fetch(process_id);
+    if (!process) {
+      throw new Error("Process not found");
+    }
+
+    process = await process.setState(state_data);
+    return process.state;
   }
 
   async _filterForAllowedWorkflows(workflows_data, actor_data) {

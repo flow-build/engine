@@ -1,5 +1,6 @@
 const { prepare } = require("../../input");
 const miniMAL = require("minimal-lisp");
+const crypto_manager = require("../../../crypto_manager");
 
 describe("prepare", () => {
     describe("$mustache", () => {
@@ -10,7 +11,7 @@ describe("prepare", () => {
             const bag = {
                 name: 'exampleName'
             }
-            const result = prepare(source, { bag});
+            const result = prepare(source, { bag });
             expect(result).toEqual("Fullname exampleName");
         });
 
@@ -23,7 +24,7 @@ describe("prepare", () => {
                     '22'
                 ]
             }
-            const result = prepare(source, { bag});
+            const result = prepare(source, { bag });
             expect(result).toEqual("Fullname 1");
         });
 
@@ -36,7 +37,7 @@ describe("prepare", () => {
                     '22'
                 ]
             }
-            const result = prepare(source, { bag});
+            const result = prepare(source, { bag });
             expect(result).toEqual("Fullname 22");
         });
 
@@ -47,10 +48,10 @@ describe("prepare", () => {
             const bag = {
                 name: 'exampleName'
             }
-            const result = prepare(source, { bag});
+            const result = prepare(source, { bag });
             expect(result).toEqual("Fullname ");
         })
-    })
+    });
 
     describe("$js", () => {
         it("javascript simple", () => {
@@ -249,5 +250,208 @@ describe("prepare", () => {
             const result = prepare(source, { bag }, interpreters);
             expect(result).toEqual("string");
         });
-    })
+    });
+
+    describe("$decrypt", () => {
+        describe("default crypto", () => {
+            beforeAll(() => {
+                const crypto = crypto_manager.buildCrypto("", { key: "12345678901234567890123456789012" });
+                crypto_manager.setCrypto(crypto);
+            });
+
+            afterAll(() => {
+                crypto_manager.setCrypto();
+            });
+
+            test("simple decrypt reference", () => {
+                const source = {
+                    $decrypt: "bag.value",
+                };
+
+                const crypto = crypto_manager.getCrypto();
+                const value = "example of value to be encrypted";
+                const encrypted_value = crypto.encrypt(value);
+                const bag = {
+                    value: encrypted_value
+                };
+
+                const result = prepare(source, { bag });
+                expect(result).toEqual(value);
+            });
+        });
+    });
+
+    describe("$map", () => {
+        it("map a fixed array", () => {
+            const source = {
+                $map: {
+                    array: [
+                        {
+                            id: "22"
+                        },
+                        {
+                            id: 33
+                        },
+                        {
+                            id: null
+                        },
+                        {
+                        },
+                        22
+                    ],
+                    value: {
+                        $ref: "id"
+                    }
+                }
+            };
+            const bag = {}
+            const result = prepare(source, { bag });
+            expect(result).toEqual(["22", 33, null, undefined, undefined]);
+        });
+
+        it("map a array from $js", () => {
+            const source = {
+                $map: {
+                    array: { $js: "({bag}) => bag.users" },
+                    value: {
+                        $ref: "id"
+                    }
+                }
+            };
+            const bag = {
+                users: [
+                    {
+                        id: "22"
+                    },
+                    {
+                        id: 33
+                    },
+                    {
+                        id: null
+                    },
+                    {
+                    },
+                    22
+                ]
+            }
+            const result = prepare(source, { bag });
+            expect(result).toEqual(["22", 33, null, undefined, undefined]);
+        });
+
+        it("map array object to array string using $ref", () => {
+            const source = {
+                $map: {
+                    array: { $ref: "bag.users" },
+                    value: {
+                        $ref: "id"
+                    }
+                }
+            };
+            const bag = {
+                users: [
+                    {
+                        id: "22"
+                    },
+                    {
+                        id: 33
+                    },
+                    {
+                        id: null
+                    },
+                    {
+                    },
+                    22
+                ]
+            }
+            const result = prepare(source, { bag });
+            expect(result).toEqual(["22", 33, null, undefined, undefined]);
+        });
+
+        it("map array object to object using $ref, $mustache, fixed value", () => {
+            const source = {
+                $map: {
+                    array: { $ref: "bag.users" },
+                    value: {
+                        id: {
+                            $ref: "id"
+                        },
+                        fullName: {
+                            $mustache: "{{first_name}} {{last_name}}"
+                        },
+                        value: 3000,
+                        valid: true,
+                        status: "new",
+                    }
+                }
+            };
+            const bag = {
+                users: [
+                    {
+                        id: "22",
+                        first_name: "Jose",
+                        last_name: "Faria"
+                    },
+                    {
+                        id: 33,
+                        first_name: "Maria"
+                    },
+                    {
+                        last_name: "Silva"
+                    }
+                ]
+            }
+            const result = prepare(source, { bag });
+            expect(result).toEqual([
+                {
+                    id: "22",
+                    fullName: "Jose Faria",
+                    value: 3000,
+                    valid: true,
+                    status: "new",
+                },
+                {
+                    id: 33,
+                    fullName: "Maria ",
+                    value: 3000,
+                    valid: true,
+                    status: "new",
+                },
+                {
+                    id: undefined,
+                    fullName: " Silva",
+                    value: 3000,
+                    valid: true,
+                    status: "new",
+                },
+            ]);
+        });
+
+        it("returns the value if 'array' do not reference a array", () => {
+            const source = {
+                $map: {
+                    array: { $ref: "bag.data" },
+                    value: {
+                        $ref: "id"
+                    }
+                }
+            };
+            const bag = {
+                data: {
+                    users: [
+                        {
+                            id: "22"
+                        }
+                    ]
+                }
+            }
+            const result = prepare(source, { bag });
+            expect(result).toEqual({
+                users: [
+                    {
+                        id: "22"
+                    }
+                ]
+            });
+        });
+    });
 })

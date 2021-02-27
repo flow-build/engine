@@ -103,7 +103,8 @@ const run_example = async () => {
     if (process_ended) {
       console.log('Process ended');
     } else {
-      await engine.pushActivity(process_id, actor_data);
+      const pushResponse = await engine.pushActivity(process_id, actor_data);
+      await pushResponse.processPromise;
     }
   }
 

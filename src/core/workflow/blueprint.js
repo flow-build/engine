@@ -30,7 +30,12 @@ class Blueprint {
   }
 
   static validate_nodes(spec) {
+    const nodeSet = new Set();
     for (const node_spec of spec.nodes) {
+      if (nodeSet.has(node_spec.id)) {
+        return [false, `found existing node_id ${node_spec.id}`];
+      }
+      nodeSet.add(node_spec.id)
       const [is_valid, error] = Blueprint._parseNode(node_spec).validate();
       if (!is_valid) {
         const node_id = node_spec.id;
@@ -42,7 +47,12 @@ class Blueprint {
   }
 
   static validate_lanes(spec) {
+    const laneSet = new Set();
     for (const lane_spec of spec.lanes) {
+      if (laneSet.has(lane_spec.id)) {
+        return [false, `found existing lane_id ${lane_spec.id}`];
+      }
+      laneSet.add(lane_spec.id);
       const [is_valid, error] = Blueprint._parseLane(lane_spec).validate();
       if (!is_valid) {
         const lane_id = lane_spec.id;

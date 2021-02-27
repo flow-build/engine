@@ -20,7 +20,7 @@ const blueprint_spec = {
     {
       id: "2",
       type: "UserTask",
-      name: "User task node",
+      name: "First user task node",
       next: "3",
       lane_id: "1",
       parameters: {
@@ -28,13 +28,22 @@ const blueprint_spec = {
         action: "userAction",
         input: {
           notifyData: "Notify user"
+        },
+        activity_schema: {
+          type: "object",
+          properties: {
+            textParam: {
+              type: "string"
+            }
+          },
+          required: [ 'textParam']
         }
       }
     },
     {
       id: "3",
       type: "UserTask",
-      name: "User task node",
+      name: "Second user task node",
       next: "99",
       lane_id: "1",
       parameters: {

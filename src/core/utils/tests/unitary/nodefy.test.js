@@ -5,16 +5,24 @@ const { SystemTaskNode } = require("../../../workflow/nodes");
 const { nodes_ } = require("../../../workflow/tests/unitary/node_samples");
 
 function testFunction(firstTestArg, secondTestArg) {
-  return [firstTestArg, secondTestArg];
+  return {
+    first: firstTestArg,
+    second: secondTestArg
+  };
 }
 
 class testClass {
   firstTestMethod(firstTestArg, secondTestArg) {
-    return [firstTestArg, secondTestArg];
+    return {
+      first: firstTestArg,
+      second: secondTestArg
+    };
   }
 
   secondTestMethod(firstTestArg, secondTestArg) {
-    return [secondTestArg, firstTestArg];
+    return {
+      second: secondTestArg
+    };
   }
 }
 
@@ -31,7 +39,35 @@ describe("Nodefy Function should work", () => {
     const custom_node = new custom_node_class();
     const execution_data = {firstTestArg: "first", secondTestArg: "second"};
     const result = await custom_node._run(execution_data, null);
-    expect(result[0]).toStrictEqual(["first", "second"]);
+    expect(result[0]).toEqual({
+      first: "first",
+      second: "second",
+    });
+    expect(result[1]).toBe("running");
+  });
+
+  test("CustomSystemTaskNode _run formats array response as object with data", async () => {
+    const custom_node_class = nodefyFunction((firstTestArg, secondTestArg) => [firstTestArg, secondTestArg]);
+    const custom_node = new custom_node_class();
+    const execution_data = {firstTestArg: "first", secondTestArg: "second"};
+    const result = await custom_node._run(execution_data, null);
+    expect(result[0]).toEqual({
+      data: [
+        "first",
+        "second",
+      ],
+    });
+    expect(result[1]).toBe("running");
+  });
+
+  test("CustomSystemTaskNode _run formats string response as object with data", async () => {
+    const custom_node_class = nodefyFunction((firstTestArg) => firstTestArg);
+    const custom_node = new custom_node_class();
+    const execution_data = {firstTestArg: "first", secondTestArg: "second"};
+    const result = await custom_node._run(execution_data, null);
+    expect(result[0]).toEqual({
+      data: "first",
+    });
     expect(result[1]).toBe("running");
   });
 
@@ -53,9 +89,29 @@ describe("Nodefy Function should work", () => {
     const external_input = {};
 
     const result = await custom_node.run({bag, input, external_input});
-    expect(result.result).toStrictEqual(["first", "second"]);
+    expect(result.result).toStrictEqual({
+      first: "first",
+      second: "second",
+    });
     expect(result.error).toBeNull();
     expect(result.status).toBe("running");
+  });
+
+  test("CustomSysteemTaskNode returns error if function throw error", async () => {
+    const node_spec = _.cloneDeep(nodes_.custom_system_task);
+    const custom_node_class = nodefyFunction(() => {
+      throw new Error("Error at custom function")
+    });
+
+    const custom_node = new custom_node_class(node_spec);
+    const bag = {};
+    const input = {};
+    const external_input = {};
+
+    const result = await custom_node.run({bag, input, external_input});
+    expect(result.status).toEqual("error");
+    expect(result.error).toMatch("Error at custom function");
+    expect(result.result).toBeNull();
   });
 });
 
@@ -80,7 +136,10 @@ describe("Nodefy Class should work", () => {
     const custom_node = new custom_node_class();
     const execution_data = {firstTestArg: "first", secondTestArg: "second"};
     const result = await custom_node._run(execution_data, null);
-    expect(result[0]).toStrictEqual(["first", "second"]);
+    expect(result[0]).toStrictEqual({
+      first: "first",
+      second: "second",
+    });
     expect(result[1]).toBe("running");
   });
 
@@ -105,7 +164,9 @@ describe("Nodefy Class should work", () => {
     const external_input = {};
 
     const result = await custom_node.run({bag, input, external_input});
-    expect(result.result).toStrictEqual(["second", "first"]);
+    expect(result.result).toStrictEqual({
+      second: "second",
+    });
     expect(result.error).toBeNull();
     expect(result.status).toBe("running");
   });

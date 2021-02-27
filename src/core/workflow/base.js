@@ -65,6 +65,11 @@ class PersistedEntity extends BaseEntity {
     await this.getPersist().save(this.serialize(), ...args);
     return this;
   }
+
+  async delete(...args) {
+    await this.getPersist().delete(this.id, ...args);
+    return this;
+  }
 }
 
 module.exports = {

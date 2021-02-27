@@ -3,37 +3,54 @@ const settings = require("../settings/settings");
 const { Engine } = require("../src/engine/engine");
 
 const blueprint_spec = {
-  requirements: ["core"],
+  requirements: [
+    "core"
+  ],
   prepare: [],
   nodes: [
     {
       id: "1",
       type: "Start",
-      name: "Start node",
-      parameters: {
-        input_schema: {},
-      },
+      name: "Start Pizza 2 WF",
       next: "2",
+      parameters: {
+        input_schema: {}
+      },
       lane_id: "1"
     },
     {
       id: "2",
-      type: "ScriptTask",
-      name: "Create values for bag",
+      type: "SystemTask",
+      name: "Take the order",
+      category: "HTTP",
       next: "3",
       lane_id: "1",
       parameters: {
-        input: {},
-        script: {
-          package: "",
-          function: [
-            "fn",
-            ["&", "args"],
-            {
-              example: "bag_example",
-              value: "bag_value",
-            },
+        input: {
+          status: "pending",
+          qty: 1,
+          flavors: [
+            "portuguesa"
           ],
+          comments: "comentarios"
+        },
+        request: {
+          url: "https://5faabe16b5c645001602b152.mockapi.io/order",
+          verb: "POST",
+          headers: {
+            ContentType: "application/json"
+          }
+        }
+      },
+      result_schema: {
+        type: "object",
+        properties: {
+          id: { type: "string" },
+          qty: { type: "string" },
+          status: { type: "string" },
+          flavors: { type: "array" },
+          comments: { type: "string" },
+          createdAt: { type: "string", format: "date-time" }
         },
       }
     },
@@ -41,20 +58,21 @@ const blueprint_spec = {
       id: "3",
       type: "SystemTask",
       category: "SetToBag",
-      name: "Set values on bag",
+      name: "Save Order",
       next: "4",
       lane_id: "1",
       parameters: {
         input: {
-          example: {"$ref": "result.example"},
-          valueResult: {"$ref": "result.value"}
+          order: {
+            "$ref": "result.data"
+          }
         }
       }
     },
     {
       id: "4",
       type: "Finish",
-      name: "Finish node",
+      name: "Finish",
       next: null,
       lane_id: "1"
     }
@@ -62,11 +80,18 @@ const blueprint_spec = {
   lanes: [
     {
       id: "1",
-      name: "default",
-      rule: lisp.return_true()
+      name: "client lane",
+      rule: [
+        "fn",
+        [
+          "&",
+          "args"
+        ],
+        true
+      ]
     }
   ],
-  environment: {},
+  environment: {}
 };
 
 const actor_data = {
@@ -74,7 +99,7 @@ const actor_data = {
   claims: []
 };
 
-const run_example = async() => {
+const run_example = async () => {
   console.log("===  RUNNING bag_example  ===");
   const engine = new Engine(...settings.persist_options);
   const workflow = await engine.saveWorkflow("bag_example", "bag showcase", blueprint_spec);
@@ -86,4 +111,3 @@ const run_example = async() => {
 }
 
 run_example().then(res => { console.log(res); });
-

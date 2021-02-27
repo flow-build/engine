@@ -61,7 +61,7 @@ class Workflow extends PersistedEntity {
   }
 
   async createProcess(actor_data, initial_bag = {}) {
-    return await new Process(this._id, Blueprint.parseSpec(this._blueprint_spec)).create(actor_data, initial_bag);
+    return await new Process({ id: this._id, name: this._name }, Blueprint.parseSpec(this._blueprint_spec)).create(actor_data, initial_bag);
   }
 }
 

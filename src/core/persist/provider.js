@@ -8,7 +8,8 @@ const { ProcessKnexPersist,
         WorkflowKnexPersist,
         PackagesKnexPersist,
         ActivityManagerKnexPersist,
-        ActivityKnexPersist } = require("../persist/knex");
+        ActivityKnexPersist,
+        TimerKnexPersist } = require("../persist/knex");
 const { PersistorSingleton } = require("../persist/persist");
 
 class PersistorProvider {
@@ -36,7 +37,8 @@ class PersistorProvider {
         Workflow: [WorkflowKnexPersist, db],
         Packages: [PackagesKnexPersist, db],
         ActivityManager: [ActivityManagerKnexPersist, db],
-        Activity: [ActivityKnexPersist, db]
+        Activity: [ActivityKnexPersist, db],
+        Timer: [TimerKnexPersist, db]
       };
       break;
     default:

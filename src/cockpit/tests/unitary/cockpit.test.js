@@ -18,6 +18,8 @@ afterAll(async () => {
   if (settings.persist_options[0] === "knex"){
     await Workflow.getPersist()._db.destroy();;
   }
+  const engine = new Engine(...settings.persist_options);
+  Engine.kill();
 });
 
 describe("getProcessStateHistory works", () => {
@@ -144,16 +146,162 @@ describe("Adding extra nodes works", () => {
   });
 });
 
-test("fetchWorkflowsWithProcessStatusCount works", async () => {
-  const cockpit = new Cockpit(...settings.persist_options);
-  const workflow = await cockpit.saveWorkflow("sample", "sample", blueprints_.minimal);
-  await cockpit.createProcess(workflow.id, actors_.simpleton);
-  const process = await cockpit.createProcess(workflow.id, actors_.simpleton);
-  await cockpit.runProcess(process.id, actors_.simpleton, {});
+describe("fetchWorkflowsWithProcessStatusCount", () => {
+  function sleep() {
+    return new Promise((resolve) => setTimeout(resolve, 1));
+  }
 
-  let response = await cockpit.fetchWorkflowsWithProcessStatusCount(actors_.simpleton);
-  expect(response.sample.unstarted).toBe(1);
-  expect(response.sample.finished).toBe(1);
+  test("base test", async () => {
+    const cockpit = new Cockpit(...settings.persist_options);
+    const workflow = await cockpit.saveWorkflow("sample", "sample", blueprints_.minimal);
+    await cockpit.createProcess(workflow.id, actors_.simpleton);
+    const process = await cockpit.createProcess(workflow.id, actors_.simpleton);
+    await cockpit.runProcess(process.id, actors_.simpleton, {});
+
+    let response = await cockpit.fetchWorkflowsWithProcessStatusCount();
+    expect(response[workflow.id].workflow_name).toEqual("sample");
+    expect(response[workflow.id].workflow_description).toEqual("sample");
+    expect(response[workflow.id].workflow_version).toEqual(1);
+    expect(response[workflow.id].unstarted).toEqual(1);
+    expect(response[workflow.id].finished).toEqual(1);
+  });
+
+  test("workflow_id filter works", async () => {
+    const cockpit = new Cockpit(...settings.persist_options);
+    const workflow1 = await cockpit.saveWorkflow("sample1", "sample1", blueprints_.minimal);
+    await cockpit.createProcess(workflow1.id, actors_.simpleton);
+    const workflow2 = await cockpit.saveWorkflow("sample2", "sample2", blueprints_.minimal);
+    await cockpit.createProcess(workflow2.id, actors_.simpleton);
+
+    let response = await cockpit.fetchWorkflowsWithProcessStatusCount({ workflow_id: workflow2.id });
+    expect(response[workflow1.id]).toBeUndefined();
+    expect(response[workflow2.id]).toBeDefined();
+  });
+
+  test("start_date filter works", async () => {
+    const cockpit = new Cockpit(...settings.persist_options);
+    const workflow = await cockpit.saveWorkflow("sample", "sample", blueprints_.minimal);
+    await cockpit.createProcess(workflow.id, actors_.simpleton);
+
+    // Force time difference
+    await sleep();
+    const start_date = new Date();
+    await sleep();
+
+    const process = await cockpit.createProcess(workflow.id, actors_.simpleton);
+    await cockpit.runProcess(process.id, actors_.simpleton, {});
+
+    let response = await cockpit.fetchWorkflowsWithProcessStatusCount({ start_date });
+    expect(response[workflow.id]).toBeDefined();
+    expect(response[workflow.id].unstarted).toBeUndefined();
+    expect(response[workflow.id].finished).toEqual(1);
+
+    response = await cockpit.fetchWorkflowsWithProcessStatusCount({ start_date: start_date.toJSON() });
+    expect(response[workflow.id]).toBeDefined();
+    expect(response[workflow.id].unstarted).toBeUndefined();
+    expect(response[workflow.id].finished).toEqual(1);
+  });
+
+  test("end_date filter works", async () => {
+    const cockpit = new Cockpit(...settings.persist_options);
+    const workflow = await cockpit.saveWorkflow("sample", "sample", blueprints_.minimal);
+    await cockpit.createProcess(workflow.id, actors_.simpleton);
+
+    // Force time difference
+    await sleep();
+    const end_date = new Date();
+    await sleep();
+
+    const process = await cockpit.createProcess(workflow.id, actors_.simpleton);
+    await cockpit.runProcess(process.id, actors_.simpleton, {});
+
+    let response = await cockpit.fetchWorkflowsWithProcessStatusCount({ end_date: end_date });
+    expect(response[workflow.id]).toBeDefined();
+    expect(response[workflow.id].unstarted).toEqual(1);
+    expect(response[workflow.id].finished).toBeUndefined();
+
+    response = await cockpit.fetchWorkflowsWithProcessStatusCount({ end_date: end_date.toJSON() });
+    expect(response[workflow.id]).toBeDefined();
+    expect(response[workflow.id].unstarted).toEqual(1);
+    expect(response[workflow.id].finished).toBeUndefined
+  });
+
+  test("workflow without process", async () => {
+    const cockpit = new Cockpit(...settings.persist_options);
+    const workflow = await cockpit.saveWorkflow("sample", "sample description", blueprints_.minimal);
+
+    let response = await cockpit.fetchWorkflowsWithProcessStatusCount();
+    expect(response[workflow.id]).toEqual({
+      workflow_name: "sample",
+      workflow_description: "sample description",
+      workflow_version: 1,
+    });
+  });
+});
+
+describe("runPendingProcess", () => {
+  const cockpit = new Cockpit(...settings.persist_options);
+
+  test("works", async () => {
+    const workflow = await cockpit.saveWorkflow("sample", "sample", blueprints_.minimal);
+    const process = await cockpit.createProcess(workflow.id, actors_.simpleton);
+    await cockpit.setProcessState(process.id, {
+      bag: process.state.bag,
+      result: {},
+      next_node_id: process.state.next_node_id,
+    });
+
+    const result = await cockpit.runPendingProcess(process.id);
+
+    const process_state_data_history = await cockpit.fetchProcessStateHistory(process.id);
+    expect(process_state_data_history).toHaveLength(4);
+  });
+
+  test("pass actor_data to run process", async () => {
+    const workflow = await cockpit.saveWorkflow("sample", "sample", blueprints_.use_actor_data);
+    let process = await cockpit.createProcess(workflow.id, actors_.simpleton);
+    process = await cockpit.runProcess(process.id, actors_.simpleton);
+    await cockpit.setProcessState(process.id, {
+      bag: process.state.bag,
+      result: {},
+      next_node_id: "2",
+    });
+
+    const result = await cockpit.runPendingProcess(process.id, actors_.admin);
+
+    const process_state_data_history = await cockpit.fetchProcessStateHistory(process.id);
+    expect(process_state_data_history).toHaveLength(7);
+    const states_node_2 = process_state_data_history.filter(state => state.node_id === "2");
+    expect(states_node_2).toHaveLength(2);
+    expect(states_node_2[0].step_number > states_node_2[1].step_number).toEqual(true);
+    expect(states_node_2[0].bag).toEqual({ runUser: actors_.admin });
+    expect(states_node_2[1].bag).toEqual({ runUser: actors_.simpleton });
+  });
+
+  test("exception with unknow process id", async () => {
+    const process_id = uuid();
+
+    await expect(cockpit.runPendingProcess(process_id)).rejects.toThrowError("Process not found");
+  });
+
+  test("exception with process unstarted", async () => {
+    const workflow = await cockpit.saveWorkflow("sample", "sample", blueprints_.minimal);
+    const process = await cockpit.createProcess(workflow.id, actors_.simpleton);
+
+    await expect(cockpit.runPendingProcess(process.id)).rejects.toThrowError("invalid status");
+  });
+
+  test("exception with invalid next node", async () => {
+    const workflow = await cockpit.saveWorkflow("sample", "sample", blueprints_.minimal);
+    const process = await cockpit.createProcess(workflow.id, actors_.simpleton);
+    await cockpit.setProcessState(process.id, {
+      bag: process.state.bag,
+      result: {},
+      next_node_id: "invalid node",
+    });
+
+    await expect(cockpit.runPendingProcess(process.id)).rejects.toThrowError("Node not found");
+  });
 });
 
 const _clean = async () => {
@@ -162,26 +310,13 @@ const _clean = async () => {
   const activity_manager_persist = persistor.getPersistInstance("ActivityManager");
   const process_persist = persistor.getPersistInstance("Process");
   const workflow_persist = persistor.getPersistInstance("Workflow");
+  const timer_persist = persistor.getPersistInstance("Timer");
+
   await activity_persist.deleteAll();
   await activity_manager_persist.deleteAll();
   await process_persist.deleteAll();
   await workflow_persist.deleteAll();
-};
-
-const _validate_task_data = (task, workflow, process_state) => {
-  const blueprint_spec = workflow.blueprint_spec;
-  const nodes_spec = blueprint_spec.nodes;
-  const lanes_spec = blueprint_spec.lanes;
-  const current_node_id = process_state.node_id;
-  const current_node = _.find(nodes_spec, {id: current_node_id});
-  const current_lane = _.find(lanes_spec, {id: current_node.lane_id});
-  expect(task.workflow_name).toBe(workflow.name);
-  expect(task.process_id).toBe(process_state.process_id);
-  expect(task.process_status).toBe(process_state.status);
-  expect(task.process_last_update).toMatchObject(process_state.created_at);
-  expect(task.node_name).toBe(current_node.id);
-  expect(task.lane_name).toBe(current_lane.name);
-  expect(task.process_step_number).toBe(process_state.step_number);
+  await timer_persist.deleteAll();
 };
 
 const _validate_process_state_data = (process_state_data, process_state) => {

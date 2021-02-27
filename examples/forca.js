@@ -461,7 +461,8 @@ const run_example = async () => {
       letter: external_input[0],
       // actorId: "1"
     });
-    process = await engine.pushActivity(process_id, actor_data);
+    const pushResponse = await engine.pushActivity(process_id, actor_data);
+    process = await pushResponse.processPromise;
   }
 }
 

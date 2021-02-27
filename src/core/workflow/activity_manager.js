@@ -6,9 +6,13 @@ const { Packages } = require("./packages");
 const { Lane } = require("./lanes");
 const { Activity,
         ActivityStatus } = require("./activity");
+const { Timer } = require("./timer");
+
 const { getActivityManagerNotifier } = require("../notifier_manager");
 const process_manager = require("./process_manager");
 const activity_manager_factory = require("../utils/activity_manager_factory");
+const crypto_manager = require("../crypto_manager");
+const ajvValidator = require("../utils/ajvValidator");
 
 class ActivityManager extends PersistedEntity {
 
@@ -70,35 +74,50 @@ class ActivityManager extends PersistedEntity {
   }
 
   static async fetchActivityManagerFromProcessId(process_id, actor_data, status) {
-    const activity_managers = await ActivityManager.fetchActivitiesForActorFromStatus(ActivityStatus.STARTED,
-                                                                             actor_data,
-                                                                             {process_id: process_id, type: "commit"});
-    assert.strictEqual(activity_managers.length, 1);
-    const serialized = activity_managers[0];
-    const deserialized = ActivityManager.deserialize(serialized);
-    deserialized.activities = await this.getPersist().getActivities(deserialized.id);
-    return deserialized;
-  }
-
-  static async fetchActivityForProcess(process_id, actor_data, status) {
-    const activity_managers = await ActivityManager.fetchActivitiesForActorFromStatus(ActivityStatus.STARTED,
-                                                                             actor_data,
-                                                                             {process_id: process_id});
-    assert.strictEqual(activity_managers.length, 1);
-    const serialized = activity_managers[0];
-    serialized.activities = await this.getPersist().getActivities(serialized.id);
-    return serialized;
-  }
-
-  static async fetch(activity_manager_id, actor_data) {
-    const activity_manager = await this.getPersist().getActivityDataFromId(activity_manager_id);
-    const allowed_activities = await ActivityManager.checkActorPermission([activity_manager], actor_data);
+    const activity_managers = await ActivityManager.fetchActivitiesForActorFromStatus(
+      status,
+      actor_data,
+      { process_id: process_id, type: "commit" }
+    );
     let result;
-    if (allowed_activities.length === 1) {
-      result = allowed_activities[0];
+    if (activity_managers.length === 1) {
+      result = activity_managers[0];
       result.activities = await this.getPersist().getActivities(result.id);
     }
     return result;
+  }
+
+  static async fetch(activity_manager_id) {
+    const activity_manager = await this.getPersist().getActivityDataFromId(activity_manager_id);
+    if (activity_manager) {
+      activity_manager.activities = await this.getPersist().getActivities(activity_manager.id);
+    }
+    return activity_manager;
+  }
+
+  static async get(activity_manager_id, actor_data) {
+    let result;
+    const activity_manager = await this.getPersist().getActivityDataFromId(activity_manager_id);
+    if (activity_manager) {
+      const allowed_activities = await ActivityManager.checkActorPermission([activity_manager], actor_data);
+      if (allowed_activities.length === 1) {
+        result = allowed_activities[0];
+        result.activities = await this.getPersist().getActivities(result.id);
+      }
+    }
+    return result;
+  }
+
+  static async interruptActivityManagerForProcess(process_id) {
+    const full_activity_manager_data = await this.getPersist().getActivityDataFromStatus(
+      ActivityStatus.STARTED,
+      { process_id: process_id, type: "commit" }
+    );
+    for (const activity_manager_data of full_activity_manager_data) {
+      const activity_manager = ActivityManager.deserialize(activity_manager_data);
+      activity_manager.activities = activity_manager_data.activities;
+      await activity_manager.interruptActivity(process_id);
+    }
   }
 
   get process_state_id() {
@@ -159,20 +178,35 @@ class ActivityManager extends PersistedEntity {
     this._activities = [];
   }
 
-  async save(...args) {
-    this._initTimeout();
-    return await super.save(...args);
+  async save(trx=false, ...args) {
+    await this._initTimeout(trx);
+    return await super.save(trx, ...args);
   }
 
   async beginActivity() {
     return this.props.result;
   }
 
-  async commitActivity(process_id, actor_data, external_input) {
+  async commitActivity(process_id, actor_data, external_input, activity_schema) {
+    if (this.parameters.encrypted_data) {
+      const crypto = crypto_manager.getCrypto();
+      for (const encrypted_data of this.parameters.encrypted_data) {
+        const data = _.get(external_input, encrypted_data);
+        if (data) {
+          const encrypted = crypto.encrypt(data);
+          _.set(external_input, encrypted_data, encrypted);
+        }
+      }
+    }
+
+    if (activity_schema) {
+      ajvValidator.validateActivityManager(activity_schema, external_input);
+    }
+
     const activity = await new Activity(this._id,
-                                        actor_data,
-                                        external_input,
-                                        ActivityStatus.STARTED).save();
+      actor_data,
+      external_input,
+      ActivityStatus.STARTED).save();
     this._activities.push(activity);
     await this.save();
     await this._notifyActivityManager(process_id);
@@ -182,6 +216,13 @@ class ActivityManager extends PersistedEntity {
   async pushActivity(process_id) {
     const is_completed = await this._validateActivity(process_id);
     return [is_completed, this._activities];
+  }
+
+  async interruptActivity(process_id) {
+    this._status = ActivityStatus.INTERRUPTED;
+    await this.save();
+    await this._notifyActivityManager(process_id);
+    return this;
   }
 
   async _validateActivity(process_id){
@@ -202,26 +243,49 @@ class ActivityManager extends PersistedEntity {
     }
   }
 
-  _initTimeout() {
+  async _initTimeout(trx=false) {
     const timeout = this.parameters.timeout;
     if (timeout && this.status !== ActivityStatus.COMPLETED) {
-      const timeout_id = uuid();
-      this.parameters.timeout_id = timeout_id;
-      setTimeout(async () => {
-        const activity_manager_data = await this.getPersist().getActivityDataFromId(this.id);
-        if (
-          activity_manager_data
-          && activity_manager_data.parameters.timeout_id === timeout_id
-          && activity_manager_data.activity_status === ActivityStatus.STARTED
-        ) {
-          const activity_manager = ActivityManager.deserialize(activity_manager_data);
-          activity_manager.status = ActivityStatus.COMPLETED;
-          await activity_manager.save();
-          await activity_manager._notifyActivityManager(activity_manager_data.process_id);
-          await process_manager.continueProcess(activity_manager_data.process_id, { is_continue: true, activities: this._activities });
-        }
-      }, (timeout * 1000));
+      const next_step_number = this.parameters.next_step_number;
+
+      const db = trx ? trx : Timer.getPersist()._db
+      await db('timer')
+          .where("resource_type", "ActivityManager")
+          .andWhere("resource_id", this.id)
+          .update({active: false});
+
+      console.log(`      CLEARED TIMERS FOR AM ${this.id} `);
+
+      console.log(`      CREATING NEW TIMER ON AM ${this.id} `);
+      const timer = new Timer("ActivityManager", this.id, Timer.timeoutFromNow(this.parameters.timeout), {next_step_number});
+      await timer.save(trx);
+      console.log(`      NEW TIMER ON AM ${this.id} TIMER ${timer.id}`);
+
+      this.parameters.timeout_id = timer.id;
     }
+  }
+
+  async timeout(timer, trx){
+      console.log(`TIMEOUT ON AM ${this.id} TIMER ${timer.id}`);
+
+      const activity_manager_data = await ActivityManager.fetch(timer.resource_id);
+      if (
+          activity_manager_data
+          && activity_manager_data.parameters.timeout_id === timer.id
+          && activity_manager_data.activity_status === ActivityStatus.STARTED
+      ) {
+        const activity_manager = ActivityManager.deserialize(activity_manager_data);
+        activity_manager.status = ActivityStatus.COMPLETED;
+        await activity_manager.save(trx);
+        await activity_manager._notifyActivityManager(activity_manager_data.process_id);
+        if (activity_manager.type === "commit") {
+          await process_manager.continueProcess(activity_manager_data.process_id, {
+            is_continue: true,
+            activities: activity_manager_data.activities
+          }, timer.params.next_step_number);
+        }
+      }
+
   }
 }
 

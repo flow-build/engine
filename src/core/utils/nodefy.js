@@ -17,10 +17,13 @@ const nodefyFunction = (method) => {
         return execution_data[param_name];
       });
       let result;
-      try {
-        result = await method(...args);
-      } catch(err) {
-        result = {error: err};
+      const response = await method(...args);
+      if (typeof response === 'object' && !(response instanceof Array)) {
+        result = response;
+      } else {
+        result = {
+          data: response,
+        };
       }
       return [result, 'running'];
     }
