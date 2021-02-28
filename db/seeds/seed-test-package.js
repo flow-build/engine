@@ -1,4 +1,4 @@
-const uuid = require("uuid/v1");
+const { v1: uuid } = require("uuid/v1");
 const { core_package,
         test_package } = require("./packages/packages");
 

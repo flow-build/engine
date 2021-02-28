@@ -7,7 +7,7 @@ const { Timer } = require("../../../workflow/timer");
 const { ProcessStatus } = require("../../../workflow/process_state");
 const { PersistorProvider } = require("../../../persist/provider");
 const { blueprints_, actors_ } = require("./blueprint_samples");
-const uuid = require("uuid/v1");
+const { v1: uuid } = require("uuid/v1");
 
 beforeEach(async () => {
   await _clean();
