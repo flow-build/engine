@@ -1,4 +1,4 @@
-const { v1: uuid } = require("uuid/v1");
+const { v1: uuid } = require("uuid");
 const { PersistorSingleton } = require("../persist/persist");
 
 class BaseEntity {

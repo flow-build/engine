@@ -1,5 +1,5 @@
 const _ = require("lodash");
-const { v1: uuid } = require("uuid/v1");
+const { v1: uuid } = require("uuid");
 const lisp = require("../../../core/lisp");
 const settings = require("../../../../settings/tests/settings");
 const { AssertionError } = require("assert");

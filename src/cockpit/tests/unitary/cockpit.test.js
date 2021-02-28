@@ -1,5 +1,5 @@
 const _ = require("lodash");
-const { v1: uuid } = require("uuid/v1");
+const { v1: uuid } = require("uuid");
 const settings = require("../../../../settings/tests/settings");
 const { Workflow } = require("../../../core/workflow/workflow");
 const { ProcessStatus } = require("../../../core/workflow/process_state");

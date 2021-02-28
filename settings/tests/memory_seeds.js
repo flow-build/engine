@@ -1,4 +1,4 @@
-const { v1: uuid } = require("uuid/v1");
+const { v1: uuid } = require("uuid");
 const { PersistorProvider } = require("../../src/core/persist/provider");
 const { core_package,
         test_package,
