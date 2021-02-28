@@ -1,6 +1,8 @@
 const lisp = require("../src/core/lisp");
 const settings = require("../settings/settings");
 const { Engine } = require("../src/engine/engine");
+const startLogger = require("../src/core/utils/logging");
+const emitter = require("../src/core/utils/emitter");
 
 const blueprint_spec = {
   requirements: ["core"],
@@ -104,8 +106,10 @@ const actor_data = {
   claims: []
 };
 
+startLogger(emitter);
+
 const run_example = async () => {
-  console.log("===  RUNNING bag_example  ===");
+  emitter.emit("===  RUNNING input_schema_example  ===");
   const engine = new Engine(...settings.persist_options);
   const workflow = await engine.saveWorkflow("bag_example", "bag showcase", blueprint_spec);
 
@@ -141,4 +145,4 @@ const run_example = async () => {
   return state_history;
 }
 
-run_example().then(res => { console.log(res); });
+run_example().then(res => { emitter.emit(res); });

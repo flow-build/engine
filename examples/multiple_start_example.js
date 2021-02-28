@@ -1,6 +1,8 @@
 const lisp = require("../src/core/lisp");
 const settings = require("../settings/settings");
 const { Engine } = require("../src/engine/engine");
+const startLogger = require("../src/core/utils/logging");
+const emitter = require("../src/core/utils/emitter");
 
 const blueprint_spec = {
   requirements: ["core"],
@@ -59,18 +61,20 @@ const admin_actor_data = {
   claims: ["admin"]
 };
 
+startLogger(emitter);
+
 const run_example = async() => {
-  console.log("===  RUNNING multiple_start_example  ===");
+  emitter.emit("===  RUNNING multiple_start_example  ===");
   const engine = new Engine(...settings.persist_options);
   
-  engine.setProcessStateNotifier((process_state) => console.log(process_state));
+  engine.setProcessStateNotifier((process_state) => emitter.emit(process_state));
   
-  console.log("===  simpleton start  ===");
+  emitter.emit("===  simpleton start  ===");
   const workflow = await engine.saveWorkflow("multiple_start", "multiple_start", blueprint_spec);
   const simpleton_process = await engine.createProcess(workflow.id, simpleton_actor_data);
   await engine.runProcess(simpleton_process.id, simpleton_actor_data);
   
-  console.log("===  admin start  ===");
+  emitter.emit("===  admin start  ===");
   const admin_process = await engine.createProcess(workflow.id, admin_actor_data);
   await engine.runProcess(admin_process.id, admin_actor_data);
 };

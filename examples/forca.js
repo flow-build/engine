@@ -2,6 +2,8 @@ const readlineSync = require("readline-sync");
 const lisp = require("../src/core/lisp");
 const settings = require("../settings/settings");
 const { Engine } = require("../src/engine/engine");
+const startLogger = require("../src/core/utils/logging");
+const emitter = require("../src/core/utils/emitter");
 
 const blueprint_spec = {
   requirements: ["core"],
@@ -439,11 +441,13 @@ const actor_data = {
   claims: []
 };
 
+startLogger(emitter);
+
 const run_example = async () => {
   function log(data) {
-    console.log(data);
+    emitter.emit(data);
   }
-  console.log("===  RUNNING user_task_example  ===");
+  emitter.emit("===  RUNNING forca_example  ===");
   const engine = new Engine(...settings.persist_options);
 
   // engine.setProcessStateNotifier(log);
@@ -456,7 +460,7 @@ const run_example = async () => {
   while (process.state.status === 'waiting') {
     const external_input = readlineSync.question(
       "<Simulating external client resolution> Type something here\n");
-    console.log(external_input);
+    emitter.emit(external_input);
     await engine.commitActivity(process_id, actor_data, {
       letter: external_input[0],
       // actorId: "1"

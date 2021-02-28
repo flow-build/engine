@@ -1,4 +1,4 @@
-const obju  = require("../utils/object");
+const obju = require("../utils/object");
 const { Validator } = require("../validators");
 
 class Lane {
@@ -17,7 +17,18 @@ class Lane {
   static runRule(spec, actor_data, bag = {}, lisp) {
     const rule_lisp = spec.rule;
     const rule_call = [rule_lisp, actor_data, bag];
-    return lisp.evaluate(rule_call);
+
+    let retval = false;
+
+    try {
+      retval = lisp.evaluate(rule_call);
+    } catch (e) {
+      console.error("ERROR WHILE EVALUATING LANE RULE!");
+      console.error("  LANE RULE ", rule_lisp);
+      console.error(e);
+    }
+
+    return retval;
   }
 
   static validate(spec) {

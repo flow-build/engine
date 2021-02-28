@@ -1485,6 +1485,240 @@ blueprints_.user_encrypt = {
   environment: {},
 }
 
+blueprints_.sub_process = {
+  "name": "pizzaTest",
+  "description": "desc",
+  "blueprint_spec": {
+    "requirements": ["core"],
+    "prepare": [],
+    "nodes": [
+      {
+        "id": "1",
+        "type": "Start",
+        "name": "Start node",
+        "parameters": {
+          "input_schema": {}
+        },
+        "next": "2",
+        "lane_id": "1"
+      },
+      {
+        "id": "2",
+        "type": "ScriptTask",
+        "name": "Create values for bag",
+        "next": "3",
+        "lane_id": "1",
+        "parameters": {
+          "input": {},
+          "script": {
+            "package": "",
+            "function": [
+              "fn",
+              ["&", "args"],
+              {
+                "example": "bag_example",
+                "value": "bag_value"
+              }
+            ]
+          }
+        }
+      },
+      {
+        "id": "3",
+        "type": "SystemTask",
+        "category": "SetToBag",
+        "name": "Set values on bag",
+        "next": "4",
+        "lane_id": "1",
+        "parameters": {
+          "input": {
+            "example": { "$ref": "result.example" },
+            "valueResult": { "$ref": "result.value" }
+          }
+        }
+      },
+      {
+        "id": "4",
+        "type": "SubProcess",
+        "name": "Sub Process base in User task node",
+        "next": "5",
+        "lane_id": "1",
+        "parameters": {
+          "actor_data": {
+            "id": "2",
+            "claims": []
+          },
+          "input": {},
+          "workflow_name": "blueprint_spec_son",
+          "workflow": {
+            "requirements": ["core"],
+            "prepare": [],
+            "nodes": [
+              {
+                "id": "1",
+                "type": "Start",
+                "name": "Start node",
+                "parameters": {
+                  "input_schema": {}
+                },
+                "next": "2",
+                "lane_id": "1"
+              },
+              {
+                "id": "2",
+                "type": "ScriptTask",
+                "name": "Create values for bag",
+                "next": "3",
+                "lane_id": "1",
+                "parameters": {
+                  "input": {},
+                  "script": {
+                    "package": "",
+                    "function": [
+                      "fn",
+                      ["&", "args"],
+                      {
+                        "example": "bag_example",
+                        "value": "bag_value"
+                      }
+                    ]
+                  }
+                }
+              },
+              {
+                "id": "3",
+                "type": "SystemTask",
+                "category": "SetToBag",
+                "name": "Set values on bag",
+                "next": "4",
+                "lane_id": "1",
+                "parameters": {
+                  "input": {
+                    "example": { "$ref": "result.example" },
+                    "valueResult": { "$ref": "result.value" }
+                  }
+                }
+              },
+              {
+                "id": "4",
+                "type": "Finish",
+                "name": "Finish node",
+                "next": null,
+                "lane_id": "1"
+              }
+            ],
+            "lanes": [
+              {
+                "id": "1",
+                "name": "default",
+                "rule": [
+          "fn",
+          [
+            "&",
+            "args"
+          ],
+          true
+        ]
+              }
+            ],
+            "environment": {}
+          },
+          "valid_response": "finished"
+        }
+      },
+      {
+        "id": "5",
+        "type": "ScriptTask",
+        "name": "Print user input",
+        "next": "7",
+        "lane_id": "1",
+        "parameters": {
+          "input": {
+            "userInput": { "$ref": "result.userInput" }
+          },
+          "script": {
+            "function": [
+              "fn",
+              ["input", "&", "args"],
+              [
+                "println",
+                ["`", "User input: "],
+                ["get", "input", ["`", "userInput"]]
+              ]
+            ]
+          }
+        }
+      },
+      {
+        "id": "7",
+        "type": "Finish",
+        "name": "Finish node",
+        "next": null,
+        "lane_id": "1"
+      }
+    ],
+    "lanes": [
+      {
+        "id": "1",
+        "name": "the_only_lane",
+        "rule": [
+          "fn",
+          [
+            "&",
+            "args"
+          ],
+          true
+        ]
+      }
+    ],
+    "environment": {}
+  }
+}
+
+blueprints_.start_with_timeout = {
+  requirements: [],
+  prepare: [],
+  nodes: [
+    {
+      id: "1",
+      type: "Start",
+      name: "start  node",
+      parameters: {
+        input_schema: {},
+        timeout: 5
+      },
+      next: "2",
+      lane_id: "1",
+    },
+    {
+      id: "2",
+      type: "UserTask",
+      name: "user task node",
+      parameters: {
+        action: "example_action",
+        input: {}
+      },
+      next: "99",
+      lane_id: "1",
+    },
+    {
+      id: "99",
+      type: "Finish",
+      name: "finish node",
+      next: null,
+      lane_id: "1",
+    },
+  ],
+  lanes: [
+    {
+      id: "1",
+      name: "only_lane",
+      rule: lisp.return_true(),
+    }
+  ],
+  environment: {},
+}
+
 actors_.sys_admin = {
   "actor_id": "1",
   "claims": ["sys_admin", "admin", "simpleton"]

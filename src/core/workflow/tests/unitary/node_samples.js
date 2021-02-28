@@ -20,6 +20,18 @@ nodes_.start = {
   lane_id: "1"
 };
 
+nodes_.start_w_timeout = {
+  id: "1",
+  type: "Start",
+  name: "Initial Node",
+  parameters: {
+    input_schema: {},
+    timeout: 5
+  },
+  next: "2",
+  lane_id: "1"
+};
+
 nodes_.finish = {
   id: "5",
   type: "Finish",
@@ -210,9 +222,20 @@ results_.success_start_result = {
   "external_input": {data: "external"},
   "next_node_id": "2",
   "node_id": "1",
-  "result": {data: "bag"},
+  "result": {},
   "status": "running"
 };
+
+results_.success_start_result_w_timeout = {
+  "bag": {data: "bag"},
+  "error": null,
+  "external_input": {data: "external"},
+  "next_node_id": "2",
+  "node_id": "1",
+  "result": {timeout: 5},
+  "status": "running"
+};
+
 
 results_.success_finish_result = {
   "bag": {data: "bag"},

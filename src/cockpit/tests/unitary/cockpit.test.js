@@ -14,12 +14,11 @@ beforeEach(async () => {
 });
 
 afterAll(async () => {
+  Engine.kill();
   await _clean();
   if (settings.persist_options[0] === "knex"){
     await Workflow.getPersist()._db.destroy();;
   }
-  const engine = new Engine(...settings.persist_options);
-  Engine.kill();
 });
 
 describe("getProcessStateHistory works", () => {
@@ -304,7 +303,11 @@ describe("runPendingProcess", () => {
   });
 });
 
-const _clean = async () => {
+function sleep(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
+};
+
+const _clean = async () => {  
   const persistor = PersistorProvider.getPersistor(...settings.persist_options);
   const activity_persist = persistor.getPersistInstance("Activity");
   const activity_manager_persist = persistor.getPersistInstance("ActivityManager");
@@ -313,9 +316,13 @@ const _clean = async () => {
   const timer_persist = persistor.getPersistInstance("Timer");
 
   await activity_persist.deleteAll();
+  await sleep(10);
   await activity_manager_persist.deleteAll();
+  await sleep(10);
   await process_persist.deleteAll();
+  await sleep(10);
   await workflow_persist.deleteAll();
+  await sleep(10);
   await timer_persist.deleteAll();
 };
 

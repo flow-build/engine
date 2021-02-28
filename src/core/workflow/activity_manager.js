@@ -13,6 +13,7 @@ const process_manager = require("./process_manager");
 const activity_manager_factory = require("../utils/activity_manager_factory");
 const crypto_manager = require("../crypto_manager");
 const ajvValidator = require("../utils/ajvValidator");
+const emitter = require("../utils/emitter");
 
 class ActivityManager extends PersistedEntity {
 
@@ -73,6 +74,31 @@ class ActivityManager extends PersistedEntity {
     return allowed_activities;
   }
 
+  static async checkActorsPermission(activity_data_array, actor_data_array) {
+    const allowed_activities = new Map(actor_data_array.map(actor_data => [actor_data.actor_id, []]));
+
+    for (let activity_data of activity_data_array) {
+      const blueprint = activity_data.blueprint_spec;
+      const node_id = activity_data.node_id;
+      const lane_id = blueprint.nodes.filter((node) => node.id === node_id)[0].lane_id;
+      const current_lane_spec = blueprint.lanes.filter((lane) => lane.id === lane_id)[0];
+      const lisp = await Packages._fetchPackages(blueprint.requirements, blueprint.prepare);
+
+      actor_data_array.forEach(actor_data => {
+        let is_allowed = Lane.runRule(current_lane_spec, actor_data, activity_data.bag, lisp);
+        if (is_allowed && activity_data.parameters.channels && activity_data.parameters.channels instanceof Array) {
+          is_allowed = activity_data.parameters.channels.indexOf(actor_data.channel) !== -1;
+        }
+        if (is_allowed) {
+          allowed_activities.get(actor_data.actor_id).push(activity_data);
+        }
+
+      });
+    }
+
+    return allowed_activities;
+  }
+
   static async fetchActivityManagerFromProcessId(process_id, actor_data, status) {
     const activity_managers = await ActivityManager.fetchActivitiesForActorFromStatus(
       status,
@@ -111,7 +137,7 @@ class ActivityManager extends PersistedEntity {
   static async interruptActivityManagerForProcess(process_id) {
     const full_activity_manager_data = await this.getPersist().getActivityDataFromStatus(
       ActivityStatus.STARTED,
-      { process_id: process_id, type: "commit" }
+      { process_id: process_id }
     );
     for (const activity_manager_data of full_activity_manager_data) {
       const activity_manager = ActivityManager.deserialize(activity_manager_data);
@@ -207,7 +233,7 @@ class ActivityManager extends PersistedEntity {
       actor_data,
       external_input,
       ActivityStatus.STARTED).save();
-    this._activities.push(activity);
+    this._activities.unshift(activity);
     await this.save();
     await this._notifyActivityManager(process_id);
     return this;
@@ -229,6 +255,8 @@ class ActivityManager extends PersistedEntity {
     //ToDo
     this._status = ActivityStatus.COMPLETED;
     await this.save();
+    emitter.emit("ACTIVITY_MANAGER.COMPLETED", {activity_manager: this});
+
     await this._notifyActivityManager(process_id);
     return true;
   }
@@ -254,19 +282,19 @@ class ActivityManager extends PersistedEntity {
           .andWhere("resource_id", this.id)
           .update({active: false});
 
-      console.log(`      CLEARED TIMERS FOR AM ${this.id} `);
+      emitter.emit(`      CLEARED TIMERS FOR AM ${this.id} `);
 
-      console.log(`      CREATING NEW TIMER ON AM ${this.id} `);
+      emitter.emit(`      CREATING NEW TIMER ON AM ${this.id} `);
       const timer = new Timer("ActivityManager", this.id, Timer.timeoutFromNow(this.parameters.timeout), {next_step_number});
       await timer.save(trx);
-      console.log(`      NEW TIMER ON AM ${this.id} TIMER ${timer.id}`);
+      emitter.emit(`      NEW TIMER ON AM ${this.id} TIMER ${timer.id}`);
 
       this.parameters.timeout_id = timer.id;
     }
   }
 
   async timeout(timer, trx){
-      console.log(`TIMEOUT ON AM ${this.id} TIMER ${timer.id}`);
+      emitter.emit(`TIMEOUT ON AM ${this.id} TIMER ${timer.id}`);
 
       const activity_manager_data = await ActivityManager.fetch(timer.resource_id);
       if (
@@ -277,6 +305,8 @@ class ActivityManager extends PersistedEntity {
         const activity_manager = ActivityManager.deserialize(activity_manager_data);
         activity_manager.status = ActivityStatus.COMPLETED;
         await activity_manager.save(trx);
+        emitter.emit("ACTIVITY_MANAGER.COMPLETED", { activity_manager: activity_manager });
+        
         await activity_manager._notifyActivityManager(activity_manager_data.process_id);
         if (activity_manager.type === "commit") {
           await process_manager.continueProcess(activity_manager_data.process_id, {

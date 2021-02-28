@@ -1,6 +1,28 @@
 const _ = require("lodash");
 const mustache = require("mustache");
+const handlebars = require("handlebars");
 const crypto_manager = require("../crypto_manager");
+
+handlebars.registerHelper('centesimal', function (number) {
+  const retval = '' + (Number(number) / 100).toFixed(2);
+  return retval.replace('.', ',');
+});
+
+handlebars.registerHelper('mul', function (a, b) {
+  return a * b;
+});
+
+handlebars.registerHelper('sum', function (a, b) {
+  return a + b;
+});
+
+handlebars.registerHelper('sub', function (a, b) {
+  return a - b;
+});
+
+handlebars.registerHelper('div', function (a, b) {
+  return a / b;
+});
 
 function prepare(source, context = {}, interpreters = {}) {
   let last_result;
@@ -25,6 +47,11 @@ function prepare(source, context = {}, interpreters = {}) {
         };
         case "$mustache": {
           last_result = mustache.render(source[op], context);
+          break;
+        }
+        case "$handlebars": {
+          const template = handlebars.compile(source[op]);
+          last_result = template(context);
           break;
         }
         case "$js": {

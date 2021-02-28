@@ -1,6 +1,8 @@
 const lisp = require("../src/core/lisp");
 const settings = require("../settings/settings");
 const { Engine } = require("../src/engine/engine");
+const startLogger = require("../src/core/utils/logging");
+const emitter = require("../src/core/utils/emitter");
 
 const blueprint_spec = {
   requirements: [],
@@ -84,11 +86,13 @@ const actor_data = {
   claims: []
 };
 
+startLogger(emitter);
+
 const run_example = async() => {
-  console.log("===  RUNNING bag_example  ===");
+  emitter.emit("===  RUNNING start_process_example  ===");
 
   const logger = (data) => {
-    console.log(data);
+    emitter.emit(data);
   }
 
   const engine = new Engine(...settings.persist_options);

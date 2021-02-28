@@ -14,20 +14,20 @@ const blueprint_spec = {
       name: "Start node",
       parameters: {
         input_schema: {},
+        timeout: 10,
       },
       next: "2",
       lane_id: "1"
     },
     {
       id: "2",
-      type: "SystemTask",
-      category: "timer",
-      name: "Service node",
+      type: "userTask",
+      name: "User Task node",
       next: "3",
       lane_id: "1",
       parameters: {
+        action: 'some_action',
         input: {},
-        timeout: 2,
       }
     },
     {
@@ -58,7 +58,7 @@ startLogger(emitter);
 const run_example = async() => {
   emitter.emit("===  RUNNING timer_task_example  ===");
   const engine = new Engine(...settings.persist_options);
-  const workflow = await engine.saveWorkflow("system_task_example", "system task showcase", blueprint_spec);
+  const workflow = await engine.saveWorkflow("timeout_process", "showcase expired process", blueprint_spec);
   const process = await engine.createProcess(workflow.id, actor_data);
   const process_id = process.id;
   await engine.runProcess(process_id, actor_data);
@@ -66,4 +66,6 @@ const run_example = async() => {
   return state_history;
 };
 
-run_example().then(res => { emitter.emit(res); });
+run_example()
+  .then(res => { emitter.emit(res); })
+  .catch(e);

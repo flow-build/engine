@@ -17,11 +17,11 @@ beforeEach(async () => {
 });
 
 afterAll(async () => {
+  Engine.kill();
   await _clean();
   if (settings.persist_options[0] === "knex"){
     await Process.getPersist()._db.destroy();
   }
-  Engine.kill();
 });
 
 async function createRunProcess(engine, workflow_id, actor_data) {
@@ -454,7 +454,61 @@ describe('submitActivity', () => {
     expect(process.state.node_id).toEqual("3");
     expect(process.state.next_node_id).toEqual("3");
   });
+
+  test("Throws commitActivity errorType", async () => {
+    const engine = new Engine(...settings.persist_options);
+    const workflow = await engine.saveWorkflow("user_task", "user_task", blueprints_.identity_user_task);
+    let process = await engine.createProcess(workflow.id, actors_.simpleton);
+    process = await engine.runProcess(process.id, actors_.simpleton);
+    expect(process.status).toEqual(ProcessStatus.WAITING);
+    let activity_manager = await engine.fetchAvailableActivityForProcess(process.id, actors_.simpleton);
+    expect(activity_manager.id).toBeDefined();
+
+    const { error } = await engine.submitActivity(activity_manager.id, actors_.simpleton, "Wrong external_input parameter");
+    expect(error).toBeDefined();
+    expect(error.errorType).toEqual("commitActivity");
+    expect(error.message).toContain("invalid input syntax for type json");
+  });
+
+  test("Throws submitActivityUnknownError errorType", async () => {
+    const engine = new Engine(...settings.persist_options);
+    const workflow = await engine.saveWorkflow("user_task", "user_task", blueprints_.identity_user_task);
+    let process = await engine.createProcess(workflow.id, actors_.simpleton);
+    process = await engine.runProcess(process.id, actors_.simpleton);
+    expect(process.status).toEqual(ProcessStatus.WAITING);
+    let activity_manager = await engine.fetchAvailableActivityForProcess(process.id, actors_.simpleton);
+    expect(activity_manager.id).toBeDefined();
+
+    const activity_data = { userInput: "example user input" };
+    const wrong_activity_manager_id = 123456;
+    const { error } = await engine.submitActivity(wrong_activity_manager_id, actors_.simpleton, activity_data);
+    expect(error).toBeDefined();
+    expect(error.errorType).toEqual("submitActivityUnknownError");
+    expect(error.message).toContain("invalid input syntax for type uuid");
+  });
+
+  test("Throws activityManager errorType", async () => {
+    const engine = new Engine(...settings.persist_options);
+    const workflow = await engine.saveWorkflow("user_task", "user_task", blueprints_.identity_user_task);
+    let process = await engine.createProcess(workflow.id, actors_.simpleton);
+    process = await engine.runProcess(process.id, actors_.simpleton);
+    expect(process.status).toEqual(ProcessStatus.WAITING);
+    let activity_manager = await engine.fetchAvailableActivityForProcess(process.id, actors_.simpleton);
+    expect(activity_manager.id).toBeDefined();
+
+    const activity_data = { userInput: "example user input" };
+    await engine.submitActivity(activity_manager.id, actors_.simpleton, activity_data);
+
+    const { error } = await engine.submitActivity(activity_manager.id, actors_.simpleton, activity_data);
+    expect(error).toBeDefined();
+    expect(error.errorType).toEqual("submitActivity");
+    expect(error.message).toEqual("Submit activity unavailable");
+  });
 });
+
+function sleep(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
+};
 
 const _clean = async () => {
   const persistor = PersistorProvider.getPersistor(...settings.persist_options);
@@ -462,10 +516,17 @@ const _clean = async () => {
   const activity_manager_persist = persistor.getPersistInstance("ActivityManager");
   const process_persist = persistor.getPersistInstance("Process");
   const workflow_persist = persistor.getPersistInstance("Workflow");
+  const timer_persist = persistor.getPersistInstance("Timer");
+  
   await activity_persist.deleteAll();
+  await sleep(10);
   await activity_manager_persist.deleteAll();
+  await sleep(10);
   await process_persist.deleteAll();
+  await sleep(10);
   await workflow_persist.deleteAll();
+  await sleep(10);
+  await timer_persist.deleteAll();
   if (settings.persist_options[0] === "knex"){
     await Process.getPersist()._db.delete()
                               .from("packages")

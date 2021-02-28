@@ -66,7 +66,8 @@ test("Engine create process with data", async () => {
   let process = await engine.createProcessByWorkflowName("sample", actors_.simpleton, create_data);
   process = await engine.runProcess(process.id);
   expect(process.state.status).toEqual(ProcessStatus.WAITING);
-  expect(process.state.result.start_data).toStrictEqual(create_data);
+  //won´t put initial_bag into start result
+  //expect(process.state.result.start_data).toStrictEqual(create_data);
   expect(process.state.bag).toStrictEqual(create_data);
 });
 
@@ -152,6 +153,22 @@ describe("Run existing process", () => {
 
     expect(result_process.status).toEqual(ProcessStatus.FORBIDDEN);
   });
+
+  test("Engine run process with timeout", async () => {
+    jest.setTimeout(60000);
+    const process = await createProcess(blueprints_.start_with_timeout, actors_.simpleton);
+    await engine.runProcess(process.id, actors_.simpleton);
+
+    const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
+    await delay(8000);
+
+    const result_process = await engine.fetchProcess(process.id)
+
+    expect(result_process.status).toEqual(ProcessStatus.EXPIRED);
+    const activity_managers = await engine.fetchAvailableActivitiesForActor(actors_.simpleton);
+    expect(activity_managers).toHaveLength(0);
+  });
+
 });
 
 test("process state notifier", async() => {
@@ -254,7 +271,7 @@ test("run process using environment", async () => {
     const state_set_to_bag = process_state_history[2];
     expect(state_set_to_bag.node_id).toEqual("2");
     expect(state_set_to_bag.bag).toEqual({ environment: "test"});
-    expect(state_set_to_bag.result).toEqual({});
+    expect(state_set_to_bag.result).toEqual({ timeout: undefined });
 
     const state_http = process_state_history[3];
     expect(state_http.node_id).toEqual("3");
@@ -607,7 +624,7 @@ test('Commit activity only on type \'commit\' activity manager', async () => {
   
   const commit_activity_manager = await engine.fetchActivityManager(activity_managers[1]._id, actors_.simpleton);
   expect(commit_activity_manager.type).toEqual("commit");
-  expect(commit_activity_manager.activities).toHaveLength(1);
+  expect(commit_activity_manager.activities).toHaveLength(0);
 });
 
 test('Push activity only on type \'commit\' activity manager', async () => {

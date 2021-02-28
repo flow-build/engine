@@ -11,6 +11,8 @@ const { getActivityManager } = require("../utils/activity_manager_factory");
 const ajvValidator = require("../utils/ajvValidator");
 const process_manager = require("./process_manager");
 const crypto_manager = require("../crypto_manager");
+const lisp = require("../../core/lisp");
+const emitter = require("../utils/emitter");
 
 const writeJsFunction = (function_name) => {
   return ["fn", ["&", "args"],
@@ -99,7 +101,7 @@ class Node {
 
   _processError(error, { bag, external_input, time_elapsed}) {
     if (error instanceof Error) {
-      console.error(error);
+      emitter.emit("_processError, ", error);
       error = error.toString();
     }
     let on_error = this._spec.on_error;
@@ -175,32 +177,15 @@ class StartNode extends Node {
 
   _run(execution_data, lisp) {
     ajvValidator.validateData(this._spec.parameters.input_schema, execution_data.bag);
-    return [execution_data.bag, ProcessStatus.RUNNING];
+    let result;
+    if(this._spec.parameters.timeout) {
+      result = { timeout: this._spec.parameters.timeout };
+    }
+    return [result, ProcessStatus.RUNNING];
   }
 
   _preProcessing({ bag, input }) {
     return { bag, input };
-  }
-}
-
-class FinishNode extends Node {
-  static get rules() {
-    return {
-      ...super.rules,
-      "next_is_null": [obju.fieldEquals, "next", null]
-    };
-  }
-
-  validate() {
-    return FinishNode.validate(this._spec);
-  }
-
-  _run(execution_data, lisp) {
-    return [{}, ProcessStatus.FINISHED];
-  }
-
-  next(result = null) {
-    return null;
   }
 }
 
@@ -224,6 +209,34 @@ class ParameterizedNode extends Node {
 
   _preProcessing({ bag, input, actor_data, environment }) {
     return prepare(this._spec.parameters.input, { bag: bag, result: input, actor_data: actor_data, environment: environment });
+  };
+}
+
+class FinishNode extends Node {
+  static get rules() {
+    return {
+      ...super.rules,
+      "next_is_null": [obju.fieldEquals, "next", null]
+    };
+  }
+
+  validate() {
+      return FinishNode.validate(this._spec);
+  }
+
+  _run(execution_data, lisp) {
+    return [execution_data, ProcessStatus.FINISHED];
+  }
+
+  next(result = null) {
+    return null;
+  }
+
+  _preProcessing({ bag, input, actor_data, environment }) {
+    if (this._spec.parameters && this._spec.parameters.input) {
+      return prepare(this._spec.parameters.input, { bag: bag, result: input, actor_data: actor_data, environment: environment });
+    }
+    return {};
   };
 }
 
@@ -614,6 +627,75 @@ class AbortProcessSystemTaskNode extends SystemTaskNode {
   }
 }
 
+class SubProcessNode extends ParameterizedNode {
+  static get rules() {
+    const parameters_rules = {
+      "parameters_has_actor_data": [obju.hasField, "actor_data"],
+      "parameters_has_input": [obju.hasField, "input"],
+      "timeout_has_valid_type": [obju.isFieldTypeIn, "timeout", ["undefined", "number"]],
+    };
+    return {
+      ...super.rules,
+      "next_has_valid_type": [obju.isFieldTypeIn, "next", ["string", "number"]],
+      "parameters_nested_validations": [new Validator(parameters_rules), "parameters"],
+    };
+  }
+
+  validate() {
+    return SubProcessNode.validate(this._spec);
+  }
+
+  async run({ bag, input, external_input = null, actor_data, environment = {} }, lisp) {
+    try {
+      if (!external_input) {
+        const execution_data = this._preProcessing({ bag, input, actor_data, environment });
+
+         return {
+          node_id: this.id,
+          bag: bag,
+          external_input: external_input,
+          result: execution_data,
+          error: null,
+          status: ProcessStatus.DELEGATED,
+          next_node_id: this.id,
+          action: this._spec.parameters.action,
+          activity_schema: this._spec.parameters.activity_schema
+        };
+      } else {
+        if (external_input.userInput === '') {
+          return await this._postRun(bag, input, external_input, lisp);
+        }
+      }
+    } catch (err) {
+      return this._processError(err, { bag, external_input });
+    }
+
+    if (this._spec.parameters.encrypted_data) {
+      const crypto = crypto_manager.getCrypto();
+
+      for (const field_path of this._spec.parameters.encrypted_data) {
+        const data = _.get(external_input, field_path);
+        if (data) {
+          const encrypted_data = crypto.encrypt(data);
+          _.set(external_input, field_path, encrypted_data);
+        }
+      }
+    }
+    return await this._postRun(bag, input, external_input, lisp);
+  }
+
+  async _postRun(bag, input, external_input, lisp) {
+    return {
+      node_id: this.id,
+      bag: bag,
+      external_input: external_input,
+      result: external_input,
+      error: null,
+      status: ProcessStatus.RUNNING,
+    }
+  }
+}
+
 module.exports = {
   Node: Node,
   StartNode: StartNode,
@@ -632,4 +714,6 @@ module.exports = {
 
   StartProcessSystemTaskNode: StartProcessSystemTaskNode,
   AbortProcessSystemTaskNode: AbortProcessSystemTaskNode,
+
+  SubProcessNode: SubProcessNode
 };

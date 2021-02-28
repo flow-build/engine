@@ -1510,6 +1510,21 @@ describe("StartNode", () => {
     const node_result = await node.run({bag, input, external_input})
     expect(node_result).toMatchObject(results_.success_start_result);
   });
+
+  test("With Timeout pops the timeout parameter up", async () => {
+    const node_spec = _.cloneDeep(nodes_.start_w_timeout);
+
+    const node = new nodes.StartNode(node_spec);
+
+    const bag = { data: "bag" };
+    const input = { data: "input" };
+    const external_input = { data: "external" };
+
+    const node_result = await node.run({bag, input, external_input})
+
+    expect(node_result).toMatchObject(results_.success_start_result_w_timeout);
+  });
+
 });
 
 describe("TimerSystemTaskNode", () => {

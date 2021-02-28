@@ -3,6 +3,33 @@ const ajv = new Ajv({
     allErrors: true
 });
 
+const dateTimeRegex = new RegExp('^(19[0-9]{2}|2[0-9]{3})-(0[1-9]|1[012])-([123]0|[012][1-9]|31)[ \/T\/t]([01][0-9]|2[0-3]):([0-5][0-9])(?::([0-5][0-9]))?$');
+ajv.addFormat('dateTime', {
+    validate: (dateTimeString) => dateTimeRegex.test(dateTimeString)
+});
+
+ajv.addFormat('cpf', {
+    validate: (cpf) => {
+        if (/[a-zA-Z]/.test(cpf)) {
+            return false;
+        }
+        cpf = cpf.replace(/\D/g, '');
+        if(cpf.toString().length != 11 || /^(\d)\1{10}$/.test(cpf)) return false;
+        var result = true;
+        [9,10].forEach(function(j){
+            var sum = 0, r;
+            cpf.split(/(?=)/).splice(0,j).forEach(function(e, i){
+                sum += parseInt(e) * ((j+2)-(i+1));
+            });
+            r = sum % 11;
+            r = (r <2)?0:11-r;
+            if(r != cpf.substring(j, j+1)) result = false;
+        });
+        return result;
+    },
+    errors: false,
+})
+
 function validateSchema(schema) {
     const is_valid = ajv.validateSchema(schema);
     if (!is_valid) {
@@ -15,17 +42,13 @@ function validateData(schema, data) {
     let schemaValidate;
     if (schema.properties) {
         schemaValidate = {
-            properties: {},
-            required: schema.required
+            properties: schema.properties,
+            required: schema.required,
+            additionalProperties: schema.additionalProperties
         }
     } else {
         schemaValidate = schema;
     }
-
-    const dateTimeRegex = new RegExp('^(19[0-9]{2}|2[0-9]{3})-(0[1-9]|1[012])-([123]0|[012][1-9]|31)[ \/T\/t]([01][0-9]|2[0-3]):([0-5][0-9])(?::([0-5][0-9]))?$');
-    ajv.addFormat('dateTime', {
-        validate: (dateTimeString) => dateTimeRegex.test(dateTimeString)
-    });
 
     const is_valid = ajv.validate(schemaValidate, data);
     if (!is_valid) {
@@ -36,7 +59,8 @@ function validateData(schema, data) {
 function validateActivityManager(schema, data) {
     const schemaValidate = {
         properties: {},
-        required: schema.required
+        required: schema.required,
+        additionalProperties: schema.additionalProperties
     }
 
     Object.entries(schema.properties).map(param => {
@@ -52,7 +76,14 @@ function validateActivityManager(schema, data) {
 }
 
 function validateResult(schema, data) {
-    const is_valid = ajv.validate(schema, data);
+
+    let dataValidate;
+    if (data.data) {
+        dataValidate = data.data;
+    } else {
+        dataValidate = data;
+    }
+    const is_valid = ajv.validate(schema, dataValidate);
     if (!is_valid) {
         return new Error(ajv.errorsText());
     }

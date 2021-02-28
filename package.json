@@ -6,6 +6,8 @@
     "ajv": "^7.1.1",
     "axios": "^0.21.1",
     "delegates": "^1.0.0",
+    "eventemitter2": "^6.4.4",
+    "handlebars": "^4.7.7",
     "knex": "^0.21.18",
     "lodash": "latest",
     "minimal-lisp": "^1.0.3",

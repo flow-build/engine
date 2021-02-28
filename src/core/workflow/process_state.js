@@ -29,6 +29,12 @@ class ProcessStatus {
   static get FORBIDDEN() {
     return "forbidden";
   }
+  static get DELEGATED() {
+    return "delegated";
+  }
+  static get EXPIRED() {
+    return "expired";
+  }
 }
 
 class ProcessState extends BaseEntity {

@@ -319,6 +319,23 @@ describe("commitActivity works", () => {
     expect(response.activities).toHaveLength(1);
   });
 
+  test("Engine.commitActivity unshifts activity", async () => {
+    const engine = new Engine(...settings.persist_options, {});
+    const workflow = await engine.saveWorkflow("sample", "sample", blueprints_.identity_user_task);
+    const process = await createRunProcess(engine, workflow.id, actors_.simpleton);
+    expect(process.status).toBe(ProcessStatus.WAITING);
+    let response = await engine.fetchAvailableActivitiesForActor(actors_.simpleton);
+    const activity_manager_id = response[0].id;
+
+    let external_input = {any: "first"};
+    response = await engine.commitActivity(process.id, actors_.simpleton, external_input);
+    expect(response.activities).toHaveLength(1);
+
+    external_input = {any: "second"};
+    response = await engine.commitActivity(process.id, actors_.simpleton, external_input);
+    expect(response.activities[0].data.any).toEqual("second");
+  });
+
   test("Engine.commitActivity shouldn't work for invalid actor ", async () => {
     const error = () => {throw Error("Error: No ActivityManager was found for process id")};
     const engine = new Engine(...settings.persist_options, {});

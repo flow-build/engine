@@ -16,6 +16,7 @@ class Workflow extends PersistedEntity {
       name: workflow._name,
       description: workflow._description,
       blueprint_spec: workflow._blueprint_spec,
+      version: workflow._version
     };
   }
 
@@ -27,6 +28,7 @@ class Workflow extends PersistedEntity {
         serialized.blueprint_spec);
       workflow._id = serialized.id;
       workflow._created_at = serialized.created_at;
+      workflow._version = serialized.version;
 
       return workflow;
     }

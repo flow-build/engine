@@ -3,6 +3,8 @@ const { PersistedEntity } = require("./base");
 const { Packages } = require("../workflow/packages");
 const { ProcessState, ENGINE_ID } = require("./process_state");
 const { ProcessStatus } = require("./process_state");
+const { SubProcess } = require("./sub_process")
+const { Workflow } = require("./workflow")
 const { Blueprint } = require("../workflow/blueprint");
 const { Lane } = require("../workflow/lanes");
 const { Timer } = require("./timer");
@@ -10,6 +12,10 @@ const { getProcessStateNotifier, getActivityManagerNotifier } = require("../noti
 const { getAllowedStartNodes } = require("../utils/blueprint");
 const { ActivityManager } = require("./activity_manager");
 const { validateResult } = require("./../utils/ajvValidator.js");
+const uuid = require("uuid/v1");
+const { blueprints_ } = require("../../core/workflow/tests/unitary/blueprint_samples");
+const process_manager = require("../../core/workflow/process_manager.js");
+const emitter = require('../utils/emitter');
 
 class Process extends PersistedEntity {
 
@@ -138,12 +144,12 @@ class Process extends PersistedEntity {
   }
 
   async run(actor_data, execution_input) {
-    console.log(`RUN ON PID ${this.id}`);
+    emitter.emit(`RUN ON PID ${this.id}`);
 
     this.state = await this.getPersist().getLastStateByProcess(this._id);
-    const current_node = this._blueprint.fetchNode(this._state.node_id);
+    let current_node = this._blueprint.fetchNode(this._state.node_id);
     let external_input;
-    if (this.status === ProcessStatus.WAITING) {
+    if (this.status === ProcessStatus.WAITING || this.status === ProcessStatus.DELEGATED) {
       external_input = execution_input;
     } else if (this.status === ProcessStatus.UNSTARTED) {
       external_input = {};
@@ -159,14 +165,29 @@ class Process extends PersistedEntity {
     if (is_lane_valid) {
       const node_result = await this._runNode(current_node, external_input, custom_lisp, actor_data);
       if (node_result.error) {
-        console.log(`ERROR ON PROCESS ${this.id} DATA ${this.workflow_name}: ${current_node._spec.name}`);
+        emitter.emit(`ERROR ON PROCESS ${this.id} DATA ${this.workflow_name}: ${current_node._spec.name}`);
       }
       this.state = await this._createStateFromNodeResult(node_result, actor_data);
       await this.save();
       await this._notifyProcessState(actor_data);
 
+      if (this.state.status === ProcessStatus.RUNNING
+          && this.state.step_number === 2 
+          && this.state.result
+          && this.state.result.timeout
+        ) {
+        emitter.emit(`  CREATING PROCESS TIMER ON PID ${this.id} `);
+        let timer = new Timer("Process", this.id, Timer.timeoutFromNow(this.state.result.timeout), { actor_data });
+        await timer.save();
+        emitter.emit(`  PROCESS TIMER ON PID ${this.id} TIMER ${timer.id}`);
+      }
+
       await this._executionLoop(custom_lisp, actor_data);
 
+      if (this._current_status === ProcessStatus.DELEGATED) {
+        current_node = this._blueprint.fetchNode(this._state.node_id);
+        this.parameters = current_node._spec.parameters;
+      }
       return this;
     } else {
       return this._forbiddenState();
@@ -174,7 +195,7 @@ class Process extends PersistedEntity {
   }
 
   async continue(result_data, actor_data, trx) {
-    console.log(`CONTINUE ON PID ${this.id}`);
+    emitter.emit(`CONTINUE ON PID ${this.id}`);
     if (!this.state) {
       this.state = await this.getPersist().getLastStateByProcess(this._id);
     }
@@ -213,7 +234,7 @@ class Process extends PersistedEntity {
   }
 
   async runPendingProcess(actor_data, trx=false) {
-    console.log(`RUN PENDING PID ${this.id}`);
+    emitter.emit(`RUN PENDING PID ${this.id}`);
     this.state = await this.getPersist().getLastStateByProcess(this._id);
     if (this.status !== ProcessStatus.PENDING) {
       throw new Error(`Process on invalid status ${this.status}`);
@@ -231,6 +252,31 @@ class Process extends PersistedEntity {
 
     this._state.status = ProcessStatus.RUNNING;
     return await this._executionLoop(custom_lisp, actor_data, trx);
+  }
+
+  async expireProcess(trx=false) {
+    emitter.emit(`EXPIRE PID ${this.id}`);
+    const next_step_number = await this.getNextStepNumber();
+    this.state = new ProcessState(
+      this._id,
+      next_step_number,
+      this._state.node_id,
+      {},
+      null,
+      null,
+      null,
+      ProcessStatus.EXPIRED,
+      null,
+      null,
+      null
+    );
+
+    await ActivityManager.interruptActivityManagerForProcess(this._id)
+    await this.save();
+    await this._notifyProcessState();
+
+    return this;
+
   }
 
   async abort() {
@@ -296,7 +342,7 @@ class Process extends PersistedEntity {
     if (!p_lock) {
       throw new Error(`No process found for lock, process_id ${this.id} current_state_id ${current_state_id}`);
     }
-    console.log(`      LOCK PID ${p_lock.id}`);
+    emitter.emit(`      LOCK PID ${p_lock.id}`);
 
     const ps_lock = await trx.select("id")
       .from("process_state").first()
@@ -305,77 +351,108 @@ class Process extends PersistedEntity {
     if (!ps_lock) {
       throw new Error(`No lock for process state ${current_state_id}`);
     }
-    console.log(`      LOCK PID ${p_lock.id} PS ${ps_lock.id}`);
+    emitter.emit(`      LOCK PID ${p_lock.id} PS ${ps_lock.id}`);
 
     const next_step_number = await this.getNextStepNumber();
-
-    // console.log(`      START NODE WAIT ON PID ${this.id}`);
-    // delay(1000);
-    // console.log(`      END NODE WAIT PID ${this.id}`);
-
-    console.log(`      START NODE RUN ${this.next_node._spec.type}:${this.next_node.category}:${this.next_node._spec.name} ON PID ${this.id}`)
+    emitter.emit(`      START NODE RUN ${this.next_node._spec.type}:${this.next_node._spec.category}:${this.next_node._spec.name} ON PID ${this.id}`)
     const node_result = await this._runNode(this.next_node, null, custom_lisp, actor_data);
-
     const result_state = await this._createStateFromNodeResult(node_result, actor_data, this.next_node._spec.result_schema);
-    console.log(`      END NODE RUN STATUS ${node_result.status}`);
+    emitter.emit(`      END NODE RUN STATUS ${node_result.status}`);
+
+    let am = null;
+    let timer = null;
 
     if (result_state.step_number === next_step_number) {
       this.state = result_state;
       await this.save(trx);
-      console.log(`      NEW STATE ON PID ${p_lock.id} PS ${this.state.id}`);
+      emitter.emit(`      NEW STATE ON PID ${p_lock.id} PS ${this.state.id}`);
 
       await this._notifyProcessState(actor_data);
 
       if (result_state.status === ProcessStatus.PENDING && result_state.result.timeout) {
-        // await trx('timer')
-        // .where("resource_type", "Process")
-        // .andWhere("resource_id", this.id)
-        // .update({active: false});
-        //
-        // console.log(`      CLEARED TIMERS FOR PID ${this.id} `);
-
-        console.log(`      CREATING NEW TIMER ON PID ${p_lock.id} `);
-        const timer = new Timer("Process", this.id, Timer.timeoutFromNow(result_state.result.timeout), { actor_data });
+        emitter.emit(`      CREATING NEW TIMER ON PID ${p_lock.id} `);
+        timer = new Timer("Process", this.id, Timer.timeoutFromNow(result_state.result.timeout), { actor_data });
         await timer.save(trx);
-        console.log(`      NEW TIMER ON PID ${p_lock.id} TIMER ${timer.id}`);
+        emitter.emit(`      NEW TIMER ON PID ${p_lock.id} TIMER ${timer.id}`);
 
       } else if (node_result.activity_manager) {
-        console.log(`      CREATING NEW ACTIVITY MANAGER ON PID ${p_lock.id} `);
-        const am = await this._createActivityManager(node_result.activity_manager, Process.calculateNextStep(next_step_number), trx, node_result.activity_schema);
-        console.log(`      NEW ACTIVITY MANAGER ON PID ${p_lock.id} AM ${am.id}`);
+        emitter.emit(`      CREATING NEW ACTIVITY MANAGER ON PID ${p_lock.id} `);
+        am = await this._createActivityManager(node_result.activity_manager, Process.calculateNextStep(next_step_number), trx, node_result.activity_schema);
+        emitter.emit(`      NEW ACTIVITY MANAGER ON PID ${p_lock.id} AM ${am.id}`);
+      } else if (result_state.status === ProcessStatus.DELEGATED) {
+          const child_process = await process_manager.createProcessByWorkflowName(result_state.result.workflow_name, actor_data, { parent_process_id: this.id, expected_step_number: result_state.step_number});
+          process_manager.runProcess(child_process.id, actor_data, {});
+
+      } else if (result_state.status === ProcessStatus.FINISHED ) {
+        emitter.emit('result state =====> ', result_state);
+        if ( result_state.bag.parent_process_id) {
+          process_manager.continueProcess(result_state.bag.parent_process_id, { data: result_state.result, is_continue: true, sub_process_id: this.id}, Process.calculateNextStep(result_state.bag.expected_step_number));
+        }
       }
+
+      return [result_state, am, timer];
 
     } else {
       throw new Error(`Process ${this.id} on invalid step`);
     }
+
   }
 
   async _executionLoop(custom_lisp, actor_data, trx=false) {
-    console.log(`CALLED EXECUTION LOOP PID ${this.id} STATUS ${this.status}`);
+    emitter.emit(`CALLED EXECUTION LOOP PID ${this.id} STATUS ${this.status}`);
     let execution_success = true;
     while (execution_success && this.status === ProcessStatus.RUNNING) {
       const db = Process.getPersist()._db;
 
+      let [ps, activity_manager, timer] = [null, null, null]
       try {
         await db.transaction(async (trx) => {
-          console.log(`    BEGIN TRANSACTION FOR PID ${this.id} - ENGINE_ID ${ENGINE_ID}`);
-          await this.__inerLoop.call(this, this._current_state_id, { custom_lisp, actor_data }, trx);
-          console.log(`      COMMIT ON EXEC PID ${this.id} ON INNER LOOP - ENGINE_ID ${ENGINE_ID}`);
+          emitter.emit(`    BEGIN TRANSACTION FOR PID ${this.id} - ENGINE_ID ${ENGINE_ID}`);
+          [ps, activity_manager, timer] = await this.__inerLoop.call(this, this._current_state_id, { custom_lisp, actor_data }, trx);
+
+          emitter.emit(`      COMMIT ON EXEC PID ${this.id} ON INNER LOOP - ENGINE_ID ${ENGINE_ID}`);
         });
+
+        ps && emitter.emit("PROCESS.STEP_CREATED");
+
+        activity_manager && emitter.emit("PROCESS.ACTIVITY_MANAGER_CREATED", {
+          process: this,
+          activity_manager,
+          timer
+        })
+
       } catch (e) {
         execution_success = false;
-        console.error(e);
-        console.log(`      ROLLBACK ON EXEC PID ${this.id}  ON INNER LOOP - ENGINE_ID ${ENGINE_ID}`);
+        emitter.emit(e);
+        emitter.emit(`      ROLLBACK ON EXEC PID ${this.id}  ON INNER LOOP - ENGINE_ID ${ENGINE_ID}`);
       }
 
-      console.log(`  END LOOP PID ${this.id} STATUS ${this.status} EXECUTION SUCCESS ${execution_success}`);
+      emitter.emit(`  END LOOP PID ${this.id} STATUS ${this.status} EXECUTION SUCCESS ${execution_success}`);
     }
-    console.log(`LEFT EXECUTION LOOP PID ${this.id} STATUS ${this.status}`);
+    emitter.emit(`LEFT EXECUTION LOOP PID ${this.id} STATUS ${this.status}`);
   }
 
   async timeout(timer, trx=false){
-    console.log(`TIMEOUT ON PID ${this.id} TIMER ${timer.id}`);
-    await this.runPendingProcess(timer.params.actor_data);
+    emitter.emit(`TIMEOUT ON PID ${this.id} TIMER ${timer.id}`);
+    this.state = await this.getPersist().getLastStateByProcess(this._id);
+    switch(this.status) {
+      case ProcessStatus.ERROR:
+      case ProcessStatus.FINISHED:
+      case ProcessStatus.EXPIRED:
+        break;
+      case ProcessStatus.PENDING:
+        await this.runPendingProcess(timer.params.actor_data);
+        break;
+      case ProcessStatus.RUNNING:
+        //TODO: Avaliar como expirar um processo running.
+        emitter.emit(`  CANNOT EXPIRE RUNNING PROCESS PID ${this.id}`);
+        break;
+      case ProcessStatus.WAITING:
+      case ProcessStatus.DELEGATED:
+        await this.expireProcess();
+        break;
+    }
+    
   }
 
   async _notifyProcessState(actor_data) {
@@ -418,9 +495,9 @@ class Process extends PersistedEntity {
     if (result_schema) {
       const resultSchemaError = validateResult(result_schema, result.data);
       if (resultSchemaError) {
-      console.log(resultSchemaError);
+      emitter.emit(resultSchemaError);
         status = ProcessStatus.ERROR;
-        error = resultSchemaError;
+        error = resultSchemaError.message;
       }
     }
 
@@ -447,7 +524,8 @@ class Process extends PersistedEntity {
         external_input: external_input,
         actor_data: actor_data,
         environment: this._blueprint_spec.environment,
-        result_schema: node._spec.result_schema
+        result_schema: node._spec.result_schema,
+        process_id: this.id
       },
       custom_lisp
     );

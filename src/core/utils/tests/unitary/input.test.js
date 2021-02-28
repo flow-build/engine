@@ -53,6 +53,116 @@ describe("prepare", () => {
         })
     });
 
+    describe("$handlebars", () => {
+        it("handlebars simple", () => {
+            const source = {
+                $handlebars: "Fullname {{bag.name}}"
+            };
+            const bag = {
+                name: 'exampleName'
+            }
+            const result = prepare(source, { bag });
+            expect(result).toEqual("Fullname exampleName");
+        });
+
+        it("handlebars method use", () => {
+            const source = {
+                $handlebars: "Fullname {{bag.values.length}}"
+            };
+            const bag = {
+                values: [
+                    '22'
+                ]
+            }
+            const result = prepare(source, { bag });
+            expect(result).toEqual("Fullname 1");
+        });
+
+        it("handlebars array access by index", () => {
+            const source = {
+                $handlebars: "Fullname {{bag.values.[0]}}"
+            };
+            const bag = {
+                values: [
+                    '22'
+                ]
+            }
+            const result = prepare(source, { bag });
+            expect(result).toEqual("Fullname 22");
+        });
+
+        it("handlebars missing value", () => {
+            const source = {
+                $handlebars: "Fullname {{bag.firstName}}"
+            };
+            const bag = {
+                name: 'exampleName'
+            }
+            const result = prepare(source, { bag });
+            expect(result).toEqual("Fullname ");
+        })
+
+        it("handlebars centesimal value", () => {
+            const source = {
+                $handlebars: "Price {{centesimal bag.price}}"
+            };
+            const bag = {
+                price: '1200'
+            }
+            const result = prepare(source, { bag });
+            expect(result).toEqual("Price 12,00");
+        })
+
+        it("handlebars sum", () => {
+            const source = {
+                $handlebars: "Apples: {{bag.apples}} Oranges: {{bag.oranges}} Total fruits: {{sum bag.apples bag.oranges}}"
+            };
+            const bag = {
+                apples: 2,
+                oranges: 3,
+            }
+            const result = prepare(source, { bag });
+            expect(result).toEqual("Apples: 2 Oranges: 3 Total fruits: 5");
+        })
+
+        it("handlebars subtraction", () => {
+            const source = {
+                $handlebars: "Total cost: {{bag.cost}} Paid: {{bag.paid}} Change: {{sub bag.paid bag.cost}}"
+            };
+            const bag = {
+                cost: 25,
+                paid: 30,
+            }
+            const result = prepare(source, { bag });
+            expect(result).toEqual("Total cost: 25 Paid: 30 Change: 5");
+        })
+
+        it("handlebars centesimal multiplication", () => {
+            const source = {
+                $handlebars: "Unit price: {{centesimal bag.price}} Qtd: {{bag.qtd}} Total price: {{centesimal (mul bag.price bag.qtd) }}"
+            };
+            const bag = {
+                price: '1200',
+                qtd: 2,
+            }
+            const result = prepare(source, { bag });
+            expect(result).toEqual("Unit price: 12,00 Qtd: 2 Total price: 24,00");
+        })
+
+        it("handlebars centesimal division", () => {
+            const source = {
+                $handlebars: "Total cost: {{centesimal bag.cost}} Friends: {{bag.friends}} Unit payment: {{centesimal (div bag.cost bag.friends)}}"
+            };
+            const bag = {
+                cost: '5500',
+                friends: 4,
+            }
+            const result = prepare(source, { bag });
+            expect(result).toEqual("Total cost: 55,00 Friends: 4 Unit payment: 13,75");
+        })
+    });
+
+
     describe("$js", () => {
         it("javascript simple", () => {
             const source = {

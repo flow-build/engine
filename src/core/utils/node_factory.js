@@ -80,6 +80,10 @@ module.exports = {
                 resultNode = getServiceTask(node_spec);
                 break;
             }
+            case "subprocess": {
+                resultNode = new nodes.SubProcessNode(node_spec);
+                break;
+            }
             default: {
                 throw new Error(`Invalid node, unknow type ${node_type}`);
             }
