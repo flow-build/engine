@@ -1,5 +1,5 @@
 const _ = require("lodash");
-const uuid = require('uuid/v1');
+const {v1: uuid }= require('uuid');
 const lisp = require("../../../lisp");
 const obju = require("../../../utils/object");
 const nodes = require("../../../workflow/nodes");

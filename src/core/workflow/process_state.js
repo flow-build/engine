@@ -1,5 +1,5 @@
 const { BaseEntity } = require("./base");
-const uuid = require('uuid/v1');
+const {v1: uuid }= require('uuid');
 
 const ENGINE_ID = process.env.engine_id || uuid();
 

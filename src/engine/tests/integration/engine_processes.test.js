@@ -1,4 +1,4 @@
-const uuid = require('uuid/v1');
+const {v1: uuid }= require('uuid');
 const settings = require("../../../../settings/tests/settings");
 const { Engine } = require("../../engine");
 const { PersistorProvider } = require("../../../core/persist/provider");

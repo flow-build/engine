@@ -1,4 +1,4 @@
-const uuid = require('uuid/v1');
+const {v1: uuid }= require('uuid');
 const _ = require("lodash");
 const assert = require("assert");
 const { PersistedEntity } = require("./base");
