@@ -10,6 +10,9 @@ const { ActivityStatus } = require("./activity");
 const { getActivityManager } = require("../utils/activity_manager_factory");
 const ajvValidator = require("../utils/ajvValidator");
 const process_manager = require("./process_manager");
+const crypto_manager = require("../crypto_manager");
+const lisp = require("../../core/lisp");
+const emitter = require("../utils/emitter");
 
 const writeJsFunction = (function_name) => {
   return ["fn", ["&", "args"],
@@ -52,12 +55,18 @@ class Node {
   }
 
   async run({ bag = {}, input = {}, external_input = {}, actor_data = {}, environment = {} }, lisp) {
+    const hrt_run_start = process.hrtime();
     try {
+
       const execution_data = this._preProcessing({ bag, input, actor_data, environment });
       const [result, status] = await this._run(
         execution_data,
         lisp
       );
+
+      const hrt_run_interval = process.hrtime(hrt_run_start);
+      const time_elapsed = Math.ceil(hrt_run_interval[0]* 1000 + hrt_run_interval[1] / 1000000);
+
       return {
         node_id: this.id,
         bag: this._setBag(bag, result),
@@ -65,10 +74,13 @@ class Node {
         result: result,
         error: null,
         status: status,
-        next_node_id: this.next(result)
+        next_node_id: this.next(result),
+        time_elapsed: time_elapsed
       };
     } catch (err) {
-      return this._processError(err, { bag, external_input });
+      const hrt_run_interval = process.hrtime(hrt_run_start);
+      const time_elapsed = Math.ceil(hrt_run_interval[0]* 1000 + hrt_run_interval[1] / 1000000);
+      return this._processError(err, { bag, external_input, time_elapsed});
     }
   }
 
@@ -87,7 +99,11 @@ class Node {
     return bag;
   }
 
-  _processError(error, { bag, external_input }) {
+  _processError(error, { bag, external_input, time_elapsed}) {
+    if (error instanceof Error) {
+      emitter.emit("_processError, ", error);
+      error = error.toString();
+    }
     let on_error = this._spec.on_error;
     if (on_error && typeof on_error === 'string') {
       on_error = on_error.toLowerCase();
@@ -106,7 +122,8 @@ class Node {
           },
           error: null,
           status: ProcessStatus.RUNNING,
-          next_node_id: this.id
+          next_node_id: this.id,
+          time_elapsed
         }
         break;
       }
@@ -119,7 +136,8 @@ class Node {
           result: null,
           error: error,
           status: ProcessStatus.ERROR,
-          next_node_id: this.id
+          next_node_id: this.id,
+          time_elapsed
         }
         break;
       }
@@ -159,32 +177,15 @@ class StartNode extends Node {
 
   _run(execution_data, lisp) {
     ajvValidator.validateData(this._spec.parameters.input_schema, execution_data.bag);
-    return [execution_data.bag, ProcessStatus.RUNNING];
+    let result;
+    if(this._spec.parameters.timeout) {
+      result = { timeout: this._spec.parameters.timeout };
+    }
+    return [result, ProcessStatus.RUNNING];
   }
 
   _preProcessing({ bag, input }) {
     return { bag, input };
-  }
-}
-
-class FinishNode extends Node {
-  static get rules() {
-    return {
-      ...super.rules,
-      "next_is_null": [obju.fieldEquals, "next", null]
-    };
-  }
-
-  validate() {
-    return FinishNode.validate(this._spec);
-  }
-
-  _run(execution_data, lisp) {
-    return [{}, ProcessStatus.FINISHED];
-  }
-
-  next(result = null) {
-    return null;
   }
 }
 
@@ -208,6 +209,34 @@ class ParameterizedNode extends Node {
 
   _preProcessing({ bag, input, actor_data, environment }) {
     return prepare(this._spec.parameters.input, { bag: bag, result: input, actor_data: actor_data, environment: environment });
+  };
+}
+
+class FinishNode extends Node {
+  static get rules() {
+    return {
+      ...super.rules,
+      "next_is_null": [obju.fieldEquals, "next", null]
+    };
+  }
+
+  validate() {
+      return FinishNode.validate(this._spec);
+  }
+
+  _run(execution_data, lisp) {
+    return [execution_data, ProcessStatus.FINISHED];
+  }
+
+  next(result = null) {
+    return null;
+  }
+
+  _preProcessing({ bag, input, actor_data, environment }) {
+    if (this._spec.parameters && this._spec.parameters.input) {
+      return prepare(this._spec.parameters.input, { bag: bag, result: input, actor_data: actor_data, environment: environment });
+    }
+    return {};
   };
 }
 
@@ -264,7 +293,8 @@ class UserTaskNode extends ParameterizedNode {
     const parameters_rules = {
       "parameters_has_action": [obju.hasField, "action"],
       "timeout_has_valid_type": [obju.isFieldTypeIn, "timeout", ["undefined", "number"]],
-      "channels_has_valid_type": [(obj, field) => obj[field] === undefined || obj[field] instanceof Array, "channels"]
+      "channels_has_valid_type": [(obj, field) => obj[field] === undefined || obj[field] instanceof Array, "channels"],
+      "encrypted_data_has_valid_type": [(obj, field) => obj[field] === undefined || obj[field] instanceof Array, "encrypted_data"],
     };
     return {
       ...super.rules,
@@ -294,6 +324,12 @@ class UserTaskNode extends ParameterizedNode {
         if (this._spec.parameters.channels) {
           activity_manager.parameters.channels = this._spec.parameters.channels;
         }
+        if(this._spec.parameters.encrypted_data) {
+          activity_manager.parameters.encrypted_data =this._spec.parameters.encrypted_data;
+        }
+        if(this._spec.parameters.activity_schema) {
+          activity_manager.parameters.activity_schema =this._spec.parameters.activity_schema;
+        }
         let next_node_id = this.id;
         let status = ProcessStatus.WAITING;
         if (activity_manager.type === "notify") {
@@ -311,10 +347,23 @@ class UserTaskNode extends ParameterizedNode {
           next_node_id: next_node_id,
           activity_manager: activity_manager,
           action: this._spec.parameters.action,
+          activity_schema: this._spec.parameters.activity_schema
         };
       }
     } catch (err) {
       return this._processError(err, { bag, external_input });
+    }
+
+    if (this._spec.parameters.encrypted_data) {
+      const crypto = crypto_manager.getCrypto();
+
+      for (const field_path of this._spec.parameters.encrypted_data) {
+        const data = _.get(external_input, field_path);
+        if (data) {
+          const encrypted_data = crypto.encrypt(data);
+          _.set(external_input, field_path, encrypted_data);
+        }
+      }
     }
     return await this._postRun(bag, input, external_input, lisp);
   }
@@ -437,16 +486,50 @@ class HttpSystemTaskNode extends SystemTaskNode {
     return HttpSystemTaskNode.validate(this._spec);
   }
 
+  _formatHttpTimeout(request_timeout) {
+    let http_timeout = 0;
+    const int_timeout = parseInt(request_timeout);
+    if(isNaN(int_timeout)) {
+      const env_http_timeout = parseInt(process.env.HTTP_TIMEOUT);
+      if (!isNaN(env_http_timeout)) {
+        http_timeout = env_http_timeout;
+      }
+    } else {
+      http_timeout = int_timeout;
+    }
+    return http_timeout;
+  }
+
+  _formatMaxContentLength(request_max_content_length) {
+    let max_content_length = 2000;
+    const int_max_content_length = parseInt(request_max_content_length);
+    if(isNaN(int_max_content_length)) {
+      const env_max_content_length = parseInt(process.env.MAX_CONTENT_LENGTH);
+      if (!isNaN(env_max_content_length)) {
+        max_content_length = env_max_content_length;
+      }
+    } else {
+      max_content_length = int_max_content_length;
+    }
+    return max_content_length;
+  }
+
   async _run(execution_data, lisp) {
     const { verb, url: endpoint, headers } = this.request;
+    const http_timeout = this._formatHttpTimeout(this.request.timeout);
+    const max_content_length = this._formatMaxContentLength(this.request.max_content_length)
     let result;
     try {
-      result = await request[verb](endpoint, execution_data, headers);
+      result = await request[verb](endpoint, execution_data, headers, { http_timeout, max_content_length });
     } catch (err) {
-      result = {
-        status: err.response.status,
-        data: err.response.data,
-      };
+      if (err.response) {
+        result = {
+          status: err.response.status,
+          data: err.response.data,
+        };
+      } else {
+        throw new Error(`Got no response from request to ${verb} ${endpoint}, ${err.message}`);
+      }
     }
     if (this._spec.parameters.valid_response_codes) {
       if (!this._spec.parameters.valid_response_codes.includes(result.status)) {
@@ -481,12 +564,9 @@ class TimerSystemTaskNode extends SystemTaskNode {
 
   async _run(execution_data, lisp) {
     const parameters = this._spec.parameters;
-    await new Promise((resolve, reject) => {
-      setTimeout(() => {
-        resolve();
-      }, parameters.timeout * 1000);
-    })
-    return [execution_data, ProcessStatus.RUNNING];
+
+    execution_data["timeout"] = parameters.timeout;
+    return [execution_data, ProcessStatus.PENDING];
   }
 }
 
@@ -494,7 +574,7 @@ class StartProcessSystemTaskNode extends SystemTaskNode {
   static get rules() {
     const parameters_rules = {
       "parameters_has_workflow_name": [obju.hasField, "workflow_name"],
-      "parameters_workflow_name_has_valid_type": [obju.isFieldOfType, "workflow_name", "string"],
+      "parameters_workflow_name_has_valid_type": [obju.isFieldTypeIn, "workflow_name", ["string", "object"]],
       "parameters_has_actor_data": [obju.hasField, "actor_data"],
       "parameters_actor_data_has_valid_type": [obju.isFieldOfType, "actor_data", "object"],
     };
@@ -532,6 +612,90 @@ class StartProcessSystemTaskNode extends SystemTaskNode {
   }
 }
 
+class AbortProcessSystemTaskNode extends SystemTaskNode {
+  validate() {
+    return AbortProcessSystemTaskNode.validate(this._spec);
+  }
+
+  async _run(execution_data, lisp) {
+    const abort_result = await process_manager.abortProcess(execution_data);
+    const result = {};
+    for(let index = 0; index < abort_result.length; index++) {
+      result[execution_data[index]] = abort_result[index].status;
+    }
+    return [result, ProcessStatus.RUNNING];
+  }
+}
+
+class SubProcessNode extends ParameterizedNode {
+  static get rules() {
+    const parameters_rules = {
+      "parameters_has_actor_data": [obju.hasField, "actor_data"],
+      "parameters_has_input": [obju.hasField, "input"],
+      "timeout_has_valid_type": [obju.isFieldTypeIn, "timeout", ["undefined", "number"]],
+    };
+    return {
+      ...super.rules,
+      "next_has_valid_type": [obju.isFieldTypeIn, "next", ["string", "number"]],
+      "parameters_nested_validations": [new Validator(parameters_rules), "parameters"],
+    };
+  }
+
+  validate() {
+    return SubProcessNode.validate(this._spec);
+  }
+
+  async run({ bag, input, external_input = null, actor_data, environment = {} }, lisp) {
+    try {
+      if (!external_input) {
+        const execution_data = this._preProcessing({ bag, input, actor_data, environment });
+
+         return {
+          node_id: this.id,
+          bag: bag,
+          external_input: external_input,
+          result: execution_data,
+          error: null,
+          status: ProcessStatus.DELEGATED,
+          next_node_id: this.id,
+          action: this._spec.parameters.action,
+          activity_schema: this._spec.parameters.activity_schema
+        };
+      } else {
+        if (external_input.userInput === '') {
+          return await this._postRun(bag, input, external_input, lisp);
+        }
+      }
+    } catch (err) {
+      return this._processError(err, { bag, external_input });
+    }
+
+    if (this._spec.parameters.encrypted_data) {
+      const crypto = crypto_manager.getCrypto();
+
+      for (const field_path of this._spec.parameters.encrypted_data) {
+        const data = _.get(external_input, field_path);
+        if (data) {
+          const encrypted_data = crypto.encrypt(data);
+          _.set(external_input, field_path, encrypted_data);
+        }
+      }
+    }
+    return await this._postRun(bag, input, external_input, lisp);
+  }
+
+  async _postRun(bag, input, external_input, lisp) {
+    return {
+      node_id: this.id,
+      bag: bag,
+      external_input: external_input,
+      result: external_input,
+      error: null,
+      status: ProcessStatus.RUNNING,
+    }
+  }
+}
+
 module.exports = {
   Node: Node,
   StartNode: StartNode,
@@ -547,5 +711,9 @@ module.exports = {
   SetToBagSystemTaskNode: SetToBagSystemTaskNode,
   HttpSystemTaskNode: HttpSystemTaskNode,
   TimerSystemTaskNode: TimerSystemTaskNode,
+
   StartProcessSystemTaskNode: StartProcessSystemTaskNode,
+  AbortProcessSystemTaskNode: AbortProcessSystemTaskNode,
+
+  SubProcessNode: SubProcessNode
 };

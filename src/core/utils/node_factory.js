@@ -28,6 +28,10 @@ function getServiceTask(node_spec) {
             resultNode = new nodes.StartProcessSystemTaskNode(node_spec);
             break;
         }
+        case "abortprocess": {
+            resultNode = new nodes.AbortProcessSystemTaskNode(node_spec);
+            break;
+        }
         default: {
             const customClass = extra_system_category_map[node_category];
             if (customClass) {
@@ -74,6 +78,10 @@ module.exports = {
             }
             case "systemtask": {
                 resultNode = getServiceTask(node_spec);
+                break;
+            }
+            case "subprocess": {
+                resultNode = new nodes.SubProcessNode(node_spec);
                 break;
             }
             default: {

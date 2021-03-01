@@ -1,4 +1,4 @@
-let process_state_notifier;
+let process_state_notifier = null;
 function getProcessStateNotifier() {
     return process_state_notifier;
 }
@@ -7,7 +7,7 @@ function setProcessStateNotifier(notifier) {
     process_state_notifier = notifier;
 }
 
-let activity_manager_notifier;
+let activity_manager_notifier = null;
 function getActivityManagerNotifier() {
     return activity_manager_notifier;
 }

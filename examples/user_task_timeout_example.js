@@ -2,6 +2,8 @@ const readline = require('readline');
 const lisp = require("../src/core/lisp");
 const settings = require("../settings/settings");
 const { Engine } = require("../src/engine/engine");
+const startLogger = require("../src/core/utils/logging");
+const emitter = require("../src/core/utils/emitter");
 
 function question(text) {
   const lineInterface = readline.createInterface({
@@ -65,15 +67,17 @@ const actor_data = {
   claims: []
 };
 
+startLogger(emitter);
+
 const run_example = async () => {
 
-  console.log("===  RUNNING user_task_timeout_example  ===");
+  emitter.emit("===  RUNNING user_task_timeout_example  ===");
   const engine = new Engine(...settings.persist_options);
 
   let process_ended = false;
   engine.setProcessStateNotifier(
     (processState) => {
-      console.log(processState);
+      emitter.emit(processState);
       if (processState.status === 'finished') {
         process_ended = true;
       }
@@ -89,7 +93,7 @@ const run_example = async () => {
     "<Simulating external client resolution> Type something here\n"
   );
   if (process_ended) {
-    console.log('Process ended');
+    emitter.emit('Process ended');
   } else {
     await engine.commitActivity(process_id, actor_data, { userInput: external_input });
 
@@ -101,9 +105,10 @@ const run_example = async () => {
     } while (submitActivity !== 'yes' && !process_ended);
 
     if (process_ended) {
-      console.log('Process ended');
+      emitter.emit('Process ended');
     } else {
-      await engine.pushActivity(process_id, actor_data);
+      const pushResponse = await engine.pushActivity(process_id, actor_data);
+      await pushResponse.processPromise;
     }
   }
 

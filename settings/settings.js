@@ -8,9 +8,9 @@ async function memory_setup () {
 }
 
 
-settings.persist_options = ["memory", undefined];
-memory_setup();
+// settings.persist_options = ["memory", undefined];
+// memory_setup();
 
-// settings.persist_options = ["knex", db];
+settings.persist_options = ["knex", db];
 
 module.exports = settings;

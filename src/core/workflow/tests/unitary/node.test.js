@@ -1,4 +1,5 @@
 const _ = require("lodash");
+const {v1: uuid }= require('uuid');
 const lisp = require("../../../lisp");
 const obju = require("../../../utils/object");
 const nodes = require("../../../workflow/nodes");
@@ -10,6 +11,7 @@ const { ProcessStatus } = require("../../../workflow/process_state");
 const process_manager = require("../../process_manager");
 const { nodes_, results_ } = require("./node_samples");
 const axios = require("axios");
+const crypto_manager = require("../../../crypto_manager");
 
 let package_persistor;
 let core_package;
@@ -302,6 +304,46 @@ describe("Constraints test", () => {
         expect(is_valid).toEqual(true);
       });
     });
+
+    describe("encrypted_data_has_valid_type constraint works", () => {
+      test("fails with string", () => {
+        const spec = _.cloneDeep(nodes_.user_task);
+        spec.parameters.encrypted_data = "1";
+        
+        const [is_valid, error] = nodes.UserTaskNode.validate(spec);
+
+        expect(is_valid).toEqual(false);
+        expect(error).toEqual("encrypted_data_has_valid_type");
+      });
+
+      test("fails with null", () => {
+        const spec = _.cloneDeep(nodes_.user_task);
+        spec.parameters.encrypted_data = null;
+        
+        const [is_valid, error] = nodes.UserTaskNode.validate(spec);
+
+        expect(is_valid).toEqual(false);
+        expect(error).toEqual("encrypted_data_has_valid_type");
+      });
+
+      test("valid with undefined", () => {
+        const spec = _.cloneDeep(nodes_.user_task);
+        spec.parameters.encrypted_data = undefined;
+        
+        const [is_valid, error] = nodes.UserTaskNode.validate(spec);
+
+        expect(is_valid).toEqual(true);
+      });
+
+      test("valid with array", () => {
+        const spec = _.cloneDeep(nodes_.user_task);
+        spec.parameters.encrypted_data = [];
+        
+        const [is_valid, error] = nodes.UserTaskNode.validate(spec);
+
+        expect(is_valid).toEqual(true);
+      });
+    });
   });
 
   describe("ScriptTaskNode", () => {
@@ -481,7 +523,7 @@ describe("Nodes execution works", () => {
     const bag = { data: "bag" };
     const input = { data: "result" };
     const external_input = { data: "external" };
-    expect(await node.run({ bag, input, external_input })).toStrictEqual(
+    expect(await node.run({ bag, input, external_input })).toMatchObject(
       results_.success_start_result
     );
   });
@@ -492,7 +534,7 @@ describe("Nodes execution works", () => {
     const bag = { data: "bag" };
     const input = { data: "result" };
     const external_input = { data: "external" };
-    expect(await node.run({ bag, input, external_input })).toStrictEqual(
+    expect(await node.run({ bag, input, external_input })).toMatchObject(
       results_.success_finish_result);
   });
 
@@ -518,7 +560,7 @@ describe("Nodes execution works", () => {
     const bag = { identity_system_data: "bag" };
     const input = { identity_system_data: "result" };
     const external_input = { data: "external" };
-    expect(await node.run({ bag, input, external_input })).toStrictEqual(
+    expect(await node.run({ bag, input, external_input })).toMatchObject(
       results_.success_system_task_result);
   });
 });
@@ -654,8 +696,124 @@ describe("UserTaskNode", () => {
     const actor_data = {};
     await node.run({ bag, input, external_input, actor_data });
     const result = await node.run({ bag, input, external_input, actor_data });
-    expect(result).toStrictEqual(
+    expect(result).toMatchObject(
       results_.success_user_task_result);
+  });
+
+  describe("UserTaskNode encrypted_data works", () => {
+
+    function getNode(encrypted_data) {
+      const node_spec = _.cloneDeep(nodes_.user_task);
+      node_spec.parameters.encrypted_data = encrypted_data;
+
+      return new nodes.UserTaskNode(node_spec);
+    }
+
+    test("encrypt value", async () => {
+      const user_task_node = getNode(["password"]);
+
+      const original_getCrypto = crypto_manager.getCrypto;
+      try {
+        const mock_getCrypt = jest.fn().mockImplementation(() => {
+          return {
+            encrypt: () => "encryptedData",
+          };
+        });
+        crypto_manager.getCrypto = mock_getCrypt;
+
+        const bag = { bagData: "example bag data" };
+        const input = { inputData: "example input data" };
+        const external_input = { password: "senha" };
+        const actor_data = {};
+        const result = await user_task_node.run({ bag, input, external_input, actor_data });
+        expect(result).toBeDefined();
+        expect(result.result).toEqual({ password: "encryptedData" });
+
+        expect(mock_getCrypt).toHaveBeenNthCalledWith(1);
+      } finally {
+        crypto_manager.getCrypto = original_getCrypto;
+      }
+    });
+
+    test("encrypt nested value", async () => {
+      const user_task_node = getNode(["user.password"]);
+
+      const original_getCrypto = crypto_manager.getCrypto;
+      try {
+        const mock_getCrypt = jest.fn().mockImplementation(() => {
+          return {
+            encrypt: () => "encryptedData",
+          };
+        });
+        crypto_manager.getCrypto = mock_getCrypt;
+
+        const bag = { bagData: "example bag data" };
+        const input = { inputData: "example input data" };
+        const external_input = { user: { password: "senha" } };
+        const actor_data = {};
+        const result = await user_task_node.run({ bag, input, external_input, actor_data });
+        expect(result).toBeDefined();
+        expect(result.result).toEqual({ user: { password: "encryptedData" } });
+
+        expect(mock_getCrypt).toHaveBeenNthCalledWith(1);
+      } finally {
+        crypto_manager.getCrypto = original_getCrypto;
+      }
+    });
+
+    test("encrypt multiple values", async () => {
+      const user_task_node = getNode(["user.password", "value"]);
+
+      const original_getCrypto = crypto_manager.getCrypto;
+      try {
+        const mock_getCrypt = jest.fn().mockImplementation(() => {
+          return {
+            encrypt: () => "encryptedData",
+          };
+        });
+        crypto_manager.getCrypto = mock_getCrypt;
+
+        const bag = { bagData: "example bag data" };
+        const input = { inputData: "example input data" };
+        const external_input = { user: { password: "senha" }, value: 22 };
+        const actor_data = {};
+        const result = await user_task_node.run({ bag, input, external_input, actor_data });
+        expect(result).toBeDefined();
+        expect(result.result).toEqual({ user: { password: "encryptedData" }, value: "encryptedData" });
+
+        expect(mock_getCrypt).toHaveBeenNthCalledWith(1);
+      } finally {
+        crypto_manager.getCrypto = original_getCrypto;
+      }
+    });
+
+    test("no error with encrypted_data missing", async () => {
+      const user_task_node = getNode(["user.password", "value"]);
+
+      const original_getCrypto = crypto_manager.getCrypto;
+      try {
+        const mock_getCrypt = jest.fn().mockImplementation(() => {
+          return {
+            encrypt: () => "encryptedData",
+          };
+        });
+        crypto_manager.getCrypto = mock_getCrypt;
+
+        const bag = { bagData: "example bag data" };
+        const input = { inputData: "example input data" };
+        const external_input = { user: { name: "username" }};
+        const actor_data = {};
+        const result = await user_task_node.run({ bag, input, external_input, actor_data });
+        expect(result).toBeDefined();
+        expect(result.result).toStrictEqual(external_input);
+        expect(result.result.value).toBeUndefined()
+        expect(result.result.user.passwrod).toBeUndefined()
+
+        expect(mock_getCrypt).toHaveBeenNthCalledWith(1);
+      } finally {
+        crypto_manager.getCrypto = original_getCrypto;
+      }
+    });
   });
 
   test("Creates activity manager with parameter timeout", async () => {
@@ -672,7 +830,7 @@ describe("UserTaskNode", () => {
     expect(result.activity_manager.parameters).toEqual({ timeout: 10 });
   });
 
-  test("Creates activity manager with parameter timeout", async () => {
+  test("Creates activity manager with parameter channel", async () => {
     const node_spec = _.cloneDeep(nodes_.user_task);
     node_spec.parameters.channels = ["1"];
 
@@ -684,6 +842,22 @@ describe("UserTaskNode", () => {
     const result = await node.run({ bag, input, actor_data });
     expect(result.activity_manager).toBeDefined();
     expect(result.activity_manager.parameters).toEqual({ channels: ["1"] });
+  });
+
+  test("Creates activity manager with parameter crypto", async () => {
+    const node_spec = _.cloneDeep(nodes_.user_task);
+    node_spec.parameters.encrypted_data = ["password"];
+
+    const node = new nodes.UserTaskNode(node_spec);
+
+    const bag = { identity_user_data: "example_bag_data" };
+    const input = { identity_user_data: "example_input_data" };
+    const actor_data = {};
+    const result = await node.run({ bag, input, actor_data });
+    expect(result.activity_manager).toBeDefined();
+    expect(result.activity_manager.parameters).toEqual({
+      encrypted_data: ["password"],
+    });
   });
 
   test("Can reference actor_data on input", async () => {
@@ -736,7 +910,7 @@ describe("ScriptTaskNode", () => {
     const bag = { lisp_system_data: "bag" };
     const input = { data: "result" };
     const external_input = { data: "external" };
-    expect(await node.run({ bag, input, external_input }, lisp)).toStrictEqual(
+    expect(await node.run({ bag, input, external_input }, lisp)).toMatchObject(
       results_.success_script_task_result);
   });
 
@@ -787,7 +961,7 @@ describe("HttpSystemTaskNode", () => {
     const bag = { payload: { dummy: 'payload' } };
     const input = {};
     const external_input = {};
-    expect(await node.run({ bag, input, external_input })).toStrictEqual(
+    expect(await node.run({ bag, input, external_input })).toMatchObject(
       results_.success_get_http_result);
   });
 
@@ -799,7 +973,7 @@ describe("HttpSystemTaskNode", () => {
     const bag = { payload: { dummy: 'payload' } };
     const input = {};
     const external_input = {};
-    expect(await node.run({ bag, input, external_input })).toStrictEqual(
+    expect(await node.run({ bag, input, external_input })).toMatchObject(
       results_.success_post_http_result);
   });
 
@@ -811,7 +985,7 @@ describe("HttpSystemTaskNode", () => {
     const bag = { payload: { dummy: 'payload' } };
     const input = {};
     const external_input = {};
-    expect(await node.run({ bag, input, external_input })).toStrictEqual(
+    expect(await node.run({ bag, input, external_input })).toMatchObject(
       results_.success_delete_http_result);
   });
 
@@ -825,7 +999,7 @@ describe("HttpSystemTaskNode", () => {
     const bag = {payload: {dummy: 'payload'}};
     const input = {};
     const external_input = {};
-    expect(await node.run({bag, input, external_input})).toStrictEqual(
+    expect(await node.run({bag, input, external_input})).toMatchObject(
       results_.success_delete_http_result);
   });
 
@@ -844,7 +1018,7 @@ describe("HttpSystemTaskNode", () => {
 
     const expected_result = _.cloneDeep(results_.success_delete_http_result);
     expected_result.bag = bag;
-    expect(result).toStrictEqual(expected_result);
+    expect(result).toMatchObject(expected_result);
   });
 
   test("HttpSystemTaskNode works with $ref actor_data", async () => {
@@ -858,7 +1032,7 @@ describe("HttpSystemTaskNode", () => {
     const input = {};
     const external_input = {};
     const actor_data = {verb: "DELETE"}
-    expect(await node.run({bag, input, external_input, actor_data})).toStrictEqual(
+    expect(await node.run({bag, input, external_input, actor_data})).toMatchObject(
       results_.success_delete_http_result);
   });
 
@@ -936,6 +1110,298 @@ describe("HttpSystemTaskNode", () => {
     expect(node_result.status).toEqual(ProcessStatus.ERROR);
     expect(node_result.result).toBeNull();
   });
+
+  describe('httpTimeout', () => {
+    const axios_methods = [
+      'post',
+      'get',
+      'delete',
+      'patch',
+      'put',
+      'head'
+    ];
+
+    for (const axios_method of axios_methods) {
+      test(`${axios_method.toUpperCase()} Timeout uses ENV HTTP_TIMEOUT`, async () => {
+        try {
+          process.env.HTTP_TIMEOUT = '10000';
+          let calledEndpoint;
+          let axiosConfig;
+          axios.__customResponse(axios_method, (endpoint, payload, config) => {
+            calledEndpoint = endpoint;
+            axiosConfig = config || payload;
+            return { status: 200, data: { response: "ok" } };
+          });
+
+          const node_spec = _.cloneDeep(nodes_.http_system_task);
+          node_spec.parameters.request.verb = axios_method.toUpperCase();
+          const node = new nodes.HttpSystemTaskNode(node_spec);
+
+          const bag = { bagData: "exampleBagData" };
+          const input = {};
+          const actor_data = { claims: ["user"] }
+          const response = await node.run({ bag, input, actor_data });
+          expect(response.result).toBeDefined();
+          expect(response.result.status).toEqual(200);
+          expect(response.result.data).toEqual({ response: "ok" });
+          expect(calledEndpoint).toEqual("https://koa-app:3000/test_api");
+          expect(axiosConfig.timeout).toEqual(10000);
+        } finally {
+          axios.__clearCustomResponse(axios_method);
+          delete process.env.HTTP_TIMEOUT;
+        }
+      });
+
+      test(`${axios_method.toUpperCase()} If ENV HTTP_TIMEOUT invalid uses 0`, async () => {
+        try {
+          process.env.HTTP_TIMEOUT = 'abc';
+          let calledEndpoint;
+          let axiosConfig;
+          axios.__customResponse(axios_method, (endpoint, payload, config) => {
+            calledEndpoint = endpoint;
+            axiosConfig = config || payload;
+            return { status: 200, data: { response: "ok" } };
+          });
+
+          const node_spec = _.cloneDeep(nodes_.http_system_task);
+          node_spec.parameters.request.verb = axios_method.toUpperCase();
+          const node = new nodes.HttpSystemTaskNode(node_spec);
+
+          const bag = { bagData: "exampleBagData" };
+          const input = {};
+          const actor_data = { claims: ["user"] }
+          const response = await node.run({ bag, input, actor_data });
+          expect(response.result).toBeDefined();
+          expect(response.result.status).toEqual(200);
+          expect(response.result.data).toEqual({ response: "ok" });
+          expect(calledEndpoint).toEqual("https://koa-app:3000/test_api");
+          expect(axiosConfig.timeout).toEqual(0);
+        } finally {
+          axios.__clearCustomResponse(axios_method);
+          delete process.env.HTTP_TIMEOUT;
+        }
+      });
+
+      test(`${axios_method.toUpperCase()} If no config uses 0`, async () => {
+        try {
+          expect(process.env.HTTP_TIMEOUT).toBeUndefined();
+          let calledEndpoint;
+          let axiosConfig;
+          axios.__customResponse(axios_method, (endpoint, payload, config) => {
+            calledEndpoint = endpoint;
+            axiosConfig = config || payload;
+            return { status: 200, data: { response: "ok" } };
+          });
+
+          const node_spec = _.cloneDeep(nodes_.http_system_task);
+          node_spec.parameters.request.verb = axios_method.toUpperCase();
+          const node = new nodes.HttpSystemTaskNode(node_spec);
+
+          const bag = { bagData: "exampleBagData" };
+          const input = {};
+          const actor_data = { claims: ["user"] }
+          const response = await node.run({ bag, input, actor_data });
+          expect(response.result).toBeDefined();
+          expect(response.result.status).toEqual(200);
+          expect(response.result.data).toEqual({ response: "ok" });
+          expect(calledEndpoint).toEqual("https://koa-app:3000/test_api");
+          expect(axiosConfig.timeout).toEqual(0);
+        } finally {
+          axios.__clearCustomResponse(axios_method);
+        }
+      });
+
+      test(`${axios_method.toUpperCase()} Uses timeout configured on blueprint`, async () => {
+        try {
+          let calledEndpoint;
+          let axiosConfig;
+          axios.__customResponse(axios_method, (endpoint, payload, config) => {
+            calledEndpoint = endpoint;
+            axiosConfig = config || payload;
+            return { status: 200, data: { response: "ok" } };
+          });
+
+          const node_spec = _.cloneDeep(nodes_.http_system_task);
+          node_spec.parameters.request.verb = axios_method.toUpperCase();
+          node_spec.parameters.request.timeout = "22";
+          const node = new nodes.HttpSystemTaskNode(node_spec);
+
+          const bag = { bagData: "exampleBagData" };
+          const input = {};
+          const actor_data = { claims: ["user"] }
+          const response = await node.run({ bag, input, actor_data });
+          expect(response.result).toBeDefined();
+          expect(response.result.status).toEqual(200);
+          expect(response.result.data).toEqual({ response: "ok" });
+          expect(calledEndpoint).toEqual("https://koa-app:3000/test_api");
+          expect(axiosConfig.timeout).toEqual(22);
+        } finally {
+          axios.__clearCustomResponse(axios_method);
+        }
+      });
+
+      test(`${axios_method.toUpperCase()} Uses timeout default if blueprint config is invalid`, async () => {
+        try {
+          let calledEndpoint;
+          let axiosConfig;
+          axios.__customResponse(axios_method, (endpoint, payload, config) => {
+            calledEndpoint = endpoint;
+            axiosConfig = config || payload;
+            return { status: 200, data: { response: "ok" } };
+          });
+
+          const node_spec = _.cloneDeep(nodes_.http_system_task);
+          node_spec.parameters.request.verb = axios_method.toUpperCase();
+          node_spec.parameters.request.timeout = "abc";
+          const node = new nodes.HttpSystemTaskNode(node_spec);
+
+          const bag = { bagData: "exampleBagData" };
+          const input = {};
+          const actor_data = { claims: ["user"] }
+          const response = await node.run({ bag, input, actor_data });
+          expect(response.result).toBeDefined();
+          expect(response.result.status).toEqual(200);
+          expect(response.result.data).toEqual({ response: "ok" });
+          expect(calledEndpoint).toEqual("https://koa-app:3000/test_api");
+          expect(axiosConfig.timeout).toEqual(0);
+        } finally {
+          axios.__clearCustomResponse(axios_method);
+        }
+      });
+    }
+  });
+
+  describe('maxContentLength', () => {
+    const axios_methods = [
+      'post',
+      'get',
+      'delete',
+      'patch',
+      'put',
+      'head'
+    ];
+
+    for (const axios_method of axios_methods) {
+      test(`${axios_method.toUpperCase()} maxContentLength uses ENV MAX_CONTENT_LENGTH`, async () => {
+        try {
+          process.env.MAX_CONTENT_LENGTH = '10';
+          let calledEndpoint;
+          let axiosConfig;
+          axios.__customResponse(axios_method, (endpoint, payload, config) => {
+            calledEndpoint = endpoint;
+            axiosConfig = config || payload;
+            return { status: 200, data: { response: "12345678901" } };
+          });
+
+          const node_spec = _.cloneDeep(nodes_.http_system_task);
+          node_spec.parameters.request.verb = axios_method.toUpperCase();
+          const node = new nodes.HttpSystemTaskNode(node_spec);
+
+          const bag = { bagData: "exampleBagData" };
+          const input = {};
+          const actor_data = { claims: ["user"] }
+          const response = await node.run({ bag, input, actor_data });
+          expect(response.result).toBeDefined();
+          expect(response.result.status).toEqual(200);
+          expect(response.result.data).toEqual({ response: "12345678901" });
+          expect(calledEndpoint).toEqual("https://koa-app:3000/test_api");
+          expect(axiosConfig.maxContentLength).toEqual(10);
+        } finally {
+          axios.__clearCustomResponse(axios_method);
+          delete process.env.MAX_CONTENT_LENGTH;
+        }
+      });
+
+      test(`${axios_method.toUpperCase()} If ENV HTTP_TIMEOUT invalid uses default`, async () => {
+        try {
+          process.env.MAX_CONTENT_LENGTH = 'abc';
+          let calledEndpoint;
+          let axiosConfig;
+          axios.__customResponse(axios_method, (endpoint, payload, config) => {
+            calledEndpoint = endpoint;
+            axiosConfig = config || payload;
+            return { status: 200, data: { response: "ok" } };
+          });
+
+          const node_spec = _.cloneDeep(nodes_.http_system_task);
+          node_spec.parameters.request.verb = axios_method.toUpperCase();
+          const node = new nodes.HttpSystemTaskNode(node_spec);
+
+          const bag = { bagData: "exampleBagData" };
+          const input = {};
+          const actor_data = { claims: ["user"] }
+          const response = await node.run({ bag, input, actor_data });
+          expect(response.result).toBeDefined();
+          expect(response.result.status).toEqual(200);
+          expect(response.result.data).toEqual({ response: "ok" });
+          expect(calledEndpoint).toEqual("https://koa-app:3000/test_api");
+          expect(axiosConfig.maxContentLength).toEqual(2000);
+        } finally {
+          axios.__clearCustomResponse(axios_method);
+          delete process.env.MAX_CONTENT_LENGTH;
+        }
+      });
+
+
+      test(`${axios_method.toUpperCase()} Uses max_content_length configured on blueprint`, async () => {
+        try {
+          let calledEndpoint;
+          let axiosConfig;
+          axios.__customResponse(axios_method, (endpoint, payload, config) => {
+            calledEndpoint = endpoint;
+            axiosConfig = config || payload;
+            return { status: 200, data: { response: "ok" } };
+          });
+
+          const node_spec = _.cloneDeep(nodes_.http_system_task);
+          node_spec.parameters.request.verb = axios_method.toUpperCase();
+          node_spec.parameters.request.max_content_length = "22";
+          const node = new nodes.HttpSystemTaskNode(node_spec);
+
+          const bag = { bagData: "exampleBagData" };
+          const input = {};
+          const actor_data = { claims: ["user"] }
+          const response = await node.run({ bag, input, actor_data });
+          expect(response.result).toBeDefined();
+          expect(response.result.status).toEqual(200);
+          expect(response.result.data).toEqual({ response: "ok" });
+          expect(calledEndpoint).toEqual("https://koa-app:3000/test_api");
+          expect(axiosConfig.maxContentLength).toEqual(22);
+        } finally {
+          axios.__clearCustomResponse(axios_method);
+        }
+      });
+
+      test(`${axios_method.toUpperCase()} Uses timeout default if blueprint config is invalid`, async () => {
+        try {
+          let calledEndpoint;
+          let axiosConfig;
+          axios.__customResponse(axios_method, (endpoint, payload, config) => {
+            calledEndpoint = endpoint;
+            axiosConfig = config || payload;
+            return { status: 200, data: { response: "ok" } };
+          });
+
+          const node_spec = _.cloneDeep(nodes_.http_system_task);
+          node_spec.parameters.request.verb = axios_method.toUpperCase();
+          node_spec.parameters.request.max_coontent_length = "abc";
+          const node = new nodes.HttpSystemTaskNode(node_spec);
+
+          const bag = { bagData: "exampleBagData" };
+          const input = {};
+          const actor_data = { claims: ["user"] }
+          const response = await node.run({ bag, input, actor_data });
+          expect(response.result).toBeDefined();
+          expect(response.result.status).toEqual(200);
+          expect(response.result.data).toEqual({ response: "ok" });
+          expect(calledEndpoint).toEqual("https://koa-app:3000/test_api");
+          expect(axiosConfig.maxContentLength).toEqual(2000);
+        } finally {
+          axios.__clearCustomResponse(axios_method);
+        }
+      });
+    }
+  });
 });
 
 describe("SetToBagSystemTaskNode", () => {
@@ -1004,8 +1470,7 @@ describe("StartNode", () => {
     const external_input = { data: "external" };
     const node_result = await node.run({bag, input, external_input})
     expect(node_result.status).toEqual(ProcessStatus.ERROR);
-    expect(node_result.error).toBeInstanceOf(Error);
-    expect(node_result.error.message).toMatch("should be string");
+    expect(node_result.error).toMatch("should be string");
   });
 
   test("Run status running with result error if on_error 'resumeNext", async () => {
@@ -1025,8 +1490,7 @@ describe("StartNode", () => {
     expect(node_result.external_input).toEqual(external_input);
     expect(node_result.error).toBeNull();
     expect(node_result.result.is_error).toEqual(true);
-    expect(node_result.result.error).toBeInstanceOf(Error);
-    expect(node_result.result.error.message).toMatch("should be string");
+    expect(node_result.result.error).toMatch("should be string");
   });
 
   test("Valid input_schema", async () => {
@@ -1044,8 +1508,23 @@ describe("StartNode", () => {
     const input = { data: "result" };
     const external_input = { data: "external" };
     const node_result = await node.run({bag, input, external_input})
-    expect(node_result).toStrictEqual(results_.success_start_result);
+    expect(node_result).toMatchObject(results_.success_start_result);
   });
+
+  test("With Timeout pops the timeout parameter up", async () => {
+    const node_spec = _.cloneDeep(nodes_.start_w_timeout);
+
+    const node = new nodes.StartNode(node_spec);
+
+    const bag = { data: "bag" };
+    const input = { data: "input" };
+    const external_input = { data: "external" };
+
+    const node_result = await node.run({bag, input, external_input})
+
+    expect(node_result).toMatchObject(results_.success_start_result_w_timeout);
+  });
+
 });
 
 describe("TimerSystemTaskNode", () => {
@@ -1060,7 +1539,7 @@ describe("TimerSystemTaskNode", () => {
     expect(reason).toEqual("parameters_has_timeout");
   });
 
-  test("Timer works", async () => {
+  test("Timer node puts the process on PENDING and pops the timeout parameter up", async () => {
     const node_spec = _.cloneDeep(nodes_.timer_system_task);
 
     const node = new nodes.TimerSystemTaskNode(node_spec);
@@ -1071,20 +1550,18 @@ describe("TimerSystemTaskNode", () => {
     const input = {
       input: "value",
     }
-    const startTime = new Date();
     const result = await node.run({ bag, input });
-    const endTime = new Date();
 
-    expect(result).toStrictEqual({
+    expect(result).toMatchObject({
       node_id: node_spec.id,
       next_node_id: node_spec.next,
       bag: bag,
-      status: ProcessStatus.RUNNING,
-      result: {},
+      status: ProcessStatus.PENDING,
+      result: {timeout: node_spec.parameters.timeout},
       external_input: {},
       error: null,
     });
-    expect(endTime.getTime() - startTime.getTime()).toBeGreaterThanOrEqual(node_spec.parameters.timeout * 1000);
+
   })
 });
 
@@ -1106,7 +1583,31 @@ describe("StartProcessSystemTaskNode", () => {
       expect(reason).toEqual("parameters_has_workflow_name");
     });
 
-    test("parameters_workflow_name_has_valid_type", () => {
+    test("parameters_workflow_name_has_valid_type accepts string", () => {
+      node_spec.parameters.workflow_name = "22";
+
+      const node = new nodes.StartProcessSystemTaskNode(node_spec);
+
+      const [is_valid, reason] = node.validate();
+
+      expect(is_valid).toEqual(true);
+      expect(reason).toBeNull();
+    });
+
+    test("parameters_workflow_name_has_valid_type accepts object", () => {
+      node_spec.parameters.workflow_name = { 
+        $ref: "result.value"
+      };
+
+      const node = new nodes.StartProcessSystemTaskNode(node_spec);
+
+      const [is_valid, reason] = node.validate();
+
+      expect(is_valid).toEqual(true);
+      expect(reason).toBeNull();
+    });
+
+    test("parameters_workflow_name_has_valid_type reject number", () => {
       node_spec.parameters.workflow_name = 22;
 
       const node = new nodes.StartProcessSystemTaskNode(node_spec);
@@ -1349,5 +1850,112 @@ describe("StartProcessSystemTaskNode", () => {
       );
     });
 
+  });
+});
+
+describe("AbortProcessSystemTaskNode", () => {
+  describe("Validations", () => {
+    let node_spec;
+    beforeEach(() => {
+      node_spec = _.cloneDeep(nodes_.abort_process_system_task);
+    });
+
+    test("accepts input as array process_ids", () => {
+      node_spec.parameters.input = [
+        uuid(),
+      ];
+
+      const node = new nodes.AbortProcessSystemTaskNode(node_spec);
+
+      const [is_valid, reason] = node.validate();
+
+      expect(is_valid).toEqual(true);
+      expect(reason).toBeNull();
+    });
+
+    test("accepts input as $ref", () => {
+      node_spec.parameters.input = {
+        $ref: "result.process"
+      };
+
+      const node = new nodes.AbortProcessSystemTaskNode(node_spec);
+
+      const [is_valid, reason] = node.validate();
+
+      expect(is_valid).toEqual(true);
+      expect(reason).toBeNull();
+    });
+  });
+
+  describe("run", () => {
+    const original_abortProcess = process_manager.abortProcess;
+    let mock_abortProcess = jest.fn();
+
+    beforeEach(() => {
+      mock_abortProcess.mockReset();
+
+      process_manager.abortProcess = mock_abortProcess;
+    });
+
+    afterAll(() => {
+      process_manager.abortProcess = original_abortProcess;
+    });
+
+    test("calls process_manager abortProcess", async () => {
+      const process_id = uuid();
+
+      const abort_result = [
+        {
+          status: "fulfilled",
+        }
+      ];
+      mock_abortProcess.mockResolvedValue(abort_result);
+
+      const node_spec = _.cloneDeep(nodes_.abort_process_system_task);
+      node_spec.parameters.input = [process_id]
+
+      const node = new nodes.AbortProcessSystemTaskNode(node_spec);
+
+      const result = await node.run({});
+      expect(result.status).toEqual(ProcessStatus.RUNNING);
+      expect(result.result).toEqual({
+        [process_id]: "fulfilled",
+      });
+
+      expect(mock_abortProcess).toHaveBeenNthCalledWith(1, [process_id])
+    });
+
+    test("calls process_manager abortProcess with $ref", async () => {
+      const process_list = [
+        uuid(),
+        uuid(),
+      ];
+
+      const abort_result = [
+        {
+          status: "fulfilled",
+        },
+        {
+          status: "rejected",
+        },
+      ];
+      mock_abortProcess.mockResolvedValue(abort_result);
+
+      const node_spec = _.cloneDeep(nodes_.abort_process_system_task);
+      node_spec.parameters.input = {
+        $ref: "result.process_list"
+      }
+
+      const node = new nodes.AbortProcessSystemTaskNode(node_spec);
+
+      const result = await node.run({ input: { process_list } });
+      expect(result.status).toEqual(ProcessStatus.RUNNING);
+      expect(result.result).toEqual({
+        [process_list[0]]: "fulfilled",
+        [process_list[1]]: "rejected",
+      });
+
+      expect(mock_abortProcess).toHaveBeenNthCalledWith(1, process_list)
+    });
   });
 });

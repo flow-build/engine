@@ -1,5 +1,5 @@
 const _ = require("lodash");
-const uuid = require("uuid/v1");
+const { v1: uuid } = require("uuid");
 const lisp = require("../../../core/lisp");
 const settings = require("../../../../settings/tests/settings");
 const { AssertionError } = require("assert");
@@ -20,6 +20,7 @@ afterAll(async () => {
   if (settings.persist_options[0] === "knex"){
     await Process.getPersist()._db.destroy();;
   }
+  Engine.kill();
 });
 
 async function createRunProcess(engine, workflow_id, actor_data) {
@@ -120,7 +121,10 @@ describe("fetchDoneActivitiesForActor works", () => {
     const external_input = {any: "external_input"};
     await engine.commitActivity(process.id, actors_.simpleton, external_input);
 
-    response = await engine.pushActivity(process.id, actors_.simpleton);
+    const result = await engine.pushActivity(process.id, actors_.simpleton);
+    expect(result.error).toBeUndefined();
+    expect(result.processPromise).toBeInstanceOf(Promise);
+    response = await result.processPromise;
     expect(response.state.status).toBe("finished");
 
     response = await engine.fetchDoneActivitiesForActor(actors_.simpleton);
@@ -158,12 +162,18 @@ describe("fetchDoneActivitiesForActor works", () => {
     let response = await engine.fetchAvailableActivitiesForActor(actors_.simpleton);
     let activity_manager_id = response[0].id;
     await engine.commitActivity(process_id_1, actors_.simpleton, external_input);
-    response = await engine.pushActivity(process_id_1, actors_.simpleton);
+    let pushResult = await engine.pushActivity(process_id_1, actors_.simpleton);
+    expect(pushResult.error).toBeUndefined();
+    expect(pushResult.processPromise).toBeInstanceOf(Promise);
+    response = await pushResult.processPromise;
 
     response = await engine.fetchAvailableActivitiesForActor(actors_.admin);
     activity_manager_id = response[0].id;
     await engine.commitActivity(process_id_2, actors_.admin, external_input);
-    response = await engine.pushActivity(process_id_2, actors_.admin);
+    pushResult = await engine.pushActivity(process_id_2, actors_.admin);
+    expect(pushResult.processPromise).toBeInstanceOf(Promise);
+    expect(pushResult.error).toBeUndefined();
+    response = await pushResult.processPromise;
 
     response = await engine.fetchDoneActivitiesForActor(actors_.simpleton);
     expect(response).toHaveLength(1);
@@ -181,7 +191,10 @@ describe("fetchDoneActivitiesForActor works", () => {
     const external_input = {any: "external_input"};
     await engine.commitActivity(process.id, actors_.simpleton, external_input);
 
-    response = await engine.pushActivity(process.id, actors_.simpleton);
+    const pushResult = await engine.pushActivity(process.id, actors_.simpleton);
+    expect(pushResult.processPromise).toBeInstanceOf(Promise);
+    expect(pushResult.error).toBeUndefined();
+    response = await pushResult.processPromise;
     expect(response.state.status).toBe("finished");
 
     response = await engine.fetchDoneActivitiesForActor(actors_.simpleton, {workflow_id: uuid()});
@@ -198,7 +211,10 @@ describe("fetchDoneActivitiesForActor works", () => {
     const external_input = {any: "external_input"};
     await engine.commitActivity(process.id, actors_.simpleton, external_input);
 
-    response = await engine.pushActivity(process.id, actors_.simpleton);
+    const pushResult = await engine.pushActivity(process.id, actors_.simpleton);
+    expect(pushResult.error).toBeUndefined();
+    expect(pushResult.processPromise).toBeInstanceOf(Promise);
+    response = await pushResult.processPromise;
     expect(response.state.status).toBe("finished");
 
     response = await engine.fetchDoneActivitiesForActor(actors_.simpleton,
@@ -220,7 +236,10 @@ describe("fetchDoneActivitiesForActor works", () => {
     const external_input = {any: "external_input"};
     await engine.commitActivity(process.id, actors_.simpleton, external_input);
 
-    response = await engine.pushActivity(process.id, actors_.simpleton);
+    const pushResult = await engine.pushActivity(process.id, actors_.simpleton);
+    expect(pushResult.error).toBeUndefined();
+    expect(pushResult.processPromise).toBeInstanceOf(Promise);
+    response = await pushResult.processPromise;
     expect(response.state.status).toBe("finished");
 
     response = await engine.fetchDoneActivitiesForActor(actors_.simpleton, {any: "any"});
@@ -230,6 +249,18 @@ describe("fetchDoneActivitiesForActor works", () => {
 });
 
 describe("fetchAvailableActivityForProcess works", () => {
+  test("fetchAvailableActivityForProcess returns only avaliable commit activity manager", async () => {
+    const actor_data = actors_.simpleton;
+    const engine = new Engine(...settings.persist_options, {});
+    const workflow = await engine.saveWorkflow("sample", "sample", blueprints_.notify_and_user_task);
+    const process = await createRunProcess(engine, workflow.id, actor_data);
+    expect(process.status).toBe(ProcessStatus.WAITING);
+    const process_id = process.id;
+
+    const activity_manager_data = await engine.fetchAvailableActivityForProcess(process_id, actor_data)
+    expect(activity_manager_data).toBeDefined();
+    expect(activity_manager_data.type).toEqual("commit");
+  });
 
   test("fetchAvailableActivityForProcess returns ActivityManager with started activities", async () => {
     const engine = new Engine(...settings.persist_options, {});
@@ -241,8 +272,20 @@ describe("fetchAvailableActivityForProcess works", () => {
     const external_input = {any: "external_input"};
     await engine.commitActivity(process_id, actors_.simpleton, external_input);
 
-    response = await engine.fetchAvailableActivityForProcess(process_id, actors_.simpleton);
+    const response = await engine.fetchAvailableActivityForProcess(process_id, actors_.simpleton);
     expect(response.activities).toHaveLength(1);
+  });
+
+  test("fetchAvailableActivityForProcess returns undefined if no avaliable activity manager", async () => {
+    const actor_data = actors_.simpleton;
+    const engine = new Engine(...settings.persist_options, {});
+    const workflow = await engine.saveWorkflow("sample", "sample", blueprints_.minimal);
+    const process = await createRunProcess(engine, workflow.id, actor_data);
+    expect(process.status).toBe(ProcessStatus.FINISHED);
+    const process_id = process.id;
+
+    const activity_manager_data = await engine.fetchAvailableActivityForProcess(process_id, actor_data)
+    expect(activity_manager_data).toBeUndefined();
   });
 });
 
@@ -276,6 +319,23 @@ describe("commitActivity works", () => {
     expect(response.activities).toHaveLength(1);
   });
 
+  test("Engine.commitActivity unshifts activity", async () => {
+    const engine = new Engine(...settings.persist_options, {});
+    const workflow = await engine.saveWorkflow("sample", "sample", blueprints_.identity_user_task);
+    const process = await createRunProcess(engine, workflow.id, actors_.simpleton);
+    expect(process.status).toBe(ProcessStatus.WAITING);
+    let response = await engine.fetchAvailableActivitiesForActor(actors_.simpleton);
+    const activity_manager_id = response[0].id;
+
+    let external_input = {any: "first"};
+    response = await engine.commitActivity(process.id, actors_.simpleton, external_input);
+    expect(response.activities).toHaveLength(1);
+
+    external_input = {any: "second"};
+    response = await engine.commitActivity(process.id, actors_.simpleton, external_input);
+    expect(response.activities[0].data.any).toEqual("second");
+  });
+
   test("Engine.commitActivity shouldn't work for invalid actor ", async () => {
     const error = () => {throw Error("Error: No ActivityManager was found for process id")};
     const engine = new Engine(...settings.persist_options, {});
@@ -291,6 +351,39 @@ describe("commitActivity works", () => {
     response = await engine.commitActivity(process.id, actors_.simpleton, external_input);
     expect(response.error).toBeDefined();
   });
+
+  test("Engine.commitActivity encrypts data", async () => {
+    const engine = new Engine(...settings.persist_options, {});
+    const crypto = engine.buildCrypto("", { key: "12345678901234567890123456789012" });
+    engine.setCrypto(crypto);
+    const workflow = await engine.saveWorkflow("sample", "sample", blueprints_.user_encrypt);
+    let process = await createRunProcess(engine, workflow.id, actors_.simpleton);
+    expect(process.status).toEqual(ProcessStatus.WAITING);
+
+    const user_input = "example user input"
+    const response = await engine.commitActivity(process.id, actors_.simpleton, { value: user_input });
+    expect(response.error).toBeUndefined();
+    expect(response.activities).toHaveLength(1);
+    expect(response.activities[0].data).toBeDefined();
+    expect(response.activities[0].data.value).not.toEqual(user_input);
+
+    const decrypted_value = crypto.decrypt(response.activities[0].data.value);
+    expect(decrypted_value).toEqual(user_input);
+  });
+
+  test("Engine.commitActivity encrypts only encrypted_data if present", async () => {
+    const engine = new Engine(...settings.persist_options, {});
+    const crypto = engine.buildCrypto("", { key: "12345678901234567890123456789012" });
+    engine.setCrypto(crypto);
+    const workflow = await engine.saveWorkflow("sample", "sample", blueprints_.user_encrypt);
+    let process = await createRunProcess(engine, workflow.id, actors_.simpleton);
+    expect(process.status).toEqual(ProcessStatus.WAITING);
+
+    const user_input = "example user input"
+    const response = await engine.commitActivity(process.id, actors_.simpleton, { other: user_input });
+    expect(response.error).toBeUndefined();
+    expect(response.activities).toHaveLength(1);
+  });
 });
 
 
@@ -305,13 +398,40 @@ describe("pushActivity works", () => {
     const external_input = {any: "external_input"};
     await engine.commitActivity(process.id, actors_.simpleton, external_input);
 
-    response = await engine.pushActivity(process.id, actors_.simpleton);
-    expect(response.state.status).toBe("finished");
+    const response = await engine.pushActivity(process.id, actors_.simpleton);
+    expect(response.error).toBeUndefined();
+    expect(response.processPromise).toBeInstanceOf(Promise);
+    let processState = await response.processPromise;
+    expect(processState.state.status).toBe("finished");
+  });
+
+  test("Engine.pushActivity do not continue if process on another step", async () => {
+    const engine = new Engine(...settings.persist_options, {});
+    const workflow = await engine.saveWorkflow("sample", "sample", blueprints_.identity_user_task);
+    let process = await createRunProcess(engine, workflow.id, actors_.simpleton);
+    expect(process.status).toBe(ProcessStatus.WAITING);
+
+    process = await engine.fetchProcess(process.id);
+    await process.setState({
+      bag: process.state.bag,
+      result: {},
+      next_node_id: process.state.next_node_id,
+    });
+
+    const external_input = {any: "external_input"};
+    await engine.commitActivity(process.id, actors_.simpleton, external_input);
+
+    const response = await engine.pushActivity(process.id, actors_.simpleton);
+    expect(response.error).toBeUndefined();
+    expect(response.processPromise).toBeInstanceOf(Promise);
+    const process_response = await response.processPromise;
+    expect(process_response.state.status).toBe(ProcessStatus.PENDING);
+    expect(process_response.state.step_number).toBe(4);
   });
 });
 
 describe("fetch works", () => {
-  test("acitivityManager fetch validates actor permission", async () => {
+  test("activityManager fetch validates actor permission", async () => {
     const engine = new Engine(...settings.persist_options, {});
     const workflow = await engine.saveWorkflow("sample", "sample", blueprints_.admin_identity_user_task);
     const process = await createRunProcess(engine, workflow.id, actors_.admin);
@@ -340,11 +460,19 @@ describe("fetch works", () => {
     expect(fetch_result.process_id).toEqual(process.id);
     expect(fetch_result.workflow_name).toEqual("sample");
     expect(fetch_result.activity_status).toEqual("started");
-  })
+  });
+
+  test("returns undefined if unknow activity manager", async () => {
+    const engine = new Engine(...settings.persist_options, {});
+
+    const fetch_result = await engine.fetchActivityManager(uuid(), actors_.simpleton);
+
+    expect(fetch_result).toBeUndefined();
+  });
 });
 
 describe("Deserialize convert activity_manager to correct type", () => {
-  test("acitivityManager fetch deserialize to notify activity manager instance", async () => {
+  test("activityManager fetch deserialize to notify activity manager instance", async () => {
     const engine = new Engine(...settings.persist_options, {});
     try {
       let activity_manager;
@@ -364,7 +492,7 @@ describe("Deserialize convert activity_manager to correct type", () => {
     }
   });
 
-  test("acitivityManager fetch deserialize to activity manager instance", async () => {
+  test("activityManager fetch deserialize to activity manager instance", async () => {
     const engine = new Engine(...settings.persist_options, {});
     try {
       let activity_manager;
