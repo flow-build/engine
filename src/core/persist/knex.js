@@ -4,6 +4,8 @@ const { Process } = require("../workflow/process");
 const { ProcessState } = require("../workflow/process_state");
 const { ActivityManager } = require("../workflow/activity_manager");
 const { Activity } = require("../workflow/activity");
+const { Timer } = require("../workflow/timer");
+const knex = require("knex");
 
 class KnexPersist {
 
@@ -13,18 +15,22 @@ class KnexPersist {
     this._table = table;
   }
 
-  async save(obj) {
+  async save(obj, ...args) {
     const is_update = obj.id && await this.get(obj.id);
     if (is_update) {
-      await this._update(obj.id, obj);
+      await this._update(obj.id, obj, ...args);
       return "update";
     }
-    await this._create(obj);
+    await this._create(obj, ...args);
     return "create";
   }
 
-  async delete(obj_id) {
-    return await this._db(this._table).where('id', obj_id).del();
+  async delete(obj_id, trx) {
+    if (trx) {
+      return await this._db(this._table).where('id', obj_id).transacting(trx).del();
+    } else {
+      return await this._db(this._table).where('id', obj_id).del();
+    }
   }
 
   async deleteAll() {
@@ -46,12 +52,26 @@ class KnexPersist {
       .orderBy("created_at", "desc");
   }
 
-  async _create(obj) {
-    await this._db(this._table).insert(obj);
+  async _create(obj, trx=false) {
+    if(trx){
+      await this._db(this._table).transacting(trx).insert(obj);
+    } else {
+      await this._db(this._table).insert(obj);
+    }
+
   }
 
-  async _update(obj_id, obj) {
-    await this._db(this._table).where('id', obj_id).update(obj);
+  async _update(obj_id, obj, trx=false) {
+    try {
+      if (trx) {
+        await this._db(this._table).transacting(trx).where('id', obj_id).update(obj);
+      } else {
+        await this._db(this._table).where('id', obj_id).update(obj);
+      }
+    } catch (e) {
+      console.log(e);
+    }
+
   }
 }
 
@@ -69,7 +89,7 @@ class WorkflowKnexPersist extends KnexPersist {
 
   async save(workflow) {
     await this._db.transaction(async trx => {
-      const current_version = (await this._db(this._table).transacting(trx).max("version").where({name: workflow.name}).first()).max
+      const current_version = (await this._db(this._table).transacting(trx).max("version").where({ name: workflow.name }).first()).max
       return await this._db(this._table).transacting(trx).insert({
         ...workflow,
         version: current_version + 1,
@@ -111,85 +131,117 @@ class ProcessKnexPersist extends KnexPersist {
   }
 
   async get(process_id) {
-    const process = await this._db
-          .select("*")
+    return await this._db.transaction(async (trx) => {
+      const process = await this._db
+          .select(`${this._table}.*`, "workflow.name as workflow_name")
           .from(this._table)
-          .where("id", process_id)
-          .first();
-    if (process) {
-      process.state = await this.getLastStateByProcess(process_id);
-    }
-    return process;
-  }
-
-  async getAll(filters) {
-      const processes = await this._db.select(
-        "*")
-        .from(this._table)
-        .modify((builder) => {
-          if (filters) {
-            if (filters.workflow_id) {
-              builder.where({"workflow_id": filters.workflow_id});
-            }
-          }
-      });
-      for (const process of processes) {
-        process.state = await this.getLastStateByProcess(process.id);
+          .join("workflow", "workflow.id", "workflow_id")
+          .where(`${this._table}.id`, process_id)
+          .first().transacting(trx);
+      if (process) {
+        process.state = await this.getLastStateByProcess(process_id).transacting(trx);
       }
-      return processes;
-  }
-
-  async delete(process_id) {
-    return await this._db.transaction(async trx => {
-      await this._db(this._state_table)
-        .transacting(trx)
-        .where("process_id", process_id)
-        .del();
-      return await this._db(this._table)
-        .transcting(trx)
-        .del();
+      return process;
     });
   }
 
+  async getAll(filters) {
+    const processes = await this._db.select(
+      `${this._table}.*`, "workflow.name as workflow_name")
+      .from(this._table)
+      .join("workflow", "workflow.id", "workflow_id")
+      .modify((builder) => {
+        if (filters) {
+          if (filters.workflow_id) {
+            builder.where({ "workflow_id": filters.workflow_id });
+          }
+        }
+      });
+    for (const process of processes) {
+      process.state = await this.getLastStateByProcess(process.id);
+    }
+    return processes;
+  }
+
+  async delete(process_id) {
+    //todo trx
+    try {
+      return await this._db.transaction(async trx => {
+        await this._db(this._state_table)
+            .transacting(trx)
+            .where("process_id", process_id)
+            .del();
+        return await this._db(this._table)
+            .transcting(trx)
+            .del();
+      });
+    } catch (e) {
+      console.log(`Unable delete Process with PID ${this.id}`);
+    }
+  }
+
   async deleteAll() {
+    //todo trx
     return await this._db.transaction(async trx => {
       await this._db(this._state_table).transacting(trx).del();
       return await this._db(this._table).transacting(trx).del();
     });
   }
 
-  async getStateHistoryByProcess(process_id) {
-    return await this._db
+  getStateHistoryByProcess(process_id) {
+    return this._db
       .select("*")
       .from(this._state_table)
       .where("process_id", process_id)
       .orderBy("step_number", "desc");
   }
 
-  async getLastStateByProcess(process_id) {
-    return (await this.getStateHistoryByProcess(process_id))[0];
+  getLastStateByProcess(process_id) {
+    return this._db
+        .select(`${this._state_table}.*`)
+        .from(this._table)
+        .innerJoin(this._state_table, "process_state.id", "current_state_id")
+        .where("process.id", process_id)
+        .first()
   }
 
-  async getNextStepNumber(process_id) {
-    const count_list = await this._db(this._state_table)
-          .where("process_id", process_id)
-          .count();
-    const count = Number(count_list[0].count);
-    return count + 1;
+  async getLastStepNumber(process_id) {
+    const last_step = await this._db(this._state_table)
+      .max('step_number')
+      .where("process_id", process_id)
+      .first();
+    const count = Number(last_step.max);
+    return count;
   }
 
   async getTasks(filters) {
     return await this._getTasks(filters);
   }
 
-  async getWorkflowWithProcesses(status, filters) {
+  async getWorkflowWithProcesses(filters) {
     const processes = await this._db.select(
+      "wf.id as id",
       "wf.name as name",
       "wf.description as description",
-      "wf.blueprint_spec as blueprint_spec",
+      "wf.version as version",
       "p.id as process_id")
       .from("workflow as wf")
       .leftJoin("process as p", "wf.id", "p.workflow_id")
+      .modify((builder) => {
+        if (filters) {
+          if (filters.workflow_id) {
+            builder.where("wf.id", filters.workflow_id);
+          }
+
+          if (filters.start_date) {
+            builder.where("p.created_at", ">=", filters.start_date);
+          }
+
+          if (filters.end_date) {
+            builder.where("p.created_at", "<=", filters.end_date);
+          }
+        }
+      })
     for (const process of processes) {
       process.state = await this.getLastStateByProcess(process.process_id);
     }
@@ -197,19 +249,39 @@ class ProcessKnexPersist extends KnexPersist {
   }
 
   async _create(process) {
-    await this._db.transaction(async trx => {
-      const state = process.state;
-      delete process["state"];
-      await this._db(this._table).transacting(trx).insert(process);
-      if (state) {
-        await this._db(this._state_table).transacting(trx).insert(state);
-      }
-    });
+    //todo trx
+    try {
+      await this._db.transaction(async trx => {
+        const state = process.state;
+        delete process["state"];
+        await this._db(this._table).transacting(trx).insert(process);
+        if (state) {
+          await this._db(this._state_table).transacting(trx).insert(state);
+        }
+      });
+    } catch (e) {
+      console.log(`Unable create Process with PID ${this.id}`);
+    }
+
   }
 
-  async _update(process_id, process) {
+  async _update(process_id, process, trx=false) {
     const state = process.state;
-    await this._db(this._state_table).insert(state);
+    delete process["state"];
+
+    if(trx){
+      await trx(this._state_table).insert(state);
+      await trx(this._table).where("id", process_id).update(process);
+    } else {
+      try {
+        await this._db.transaction(async trx => {
+          await this._db(this._state_table).insert(state).transacting(trx);
+          await this._db(this._table).where("id", process_id).update(process).transacting(trx);
+        });
+      } catch (e) {
+        console.log(`Unable to update Process with PID ${process_id}`);
+      }
+    }
   }
 
   _getTasks(filters) {
@@ -228,7 +300,7 @@ class ProcessKnexPersist extends KnexPersist {
       .modify((builder) => {
         if (filters) {
           if (filters.workflow_id) {
-            builder.where({"w.id": filters.workflow_id});
+            builder.where({ "w.id": filters.workflow_id });
           }
         }
       });
@@ -247,104 +319,105 @@ class ActivityManagerKnexPersist extends KnexPersist {
 
   async getActiveActivityManagers() {
     return await this._db(this._table)
-                     .where("status", "started");
+      .where("status", "started");
   }
 
   async getCompletedActivityManagers() {
     return await this._db(this._table)
-                     .where("status", "completed");
+      .where("status", "completed");
   }
 
   async getActivityDataFromStatus(status, filters) {
     return await this._db
-        .select(
-            'am.id',
-            'am.created_at',
-            'am.type',
-            'am.process_state_id',
-            'am.props',
-            'am.parameters',
-            'am.status as activity_status',
-            'ps.process_id',
-            'ps.step_number',
-            'ps.node_id',
-            'ps.next_node_id',
-            'ps.bag',
-            'ps.external_input',
-            'ps.error',
-            'ps.status as process_status',
-            'p.workflow_id',
-            'p.blueprint_spec',
-            'wf.name as workflow_name',
-            'wf.description as workflow_description',
-        )
-        .from('activity_manager AS am')
-        .rightJoin('process_state AS ps', 'am.process_state_id', 'ps.id')
-        .rightJoin('process AS p', 'ps.process_id', 'p.id')
-        .rightJoin('workflow AS wf', 'p.workflow_id', 'wf.id')
-        .where('am.status', '=', status)
-        .modify((builder) => {
-          if (filters) {
-            if (filters.workflow_id) {
-              builder.where({"wf.id": filters.workflow_id});
-            }
-            if (filters.process_id) {
-              builder.where({"p.id": filters.process_id});
-            }
-            if (filters.status) {
-              builder.where({"am.status": filters.status});
-            }
-            if (filters.type) {
-              builder.where({"am.type": filters.type});
-            }
+      .select(
+        'am.id',
+        'am.created_at',
+        'am.type',
+        'am.process_state_id',
+        'am.props',
+        'am.parameters',
+        'am.status as activity_status',
+        'ps.process_id',
+        'ps.step_number',
+        'ps.node_id',
+        'ps.next_node_id',
+        'ps.bag',
+        'ps.external_input',
+        'ps.error',
+        'ps.status as process_status',
+        'p.workflow_id',
+        'p.blueprint_spec',
+        'wf.name as workflow_name',
+        'wf.description as workflow_description',
+      )
+      .from('activity_manager AS am')
+      .rightJoin('process_state AS ps', 'am.process_state_id', 'ps.id')
+      .rightJoin('process AS p', 'ps.process_id', 'p.id')
+      .rightJoin('workflow AS wf', 'p.workflow_id', 'wf.id')
+      .where('am.status', '=', status)
+      .modify((builder) => {
+        if (filters) {
+          if (filters.workflow_id) {
+            builder.where({ "wf.id": filters.workflow_id });
           }
-        });
+          if (filters.process_id) {
+            builder.where({ "p.id": filters.process_id });
+          }
+          if (filters.status) {
+            builder.where({ "am.status": filters.status });
+          }
+          if (filters.type) {
+            builder.where({ "am.type": filters.type });
+          }
+        }
+      })
+      .orderBy('am.created_at', 'asc');
   }
 
   async getActivityDataFromId(obj_id) {
     return await this._db
-        .select(
-            'am.id',
-            'am.created_at',
-            'am.type',
-            'am.process_state_id',
-            'am.props',
-            'am.parameters',
-            'am.status as activity_status',
-            'ps.process_id',
-            'ps.step_number',
-            'ps.node_id',
-            'ps.next_node_id',
-            'ps.bag',
-            'ps.external_input',
-            'ps.error',
-            'ps.status as process_status',
-            'p.workflow_id',
-            'p.blueprint_spec',
-            'wf.name as workflow_name',
-            'wf.description as workflow_description'
-        )
-        .from('activity_manager AS am')
-        .rightJoin('process_state AS ps', 'am.process_state_id', 'ps.id')
-        .rightJoin('process AS p', 'ps.process_id', 'p.id')
-        .rightJoin('workflow AS wf', 'p.workflow_id', 'wf.id')
-        .where('am.id', '=', obj_id)
-        .first();
+      .select(
+        'am.id',
+        'am.created_at',
+        'am.type',
+        'am.process_state_id',
+        'am.props',
+        'am.parameters',
+        'am.status as activity_status',
+        'ps.process_id',
+        'ps.step_number',
+        'ps.node_id',
+        'ps.next_node_id',
+        'ps.bag',
+        'ps.external_input',
+        'ps.error',
+        'ps.status as process_status',
+        'p.workflow_id',
+        'p.blueprint_spec',
+        'wf.name as workflow_name',
+        'wf.description as workflow_description'
+      )
+      .from('activity_manager AS am')
+      .rightJoin('process_state AS ps', 'am.process_state_id', 'ps.id')
+      .rightJoin('process AS p', 'ps.process_id', 'p.id')
+      .rightJoin('workflow AS wf', 'p.workflow_id', 'wf.id')
+      .where('am.id', '=', obj_id)
+      .first();
   }
 
   async getProcessId(process_state_id) {
     return await this._db
-        .select('process_id')
-        .from('process_state')
-        .where('id', '=', process_state_id)
-        .first();
+      .select('process_id')
+      .from('process_state')
+      .where('id', '=', process_state_id)
+      .first();
   }
 
   async getActivities(activity_manager_id) {
     return await this._db
-                     .select()
-                     .from(this._activity_table)
-                     .where("activity_manager_id", activity_manager_id);
+      .select()
+      .from(this._activity_table)
+      .where("activity_manager_id", activity_manager_id);
   }
 }
 
@@ -354,11 +427,27 @@ class ActivityKnexPersist extends KnexPersist {
   }
 }
 
+class TimerKnexPersist extends KnexPersist{
+  constructor(db) {
+    super(db, Timer, "timer");
+  }
+
+  getAllReady(){
+    return this._db
+        .select()
+        .from(this._table)
+        .where("expires_at", "<", new Date())
+        .andWhere("active", true);
+  }
+
+}
+
 module.exports = {
   KnexPersist: KnexPersist,
   WorkflowKnexPersist: WorkflowKnexPersist,
   PackagesKnexPersist: PackagesKnexPersist,
   ProcessKnexPersist: ProcessKnexPersist,
   ActivityManagerKnexPersist: ActivityManagerKnexPersist,
-  ActivityKnexPersist: ActivityKnexPersist
+  ActivityKnexPersist: ActivityKnexPersist,
+  TimerKnexPersist: TimerKnexPersist
 };

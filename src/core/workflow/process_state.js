@@ -1,4 +1,7 @@
 const { BaseEntity } = require("./base");
+const {v1: uuid }= require('uuid');
+
+const ENGINE_ID = process.env.engine_id || uuid();
 
 class ProcessStatus {
 
@@ -20,9 +23,17 @@ class ProcessStatus {
   static get INTERRUPTED() {
     return "interrupted";
   }
-
+  static get PENDING() {
+    return "pending";
+  }
   static get FORBIDDEN() {
     return "forbidden";
+  }
+  static get DELEGATED() {
+    return "delegated";
+  }
+  static get EXPIRED() {
+    return "expired";
   }
 }
 
@@ -40,7 +51,10 @@ class ProcessState extends BaseEntity {
       external_input: state._external_input,
       result: state._result,
       error: state._error,
-      status: state._status
+      status: state._status,
+      actor_data: state._actor_data,
+      engine_id: state._engine_id,
+      time_elapsed: state._time_elapsed
     };
   }
 
@@ -55,16 +69,20 @@ class ProcessState extends BaseEntity {
         serialized.result,
         serialized.error,
         serialized.status,
-        serialized.next_node_id);
+        serialized.next_node_id,
+        serialized.actor_data,
+        serialized.time_elapsed
+      );
       state._id = serialized.id;
       state._created_at = serialized.created_at;
+      state._engine_id = serialized.engine_id;
       return state;
     }
     return undefined;
   }
 
   constructor(process_id, step_number, node_id, bag, external_input,
-              result, error, status, next_node_id) {
+              result, error, status, next_node_id, actor_data, time_elapsed) {
     super();
 
     this._process_id = process_id;
@@ -76,6 +94,21 @@ class ProcessState extends BaseEntity {
     this._error = error;
     this._status = status;
     this._next_node_id = next_node_id;
+    this._actor_data = actor_data;
+    this._engine_id = ENGINE_ID;
+    this._time_elapsed = time_elapsed;
+  }
+
+  get time_elapsed(){
+    return this._time_elapsed
+  }
+
+  set time_elapsed(t){
+    this._time_elapsed = t;
+  }
+
+  get engine_id(){
+    return this._engine_id;
   }
 
   get process_id() {
@@ -92,6 +125,10 @@ class ProcessState extends BaseEntity {
 
   get bag() {
     return this._bag;
+  }
+
+  get actor_data() {
+    return this._actor_data;
   }
 
   get external_input() {
@@ -117,5 +154,6 @@ class ProcessState extends BaseEntity {
 
 module.exports = {
   ProcessStatus: ProcessStatus,
-  ProcessState: ProcessState
+  ProcessState: ProcessState,
+  ENGINE_ID: ENGINE_ID
 };

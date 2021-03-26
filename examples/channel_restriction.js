@@ -2,6 +2,8 @@ const readlineSync = require("readline-sync");
 const lisp = require("../src/core/lisp");
 const settings = require("../settings/settings");
 const { Engine } = require("../src/engine/engine");
+const startLogger = require("../src/core/utils/logging");
+const emitter = require("../src/core/utils/emitter");
 
 const blueprint_spec = {
     requirements: ["core"],
@@ -64,33 +66,35 @@ const actor_data_channel_1 = {
     channel: "1",
 }
 
+startLogger(emitter);
+
 const run_example = async () => {
-    console.log("===  RUNNING user_task_example  ===");
+    emitter.emit("===  RUNNING channel_restriction_example  ===");
     const engine = new Engine(...settings.persist_options);
     const workflow = await engine.saveWorkflow("user_task_example", "user task showcase", blueprint_spec);
     const process = await engine.createProcess(workflow.id, actor_data);
     const process_id = process.id;
     await engine.runProcess(process_id, actor_data);
 
-    console.log("=== Activity manager without channel ===");
+    emitter.emit("=== Activity manager without channel ===");
     try {
         const activityManager = await engine.fetchAvailableActivityForProcess(process_id, actor_data);
-        console.log("Activity Manager: ", activityManager);
+        emitter.emit("Activity Manager: ", activityManager);
     } catch (error) {
-        console.log("Error get activityManager");
+        emitter.emit("Error get activityManager");
     }
 
-    console.log("=== Activity manager with channel 3 ===");
+    emitter.emit("=== Activity manager with channel 3 ===");
     try {
         const activityManager = await engine.fetchAvailableActivityForProcess(process_id, actor_data_channel_3);
-        console.log("Activity Manager: ", activityManager);
+        emitter.emit("Activity Manager: ", activityManager);
     } catch (error) {
-        console.log("Error get activityManager");
+        emitter.emit("Error get activityManager");
     }
 
-    console.log("=== Activity manager with channel 1 ===");
+    emitter.emit("=== Activity manager with channel 1 ===");
     const activityManager = await engine.fetchAvailableActivityForProcess(process_id, actor_data_channel_1);
-    console.log("Activity Manager: ", activityManager);
+    emitter.emit("Activity Manager: ", activityManager);
 }
 
 run_example();

@@ -20,6 +20,18 @@ nodes_.start = {
   lane_id: "1"
 };
 
+nodes_.start_w_timeout = {
+  id: "1",
+  type: "Start",
+  name: "Initial Node",
+  parameters: {
+    input_schema: {},
+    timeout: 5
+  },
+  next: "2",
+  lane_id: "1"
+};
+
 nodes_.finish = {
   id: "5",
   type: "Finish",
@@ -151,6 +163,18 @@ nodes_.start_process_system_task = {
   },
 }
 
+nodes_.abort_process_system_task = {
+  id: "888",
+  type: "SystemTask",
+  category: "AbortProcess",
+  name: "abortProcess system task node",
+  next: "99",
+  lane_id: "1",
+  parameters: {
+    input: {},
+  },
+}
+
 nodes_.custom_system_task = {
   id: "7",
   type: "SystemTask",
@@ -198,9 +222,20 @@ results_.success_start_result = {
   "external_input": {data: "external"},
   "next_node_id": "2",
   "node_id": "1",
-  "result": {data: "bag"},
+  "result": {},
   "status": "running"
 };
+
+results_.success_start_result_w_timeout = {
+  "bag": {data: "bag"},
+  "error": null,
+  "external_input": {data: "external"},
+  "next_node_id": "2",
+  "node_id": "1",
+  "result": {timeout: 5},
+  "status": "running"
+};
+
 
 results_.success_finish_result = {
   "bag": {data: "bag"},
@@ -219,7 +254,7 @@ results_.success_flow_result = {
   "next_node_id": "3",
   "node_id": "2",
   "result": {result: "1"},
-  "status": "running"
+  "status": "running",
 };
 
 results_.success_user_task_result = {
@@ -250,7 +285,7 @@ results_.success_system_task_result = {
   "next_node_id": "4",
   "node_id": "3",
   "result": {identity_system_data: "bag"},
-  "status": "running"
+  "status": "running",
 };
 
 results_.success_script_task_result = {
@@ -260,7 +295,7 @@ results_.success_script_task_result = {
   "next_node_id": "4",
   "node_id": "3",
   "result": {lisp_system_data: "bag"},
-  "status": "running"
+  "status": "running",
 };
 
 results_.success_get_http_result = {
@@ -270,7 +305,7 @@ results_.success_get_http_result = {
   "next_node_id": "4",
   "node_id": "3",
   "result": {status: 200, data: {response: 'get_success'}},
-  "status": "running"
+  "status": "running",
 };
 
 results_.success_post_http_result = {
@@ -280,7 +315,7 @@ results_.success_post_http_result = {
   "next_node_id": "4",
   "node_id": "3",
   "result": {status: 201, data: {response: 'post_success'}},
-  "status": "running"
+  "status": "running",
 };
 
 results_.success_delete_http_result = {
@@ -290,7 +325,7 @@ results_.success_delete_http_result = {
   "next_node_id": "4",
   "node_id": "3",
   "result": {status: 204, data: {response: 'delete_success'}},
-  "status": "running"
+  "status": "running",
 };
 
 module.exports = {

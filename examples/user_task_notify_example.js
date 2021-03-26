@@ -2,6 +2,8 @@ const readlineSync = require("readline-sync");
 const lisp = require("../src/core/lisp");
 const settings = require("../settings/settings");
 const { Engine } = require("../src/engine/engine");
+const startLogger = require("../src/core/utils/logging");
+const emitter = require("../src/core/utils/emitter");
 
 const blueprint_spec = {
   requirements: ["core"],
@@ -20,7 +22,7 @@ const blueprint_spec = {
     {
       id: "2",
       type: "UserTask",
-      name: "User task node",
+      name: "First user task node",
       next: "3",
       lane_id: "1",
       parameters: {
@@ -28,13 +30,22 @@ const blueprint_spec = {
         action: "userAction",
         input: {
           notifyData: "Notify user"
+        },
+        activity_schema: {
+          type: "object",
+          properties: {
+            textParam: {
+              type: "string"
+            }
+          },
+          required: [ 'textParam']
         }
       }
     },
     {
       id: "3",
       type: "UserTask",
-      name: "User task node",
+      name: "Second user task node",
       next: "99",
       lane_id: "1",
       parameters: {
@@ -68,11 +79,13 @@ const actor_data = {
   claims: []
 };
 
+startLogger(emitter);
+
 const run_example = async() => {
-  console.log("===  RUNNING user_task_notify_example  ===");
+  emitter.emit("===  RUNNING user_task_notify_example  ===");
   const logger = (message, data) => {
-    console.log(message);
-    console.log(data);
+    emitter.emit(message);
+    emitter.emit(data);
   }
   const engine = new Engine(...settings.persist_options);
 

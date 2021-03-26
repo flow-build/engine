@@ -1,4 +1,4 @@
-const uuid = require("uuid/v1");
+const { v1: uuid } = require("uuid");
 const { PersistorSingleton } = require("../persist/persist");
 
 class BaseEntity {
@@ -63,6 +63,11 @@ class PersistedEntity extends BaseEntity {
 
   async save(...args) {
     await this.getPersist().save(this.serialize(), ...args);
+    return this;
+  }
+
+  async delete(...args) {
+    await this.getPersist().delete(this.id, ...args);
     return this;
   }
 }

@@ -173,9 +173,11 @@ class ProcessMemoryPersist extends MemoryPersist {
     return (await this.getStateHistoryByProcess(process_id))[0];
   }
 
-  async getNextStepNumber(process_id) {
+  async getLastStepNumber(process_id) {
     const states = _.filter(this._state_store, {process_id: process_id});
-    return states.length + 1;
+    const last_state = _.maxBy(states, (state) => state.step_number);
+    const last_step = last_state ? last_state.step_number : 0;
+    return last_step;
   }
 
   async getTasks(filters) {
@@ -212,15 +214,51 @@ class ProcessMemoryPersist extends MemoryPersist {
     });
   }
 
-  async getWorkflowWithProcesses() {
+  async getWorkflowWithProcesses(filters) {
     const processes = Object.entries(this._store).map(entry => entry[1]);
+    const list_workflow_data = [];
     for (const process of processes) {
-      const workflow = await new WorkflowMemoryPersist().get(process.workflow_id);
-      process.name = workflow.name;
-      process.description = workflow.description;
-      process.state = await this.getLastStateByProcess(process.id);
+      let skipProcess = false;
+
+      if (filters) {
+        if (filters.workflow_id && process.workflow_id !== filters.workflow_id) {
+          skipProcess = true;
+        }
+
+        if (filters.start_date) {
+          let filter_date = filters.start_date;
+          if (!(filter_date instanceof Date)) {
+            filter_date = new Date(filter_date);
+          }
+          if (process.created_at.getTime() < filter_date.getTime()) {
+            skipProcess = true;
+          }
+        }
+
+        if (filters.end_date) {
+          let filter_date = filters.end_date;
+          if (!(filter_date instanceof Date)) {
+            filter_date = new Date(filter_date);
+          }
+          if (process.created_at.getTime() > filter_date.getTime()) {
+            skipProcess = true;
+          }
+        }
+      }
+
+      if (!skipProcess) {
+        const workflow = await new WorkflowMemoryPersist().get(process.workflow_id);
+        const workflow_data = {
+          id: workflow.id,
+          name: workflow.name,
+          description: workflow.description,
+          version: workflow.version,
+        }
+        workflow_data.state = await this.getLastStateByProcess(process.id);
+        list_workflow_data.push(workflow_data);
+      }
     }
-    return processes;
+    return list_workflow_data;
   }
 
   async _create(process) {
@@ -338,10 +376,14 @@ class ActivityManagerMemoryPersist extends MemoryPersist {
       return workflow.id===process.workflow_id;
     })[0];
 
-    return this._format_activity_response(activity_manager,
-                                                    state,
-                                                    process,
-                                                    workflow);
+    let response;
+    if (activity_manager) {
+      response = this._format_activity_response(activity_manager,
+        state,
+        process,
+        workflow);
+    }
+    return response;
   }
 
   async getProcessId(process_state_id) {

@@ -1,19 +1,20 @@
+const {v1: uuid }= require('uuid');
 const settings = require("../../../../settings/tests/settings");
 const { Engine } = require("../../engine");
 const { PersistorProvider } = require("../../../core/persist/provider");
-const { ProcessState, ProcessStatus } = require("../../../core/workflow/process_state");
+const { ProcessStatus } = require("../../../core/workflow/process_state");
 const { Process } = require("../../../core/workflow/process");
-const { Workflow } = require("../../../core/workflow/workflow");
 const { blueprints_, actors_ } = require("../../../core/workflow/tests/unitary/blueprint_samples");
 
 beforeEach(async () => {
   await _clean();
 });
 
+
 afterAll(async () => {
   await _clean();
   if (settings.persist_options[0] === "knex"){
-    await Process.getPersist()._db.destroy();;
+    await Process.getPersist()._db.destroy();
   }
 });
 
@@ -23,9 +24,7 @@ test("Workflow should not work with missing requirements", async () => {
   let process = await engine.createProcess(workflow.id, actors_.simpleton);
   process = await engine.runProcess(process.id, actors_.simpleton);
   expect(process.status).toBe(ProcessStatus.ERROR);
-  expect(process.state.error.message).toStrictEqual(
-    expect.stringContaining("Couldn't execute scripted function")
-  );
+  expect(process.state.error).toMatch("Couldn't execute scripted function");
 });
 
 test("Engine create process", async () => {
@@ -67,7 +66,8 @@ test("Engine create process with data", async () => {
   let process = await engine.createProcessByWorkflowName("sample", actors_.simpleton, create_data);
   process = await engine.runProcess(process.id);
   expect(process.state.status).toEqual(ProcessStatus.WAITING);
-  expect(process.state.result.start_data).toStrictEqual(create_data);
+  //won´t put initial_bag into start result
+  //expect(process.state.result.start_data).toStrictEqual(create_data);
   expect(process.state.bag).toStrictEqual(create_data);
 });
 
@@ -80,7 +80,8 @@ test("Engine create process with missing data but run fails", async () => {
   expect(process.state.status).toEqual(ProcessStatus.ERROR);
   const error = process.state.error;
   expect(error).toBeDefined();
-  expect(error).toBeInstanceOf(Error);
+  expect(error).toMatch("number");
+  expect(error).toMatch("name");
   expect(process.state.result).toBeNull();
   expect(process.state.bag).toStrictEqual(create_data);
 });
@@ -93,7 +94,20 @@ describe("Run existing process", () => {
     return await engine.createProcess(workflow.id, actor_data);
   }
 
+  test("Engine run process with timers", async () => {
+    const process = await createProcess(blueprints_.timer, actors_.simpleton);
+    await engine.runProcess(process.id, actors_.simpleton);
+
+    const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
+    await delay(2000);
+
+    const result_process = await engine.fetchProcess(process.id)
+
+    expect(result_process.status).toEqual(ProcessStatus.FINISHED);
+  });
+
   test("Engine run new process", async () => {
+    jest.setTimeout(60000);
     const process = await createProcess(blueprints_.minimal, actors_.simpleton);
     const result_process = await engine.runProcess(process.id, actors_.simpleton);
 
@@ -139,6 +153,22 @@ describe("Run existing process", () => {
 
     expect(result_process.status).toEqual(ProcessStatus.FORBIDDEN);
   });
+
+  test("Engine run process with timeout", async () => {
+    jest.setTimeout(60000);
+    const process = await createProcess(blueprints_.start_with_timeout, actors_.simpleton);
+    await engine.runProcess(process.id, actors_.simpleton);
+
+    const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
+    await delay(8000);
+
+    const result_process = await engine.fetchProcess(process.id)
+
+    expect(result_process.status).toEqual(ProcessStatus.EXPIRED);
+    const activity_managers = await engine.fetchAvailableActivitiesForActor(actors_.simpleton);
+    expect(activity_managers).toHaveLength(0);
+  });
+
 });
 
 test("process state notifier", async() => {
@@ -153,6 +183,10 @@ test("process state notifier", async() => {
     await engine.runProcess(process.id, actors_.simpleton);
   
     expect(notifier).toHaveBeenCalledTimes(3);
+    expect(notifier).toHaveBeenCalledWith(expect.anything(), actors_.simpleton);
+    for (const [process_state] of notifier.mock.calls) {
+      expect(process_state.workflow_name).toEqual("sample");
+    }
   } finally {
     engine.setProcessStateNotifier();
   }
@@ -193,7 +227,10 @@ test("activity manager notifier on activity commit", async () => {
     process = await engine.runProcess(process.id, actors_.simpleton);
     const external_input = {any: "external_input"};
     await engine.commitActivity(process.id, actors_.simpleton, external_input);
-    await engine.pushActivity(process.id, actors_.simpleton);
+    const result = await engine.pushActivity(process.id, actors_.simpleton);
+    expect(result.error).toBeUndefined();
+    expect(result.processPromise).toBeInstanceOf(Promise);
+    await result.processPromise;
   
     expect(notifier).toHaveBeenCalledTimes(3);
   } finally {
@@ -218,6 +255,7 @@ test("run process using environment", async () => {
     process.env.API_HOST = "https://koa-app:3000/test_api";
     process.env.PAYLOAD = "payload";
     process.env.LIMIT = "999";
+
     let workflow_process = await engine.createProcess(workflow.id, actors_.simpleton);
     expect(workflow_process.state.status).toEqual("unstarted");
     
@@ -227,13 +265,13 @@ test("run process using environment", async () => {
     const external_input = { any: "external_input"};
     workflow_process = await engine.runProcess(workflow_process.id, actors_.simpleton, external_input);
     expect(workflow_process.state.status).toEqual("finished");
-  
+
     expect(process_state_history).toHaveLength(8);
 
     const state_set_to_bag = process_state_history[2];
     expect(state_set_to_bag.node_id).toEqual("2");
     expect(state_set_to_bag.bag).toEqual({ environment: "test"});
-    expect(state_set_to_bag.result).toEqual({});
+    expect(state_set_to_bag.result).toEqual({ timeout: undefined });
 
     const state_http = process_state_history[3];
     expect(state_http.node_id).toEqual("3");
@@ -275,17 +313,43 @@ test("run process that creaters another process", async () => {
 
     const create_process_process_list = await engine.fetchProcessList({workflow_id: create_process_workflow.id});
     expect(create_process_process_list).toHaveLength(1);
+
+    const result = await engine.fetchProcess(create_process_process_list[0].id);
+    expect(result.state.status).toEqual(ProcessStatus.FINISHED);
   } finally {
     engine.setProcessStateNotifier();
   }
 });
 
+// test("run process that abort another process", async () => {
+//   const engine = new Engine(...settings.persist_options);
+//
+//   const user_task_workflow = await engine.saveWorkflow("user_task", "user_task", blueprints_.identity_user_task);
+//   const abort_process_workflow = await engine.saveWorkflow("abort_process_minimal", "abort_process_minimal", blueprints_.abort_process_minimal);
+//
+//   let user_task_process = await engine.createProcess(user_task_workflow.id, actors_.simpleton);
+//   user_task_process = await engine.runProcess(user_task_process.id, actors_.simpleton);
+//   expect(user_task_process.state.status).toEqual(ProcessStatus.WAITING);
+//
+//   let abort_process = await engine.createProcess(abort_process_workflow.id, actors_.simpleton, {
+//     process_list: [
+//       user_task_process.id,
+//       uuid(),
+//     ]
+//   });
+//   abort_process = await engine.runProcess(abort_process.id, actors_.simpleton);
+//   expect(abort_process.state.status).toEqual(ProcessStatus.FINISHED);
+//
+//   user_task_process = await engine.fetchProcess(user_task_process.id);
+//   expect(user_task_process.state.status).toEqual(ProcessStatus.INTERRUPTED);
+// });
+
 describe("User task timeout", () => {
   const engine = new Engine(...settings.persist_options);
   let actualTimeout;
-  function wait() {
+  function wait(ms=2000) {
     return new Promise((resolve) => {
-      actualTimeout(resolve, 300);
+      actualTimeout(resolve, ms);
     });
   }
   
@@ -298,12 +362,15 @@ describe("User task timeout", () => {
   afterEach(() => {
     jest.useRealTimers();
   })
-  
+
   test("finish after timeout", async () => {
+    jest.setTimeout(30000);
     const process = await engine.createProcessByWorkflowName("user_timeout", actors_.simpleton);
     await engine.runProcess(process.id);
-    
+
     jest.runAllTimers();
+    await wait();
+    await Engine._beat()
     await wait();
 
     const process_state_history = await engine.fetchProcessStateHistory(process.id);
@@ -335,20 +402,20 @@ describe("User task timeout", () => {
       result: {},
     });
 
+    await Engine._beat();
     const activity_managers = await engine.fetchAvailableActivitiesForActor(actors_.simpleton);
     expect(activity_managers).toHaveLength(0);
   });
 
   test("commit reset timeout", async () => {
+    jest.setTimeout(14000);
     const process = await engine.createProcessByWorkflowName("user_timeout", actors_.simpleton);
     await engine.runProcess(process.id);
 
-    jest.advanceTimersByTime(0.6  * 1000);
     await wait();
 
     await engine.commitActivity(process.id, actors_.simpleton, { activity_data: 'example_activity_data' });
 
-    jest.advanceTimersByTime(0.6 * 1000);
     await wait();
 
     let process_state_history = await engine.fetchProcessStateHistory(process.id);
@@ -363,7 +430,7 @@ describe("User task timeout", () => {
     });
 
     jest.runAllTimers();
-    await wait();
+    await wait(2000);
 
     process_state_history = await engine.fetchProcessStateHistory(process.id);
     expect(process_state_history).toHaveLength(5);
@@ -405,7 +472,10 @@ describe("User task timeout", () => {
     await engine.runProcess(process.id);
 
     await engine.commitActivity(process.id, actors_.simpleton, { activity_data: "example_activity_data" });
-    await engine.pushActivity(process.id, actors_.simpleton);
+    const result = await engine.pushActivity(process.id, actors_.simpleton);
+    expect(result.error).toBeUndefined();
+    expect(result.processPromise).toBeInstanceOf(Promise);
+    await result.processPromise;
     
     function validateProcessStateHistory(process_state_history) {
       expect(process_state_history).toHaveLength(5);
@@ -500,7 +570,8 @@ describe("User task timeout", () => {
     expect(activity_managers).toHaveLength(1);
     
     jest.runAllTimers();
-    await wait();
+    await wait(3000);
+    await Engine._beat();
     
     process_state_history = await engine.fetchProcessStateHistory(process.id);
     validateProcessStateHistory(process_state_history);
@@ -508,7 +579,25 @@ describe("User task timeout", () => {
     activity_managers = await engine.fetchAvailableActivitiesForActor(actors_.simpleton);
     expect(activity_managers).toHaveLength(0);
   });
-})
+
+  test("timeout do not continue another user task", async () => {
+    await engine.saveWorkflow("user_timeout_user", "user_timeout_user", blueprints_.user_timeout_user);
+
+    const process = await engine.createProcessByWorkflowName("user_timeout_user", actors_.simpleton);
+    const process_id = process.id;
+    await engine.runProcess(process_id);
+    await engine.runProcess(process_id, actors_.simpleton, { activity_data: "example_activity_data" });
+
+    let process_state_history = await engine.fetchProcessStateHistory(process_id);
+    expect(process_state_history).toHaveLength(5);
+
+    jest.runAllTimers();
+    await wait();
+
+    process_state_history = await engine.fetchProcessStateHistory(process_id);
+    expect(process_state_history).toHaveLength(5);
+  });
+});
 
 test('Commit activity only on type \'commit\' activity manager', async () => {
   const engine = new Engine(...settings.persist_options);
@@ -535,7 +624,7 @@ test('Commit activity only on type \'commit\' activity manager', async () => {
   
   const commit_activity_manager = await engine.fetchActivityManager(activity_managers[1]._id, actors_.simpleton);
   expect(commit_activity_manager.type).toEqual("commit");
-  expect(commit_activity_manager.activities).toHaveLength(1);
+  expect(commit_activity_manager.activities).toHaveLength(0);
 });
 
 test('Push activity only on type \'commit\' activity manager', async () => {
@@ -554,7 +643,10 @@ test('Push activity only on type \'commit\' activity manager', async () => {
   expect(process.state.node_id).toEqual("3");
   expect(activity_managers).toHaveLength(2);
 
-  await engine.pushActivity(process.id, actors_.simpleton);
+  const result = await engine.pushActivity(process.id, actors_.simpleton);
+  expect(result.error).toBeUndefined();
+  expect(result.processPromise).toBeInstanceOf(Promise);
+  await result.processPromise;
 
   const notify_activity_manager = await engine.fetchActivityManager(activity_managers[0]._id, actors_.simpleton);
   expect(notify_activity_manager.type).toEqual("notify");
@@ -566,13 +658,17 @@ test('Push activity only on type \'commit\' activity manager', async () => {
 });
 
 const _clean = async () => {
+
   const persistor = PersistorProvider.getPersistor(...settings.persist_options);
   const activity_persist = persistor.getPersistInstance("Activity");
   const activity_manager_persist = persistor.getPersistInstance("ActivityManager");
   const process_persist = persistor.getPersistInstance("Process");
   const workflow_persist = persistor.getPersistInstance("Workflow");
+  const timer_persist = persistor.getPersistInstance("Timer");
+
   await activity_persist.deleteAll();
   await activity_manager_persist.deleteAll();
   await process_persist.deleteAll();
   await workflow_persist.deleteAll();
+  await timer_persist.deleteAll();
 };

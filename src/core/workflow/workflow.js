@@ -16,6 +16,7 @@ class Workflow extends PersistedEntity {
       name: workflow._name,
       description: workflow._description,
       blueprint_spec: workflow._blueprint_spec,
+      version: workflow._version
     };
   }
 
@@ -27,6 +28,7 @@ class Workflow extends PersistedEntity {
         serialized.blueprint_spec);
       workflow._id = serialized.id;
       workflow._created_at = serialized.created_at;
+      workflow._version = serialized.version;
 
       return workflow;
     }
@@ -61,7 +63,7 @@ class Workflow extends PersistedEntity {
   }
 
   async createProcess(actor_data, initial_bag = {}) {
-    return await new Process(this._id, Blueprint.parseSpec(this._blueprint_spec)).create(actor_data, initial_bag);
+    return await new Process({ id: this._id, name: this._name }, Blueprint.parseSpec(this._blueprint_spec)).create(actor_data, initial_bag);
   }
 }
 

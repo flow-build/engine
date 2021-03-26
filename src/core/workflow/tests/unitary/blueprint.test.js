@@ -156,6 +156,40 @@ test("are_all_lanes_present constraint works", () => {
   expect(error).toBe("are_all_lanes_present");
 });
 
+describe("Blueprint.validate", () => {
+  test("fails if node_id repeats", () => {
+    const blueprint_spec = _.cloneDeep(blueprints_.minimal);
+    blueprint_spec.nodes.push({
+      id: blueprint_spec.nodes[0].id,
+      type: "SystemTask",
+      category: "SetToBag",
+      name: "System node name",
+      next: "2",
+      lane_id: "1",
+      parameters: {
+        input: {}
+      }
+    });
+
+    const response = Blueprint.validate(blueprint_spec);
+    expect(response[0]).toEqual(false);
+    expect(response[1]).toMatch("found existing node_id");
+  });
+
+  test("fails if lane_id repeats", () => {
+    const blueprint_spec = _.cloneDeep(blueprints_.minimal);
+    blueprint_spec.lanes.push({
+      id: blueprint_spec.lanes[0].id,
+      name: "the_only_lane",
+      rule: ["fn", ["&", "args"], true]
+    });
+
+    const response = Blueprint.validate(blueprint_spec);
+    expect(response[0]).toEqual(false);
+    expect(response[1]).toMatch("found existing lane_id");
+  });
+});
+
 test("fetchNode works for existing nodes", () => {
   const node_id = 2;
   const spec = blueprints_.minimal;
