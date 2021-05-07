@@ -31,7 +31,7 @@ jobs:
       - name: run migrations
         run: |
           npm install -g knex
-          knex --env docker migrate:latest
+          knex --env test migrate:latest
 
       - name: start tests
         run: npm run tests
