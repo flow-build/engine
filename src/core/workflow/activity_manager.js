@@ -1,4 +1,4 @@
-const {v1: uuid }= require('uuid');
+const { v1: uuid } = require("uuid");
 const _ = require("lodash");
 const assert = require("assert");
 const { PersistedEntity } = require("./base");
@@ -282,19 +282,19 @@ class ActivityManager extends PersistedEntity {
           .andWhere("resource_id", this.id)
           .update({active: false});
 
-      emitter.emit(`      CLEARED TIMERS FOR AM ${this.id} `);
+      emitter.emit('ACTIVITY_MANAGER.CLEARED_TIMERS',`      CLEARED TIMERS FOR AM ${this.id} `,{ activity_manager_id: this.id });
 
-      emitter.emit(`      CREATING NEW TIMER ON AM ${this.id} `);
+      emitter.emit('ACTIVITY_MANAGER.CREATING_NEW_TIMER',`      CREATING NEW TIMER ON AM ${this.id} `,{ activity_manager_id: this.id });
       const timer = new Timer("ActivityManager", this.id, Timer.timeoutFromNow(this.parameters.timeout), {next_step_number});
       await timer.save(trx);
-      emitter.emit(`      NEW TIMER ON AM ${this.id} TIMER ${timer.id}`);
+      emitter.emit('ACTIVITY_MANAGER.NEW_TIMER',`      NEW TIMER ON AM ${this.id} TIMER ${timer.id}`,{ activity_manager_id: this.id, timer_id: timer.id });
 
       this.parameters.timeout_id = timer.id;
     }
   }
 
   async timeout(timer, trx){
-      emitter.emit(`TIMEOUT ON AM ${this.id} TIMER ${timer.id}`);
+      emitter.emit('ACTIVITY_MANAGER.TIMEOUT_EXPIRED',`TIMEOUT ON AM ${this.id} TIMER ${timer.id}`,{ activity_manager_id: this.id, timer_id: timer.id });
 
       const activity_manager_data = await ActivityManager.fetch(timer.resource_id);
       if (
@@ -305,7 +305,7 @@ class ActivityManager extends PersistedEntity {
         const activity_manager = ActivityManager.deserialize(activity_manager_data);
         activity_manager.status = ActivityStatus.COMPLETED;
         await activity_manager.save(trx);
-        emitter.emit("ACTIVITY_MANAGER.COMPLETED", { activity_manager: activity_manager });
+        emitter.emit('ACTIVITY_MANAGER.COMPLETED', { activity_manager: activity_manager });
         
         await activity_manager._notifyActivityManager(activity_manager_data.process_id);
         if (activity_manager.type === "commit") {

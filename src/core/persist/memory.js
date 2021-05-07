@@ -336,6 +336,9 @@ class ActivityManagerMemoryPersist extends MemoryPersist {
               if (filters.type) {
                 result_filters.push(activity_manager.type === filters.type);
               }
+              if (filters.current_status) {
+                result_filters.push(process.current_status === filters.current_status);
+              }
             }
             return result_filters.reduce((result, current) => result && current, true)
           })[0];

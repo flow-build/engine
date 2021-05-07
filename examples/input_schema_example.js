@@ -1,7 +1,7 @@
 const lisp = require("../src/core/lisp");
 const settings = require("../settings/settings");
 const { Engine } = require("../src/engine/engine");
-const startLogger = require("../src/core/utils/logging");
+const startEventListener = require("../src/core/utils/eventEmitter");
 const emitter = require("../src/core/utils/emitter");
 
 const blueprint_spec = {
@@ -106,7 +106,7 @@ const actor_data = {
   claims: []
 };
 
-startLogger(emitter);
+startEventListener(emitter);
 
 const run_example = async () => {
   emitter.emit("===  RUNNING input_schema_example  ===");

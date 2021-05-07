@@ -32,7 +32,7 @@ describe("validateData", () => {
             type: "object"
         };
         const data = "input";
-        expect(() => ajvValidator.validateData(schema, data)).toThrowError("should be object");
+        expect(() => ajvValidator.validateData(schema, data)).toThrowError("data must be object");
     });
 
     test("Throws error with all error messages", () => {
@@ -50,8 +50,8 @@ describe("validateData", () => {
         try {
             ajvValidator.validateData(schema, data)
         } catch (error) {
-            expect(error.message).toMatch("name should be string");
-            expect(error.message).toMatch("age should be number");
+            expect(error.message).toMatch("data/name must be string");
+            expect(error.message).toMatch("data/age must be number");
         }
     })
 
@@ -99,10 +99,17 @@ describe("validateData", () => {
 
     test("Throw error with invalid cpf", () => {
         const schema = {
+            type: "object",
+            properties: {
+                data: {type: "string", format: "cpf"}
+            }
+        }
+        
+        const data = {
             cpf: "123.123.123-12"
         };
         try {
-            ajvValidator.validateData(schema);
+            ajvValidator.validateData(schema, data);
         } catch (resultError) {
             expect(resultError).toBeDefined();
         }
@@ -111,9 +118,16 @@ describe("validateData", () => {
 
     test("Validate cpf", () => {
         const schema = {
-            cpf: '825.566.405-02',
+            type: "object",
+            properties: {
+                data: {type: "string", format: "cpf"}
+            }
         }
-        const resultError = ajvValidator.validateData(schema);
+
+        const data = {
+            cpf: "825.566.405-02"
+        }
+        const resultError = ajvValidator.validateData(schema, data);
         expect(resultError).toBeUndefined();
     });
 
@@ -145,7 +159,7 @@ describe("validateData", () => {
         };
         const resultError = ajvValidator.validateResult(schema, data);
         expect(resultError).toBeDefined();
-        expect(resultError.message).toMatch("data.cpf should match format \"cpf\"");
+        expect(resultError.message).toMatch("data/cpf must match format \"cpf\"");
 
     });
 
@@ -211,7 +225,7 @@ describe("validateData", () => {
             ajvValidator.validateData(schema, data)
         } catch (error) {
             expect(error).toBeDefined();
-            expect(error.message).toMatch("data should have required property 'nome'");
+            expect(error.message).toMatch("data must have required property 'nome'");
         }
     });
 
@@ -232,7 +246,7 @@ describe("validateData", () => {
             ajvValidator.validateData(schema, data)
         } catch (error) {
             expect(error).toBeDefined();
-            expect(error.message).toMatch("data should NOT have additional properties");
+            expect(error.message).toMatch("data must NOT have additional properties");
         }
     });
 
@@ -343,7 +357,7 @@ describe("validateResult", () => {
 
         const resultError = ajvValidator.validateResult(schema, data);
         expect(resultError).toBeDefined();
-        expect(resultError.message).toMatch('data should have required property \'id\'');
+        expect(resultError.message).toMatch("data must have required property 'id'");
     });
 
     test("Valid schema with data only", () => {
@@ -425,7 +439,7 @@ describe("validateResult", () => {
 
         const resultError = ajvValidator.validateResult(schema, data);
         expect(resultError).toBeDefined();
-        expect(resultError.message).toMatch('data should have required property \'id\'');
+        expect(resultError.message).toMatch("data must have required property 'id'");
     });
 
     test("Pass with required in nested items in data only", () => {
@@ -511,6 +525,6 @@ describe("validateResult", () => {
 
         const resultError = ajvValidator.validateResult(schema, data);
         expect(resultError).toBeDefined();
-        expect(resultError.message).toMatch('data.input should have required property \'password\'');
+        expect(resultError.message).toMatch("data/input must have required property 'password'");
     });
 });

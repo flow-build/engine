@@ -1,7 +1,7 @@
 const lisp = require("../src/core/lisp");
 const settings = require("../settings/settings");
 const { Engine } = require("../src/engine/engine");
-const startLogger = require("../src/core/utils/logging");
+const startEventListener = require("../src/core/utils/eventEmitter");
 const emitter = require("../src/core/utils/emitter");
 
 const blueprint_spec = {
@@ -53,10 +53,10 @@ const actor_data = {
   claims: []
 };
 
-startLogger(emitter);
+startEventListener(emitter);
 
 const run_example = async() => {
-  emitter.emit("===  RUNNING timer_task_example  ===");
+  emitter.emit('info', "===  RUNNING timer_task_example  ===");
   const engine = new Engine(...settings.persist_options);
   const workflow = await engine.saveWorkflow("system_task_example", "system task showcase", blueprint_spec);
   const process = await engine.createProcess(workflow.id, actor_data);
@@ -66,4 +66,4 @@ const run_example = async() => {
   return state_history;
 };
 
-run_example().then(res => { emitter.emit(res); });
+run_example().then(res => { emitter.emit('info', 'res', res); });

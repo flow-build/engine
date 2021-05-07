@@ -1,8 +1,9 @@
+require('dotenv').config();
 const readline = require('readline');
 const lisp = require("../src/core/lisp");
 const settings = require("../settings/settings");
 const { Engine } = require("../src/engine/engine");
-const startLogger = require("../src/core/utils/logging");
+const startEventListener = require("../src/core/utils/eventEmitter");
 const emitter = require("../src/core/utils/emitter");
 
 function question(text) {
@@ -67,17 +68,17 @@ const actor_data = {
   claims: []
 };
 
-startLogger(emitter);
+startEventListener(emitter);
 
 const run_example = async () => {
 
-  emitter.emit("===  RUNNING user_task_timeout_example  ===");
+  emitter.emit('info', "===  RUNNING user_task_timeout_example  ===");
   const engine = new Engine(...settings.persist_options);
 
   let process_ended = false;
   engine.setProcessStateNotifier(
     (processState) => {
-      emitter.emit(processState);
+      emitter.emit('PROCESS_STATE_LISTENER',`NEW PROCESS_STATE`);
       if (processState.status === 'finished') {
         process_ended = true;
       }
@@ -93,7 +94,7 @@ const run_example = async () => {
     "<Simulating external client resolution> Type something here\n"
   );
   if (process_ended) {
-    emitter.emit('Process ended');
+    emitter.emit('info', 'Process ended');
   } else {
     await engine.commitActivity(process_id, actor_data, { userInput: external_input });
 
@@ -105,7 +106,7 @@ const run_example = async () => {
     } while (submitActivity !== 'yes' && !process_ended);
 
     if (process_ended) {
-      emitter.emit('Process ended');
+      emitter.emit('info', 'Process ended');
     } else {
       const pushResponse = await engine.pushActivity(process_id, actor_data);
       await pushResponse.processPromise;

@@ -7,14 +7,17 @@ const emitter = require("../src/core/utils/emitter");
 const blueprint_spec = {
   requirements: ["core"],
   prepare: [],
+  parameters: {
+    max_step_number: 20
+  },
   nodes: [
     {
       id: "1",
       type: "Start",
       name: "Start node",
       parameters: {
-        input_schema: {},
-      },
+        input_schema: {}
+        },
       next: "2",
       lane_id: "1"
     },
@@ -44,7 +47,7 @@ const blueprint_spec = {
       type: "SystemTask",
       category: "SetToBag",
       name: "Set values on bag",
-      next: "4",
+      next: "2",
       lane_id: "1",
       parameters: {
         input: {
@@ -75,12 +78,14 @@ const actor_data = {
   id: "1",
   claims: []
 };
+
 startEventListener(emitter);
 
 const run_example = async() => {
+  // Make sure max_step_number is defined as environment variable before running
+  emitter.emit("===  RUNNING max_step_number_example  ===");
   const engine = new Engine(...settings.persist_options);
-  emitter.emit('info', "===  RUNNING bag_example  ===");
-  const workflow = await engine.saveWorkflow("bag_example", "bag showcase", blueprint_spec);
+  const workflow = await engine.saveWorkflow("max_step_number_example", "max_step_number_example showcase", blueprint_spec);
   const process = await engine.createProcess(workflow.id, actor_data);
   const process_id = process.id;
   await engine.runProcess(process_id, actor_data);

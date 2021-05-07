@@ -1,2 +1,7 @@
 // Setup file for Jest if needed
-module.exports = () => {}
+
+global.console = {
+    ...console,
+    log: jest.fn(),
+    debug: jest.fn(),
+  };

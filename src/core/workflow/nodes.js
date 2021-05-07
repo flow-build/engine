@@ -101,7 +101,10 @@ class Node {
 
   _processError(error, { bag, external_input, time_elapsed}) {
     if (error instanceof Error) {
-      emitter.emit("_processError, ", error);
+      emitter.emit('NODE.ERROR',`ERROR AT NID ${this.id}`, {
+        node_id: this.id,
+        error: error
+      });
       error = error.toString();
     }
     let on_error = this._spec.on_error;
@@ -172,6 +175,7 @@ class StartNode extends Node {
         error = err.message;
       }
     }
+    emitter.emit('NODE.START.VALIDATED','START NODE VALIDATED', { is_valid: is_valid, error: error });
     return [is_valid, error]
   }
 
@@ -608,6 +612,9 @@ class StartProcessSystemTaskNode extends SystemTaskNode {
     );
     process_manager.runProcess(process.id, execution_data.actor_data);
 
+    if(!process.id) {
+      return [{ process_id: '', error: 'unable to create process' }, ProcessStatus.ERROR]
+    }
     return [{ process_id: process.id }, ProcessStatus.RUNNING];
   }
 }
@@ -632,7 +639,8 @@ class SubProcessNode extends ParameterizedNode {
     const parameters_rules = {
       "parameters_has_actor_data": [obju.hasField, "actor_data"],
       "parameters_has_input": [obju.hasField, "input"],
-      "timeout_has_valid_type": [obju.isFieldTypeIn, "timeout", ["undefined", "number"]],
+      "parameters_has_workflow_name": [obju.hasField, "workflow_name"],
+      "parameters_workflow_name_has_valid_type": [obju.isFieldTypeIn, "workflow_name", ["string", "object"]]
     };
     return {
       ...super.rules,
@@ -653,13 +661,12 @@ class SubProcessNode extends ParameterizedNode {
          return {
           node_id: this.id,
           bag: bag,
-          external_input: external_input,
+          external_input: external_input, //external_input is always null here
           result: execution_data,
           error: null,
           status: ProcessStatus.DELEGATED,
           next_node_id: this.id,
-          action: this._spec.parameters.action,
-          activity_schema: this._spec.parameters.activity_schema
+          workflow_name: this._spec.parameters.workflow_name
         };
       } else {
         if (external_input.userInput === '') {

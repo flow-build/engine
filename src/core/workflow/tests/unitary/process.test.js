@@ -1,4 +1,4 @@
-const {v1: uuid }= require('uuid');
+const { v1: uuid } = require("uuid");
 const { PersistorProvider } = require("../../../persist/provider");
 const settings = require("../../../../../settings/tests/settings");
 const { Engine } = require("../../../../engine/engine");
@@ -139,14 +139,14 @@ describe("Process test", () => {
             try {
                 const process_state_notifier = jest.fn();
                 engine.setProcessStateNotifier(process_state_notifier)
-    
+
                 process = await engine.fetchProcess(process_id);
                 const result = await process.setState({
                     bag: { bagKey: "bag value" },
                     result: { resultKey: "result value" },
                     next_node_id: "99",
                 });
-    
+
                 expect(result.state).toBeDefined();
                 expect(result.state.status).toEqual(ProcessStatus.PENDING);
 
@@ -219,6 +219,43 @@ describe("Process test", () => {
 
             const process_history = await engine.fetchProcessStateHistory(process_id);
             expect(process_history).toHaveLength(3);
+        });
+    })
+
+    describe("IsJsonString", () => {
+        let workflow_process;
+        beforeEach(async () => {
+            process.env.engine_id = uuid();
+            const engine = new Engine(...settings.persist_options);
+            const workflow = await engine.saveWorkflow("sample", "sample", blueprints_.minimal);
+            workflow_process = await engine.createProcess(workflow.id, actors_.simpleton);
+        });
+
+        test("it should pass with correct JSON input", async () => {
+            const test_input = {
+                prop: "foo"
+            };
+            expect(workflow_process.IsJsonString(test_input)).toEqual(true);
+        });
+
+        test("it should fail with text input", async () => {
+            const test_input = "wrong input";
+            expect(workflow_process.IsJsonString(test_input)).toEqual(false);
+        })
+
+        test("it should fail with numeric input", async () => {
+            const test_input = 123456789;
+            expect(workflow_process.IsJsonString(test_input)).toEqual(false);
+        });
+
+        test("it should fail with boolean input", async () => {
+            const test_input = true;
+            expect(workflow_process.IsJsonString(test_input)).toEqual(false);
+        });
+
+        test("it should pass with undefined input", async () => {
+            const test_input = undefined;
+            expect(workflow_process.IsJsonString(test_input)).toEqual(true);
         });
     })
 });

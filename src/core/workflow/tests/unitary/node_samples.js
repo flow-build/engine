@@ -190,6 +190,20 @@ nodes_.custom_system_task = {
   },
 }
 
+nodes_.subprocess_task = {
+  id: "sbtask",
+  type: "SubProcess",
+  name: "abortProcess system task node",
+  next: "99",
+  lane_id: "1",
+  parameters: {
+    actor_data: {},
+    workflow_name: "any_workflow_name",
+    input: {}
+  },
+}
+
+
 nodes_.invalid_namespace = {
   id: "2",
   type: "SystemTask",

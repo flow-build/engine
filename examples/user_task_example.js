@@ -2,7 +2,7 @@ const readlineSync = require("readline-sync");
 const lisp = require("../src/core/lisp");
 const settings = require("../settings/settings");
 const { Engine } = require("../src/engine/engine");
-const startLogger = require("../src/core/utils/logging");
+const startEventListener = require("../src/core/utils/eventEmitter");
 const emitter = require("../src/core/utils/emitter");
 
 const blueprint_spec = {
@@ -76,17 +76,17 @@ const actor_data = {
   claims: []
 };
 
-startLogger(emitter);
+startEventListener(emitter);
 
 const run_example = async() => {
-  emitter.emit("===  RUNNING user_task_example  ===");
+  emitter.emit('info', "===  RUNNING user_task_example  ===");
   const engine = new Engine(...settings.persist_options);
   const workflow = await engine.saveWorkflow("user_task_example", "user task showcase", blueprint_spec);
   const process = await engine.createProcess(workflow.id, actor_data);
   const process_id = process.id;
   await engine.runProcess(process_id, actor_data);
   let state_history = await engine.fetchProcessStateHistory(process_id);
-  emitter.emit(state_history);
+  emitter.emit('info', 'state_history', state_history);
   const external_input = readlineSync.question(
     "<Simulating external client resolution> Type something here\n");
   await engine.runProcess(process_id, actor_data, {userInput: external_input});
@@ -94,4 +94,4 @@ const run_example = async() => {
   return state_history;
 }
 
-run_example().then(res => { emitter.emit(res); });
+run_example().then(res => { emitter.emit('info', 'response', res); });

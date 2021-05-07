@@ -1,7 +1,7 @@
-const Ajv = require("ajv").default;
-const ajv = new Ajv({
-    allErrors: true
-});
+const Ajv = require("ajv");
+const addFormats = require("ajv-formats");
+const ajv = new Ajv({allErrors: true});
+addFormats(ajv);
 
 const dateTimeRegex = new RegExp('^(19[0-9]{2}|2[0-9]{3})-(0[1-9]|1[012])-([123]0|[012][1-9]|31)[ \/T\/t]([01][0-9]|2[0-3]):([0-5][0-9])(?::([0-5][0-9]))?$');
 ajv.addFormat('dateTime', {
@@ -42,6 +42,7 @@ function validateData(schema, data) {
     let schemaValidate;
     if (schema.properties) {
         schemaValidate = {
+            type: 'object',
             properties: schema.properties,
             required: schema.required,
             additionalProperties: schema.additionalProperties
@@ -58,6 +59,7 @@ function validateData(schema, data) {
 
 function validateActivityManager(schema, data) {
     const schemaValidate = {
+        type: 'object',
         properties: {},
         required: schema.required,
         additionalProperties: schema.additionalProperties
@@ -89,9 +91,25 @@ function validateResult(schema, data) {
     }
 }
 
+function validateBlueprintParameters(data) {
+    const schemaBlueprintParametersValidate = {
+        type: "object",
+        properties: {
+            max_step_number: {type: "integer"}
+        }
+    }
+
+    const is_valid = ajv.validate(schemaBlueprintParametersValidate, data);
+
+    if (!is_valid) {
+        throw new Error(ajv.errorsText());
+    }
+}
+
 module.exports = {
     validateData: validateData,
     validateSchema: validateSchema,
     validateActivityManager: validateActivityManager,
-    validateResult: validateResult
+    validateResult: validateResult,
+    validateBlueprintParameters: validateBlueprintParameters
 };

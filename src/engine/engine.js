@@ -14,9 +14,10 @@ const {setProcessStateNotifier, setActivityManagerNotifier} = require("../core/n
 const {addSystemTaskCategory} = require("../core/utils/node_factory");
 const process_manager = require("../core/workflow/process_manager");
 const crypto_manager = require("../core/crypto_manager");
-const startLogger = require("../core/utils/logging");
+const startEventListener = require("../core/utils/eventEmitter");
 const emitter = require("../core/utils/emitter");
-
+const { createLogger } = require("../core/utils/logging");
+const { ProcessStatus } = require("./../core/workflow/process_state");
 
 function getActivityManagerFromData(activity_manager_data) {
     const activity_manager = ActivityManager.deserialize(activity_manager_data);
@@ -25,6 +26,10 @@ function getActivityManagerFromData(activity_manager_data) {
 }
 
 class Engine {
+
+    static get event_emitter(){
+        return emitter;
+    }
 
     static get instance() {
         return Engine._instance;
@@ -50,9 +55,10 @@ class Engine {
         return Engine._heart;
     }
 
-    constructor(persist_mode, persist_args) {
+    constructor(persist_mode, persist_args, logger_level) {
+        createLogger(logger_level);
         if (Engine.instance) {
-            startLogger(emitter);
+            startEventListener(emitter);
             return Engine.instance;
         }
         PersistorProvider.getPersistor(persist_mode, persist_args);
@@ -61,26 +67,26 @@ class Engine {
         try {
             Engine.heart = Engine.setNextHeartBeat();
         } catch (e) {
-            emitter.emit(e);
+            emitter.emit('error', 'ENGINE.ERROR', e);
         }
     }
 
     static async _beat() {
         const TIMER_BATCH = process.env.TIMER_BATCH || 40
         const ORPHAN_BATCH = process.env.ORPHAN_BATCH || 10;
-        emitter.emit(`HEARTBEAT @ ${new Date().toISOString()}`);
+        emitter.emit('silly', 'ENGINE.HEARTBEAT',`HEARTBEAT @ ${new Date().toISOString()}`);
         await Timer.getPersist()._db.transaction(async (trx) => {
             try {
-                emitter.emit(`  FETCHING TIMERS ON HEARTBEAT BATCH ${TIMER_BATCH}`);
+                emitter.emit('silly', 'ENGINE.FETCHING_TIMERS',`  FETCHING TIMERS ON HEARTBEAT BATCH ${TIMER_BATCH}`);
                 const locked_timers = await trx("timer")
                     .where("expires_at", "<", new Date())
                     .andWhere("active", true)
                     .limit(TIMER_BATCH)
                     .forUpdate()
                     .skipLocked();
-                emitter.emit(`  FETCHED ${locked_timers.length} TIMERS ON HEARTBEAT`);
+                emitter.emit('silly', 'ENGINE.TIMERS',`  FETCHED ${locked_timers.length} TIMERS ON HEARTBEAT`,{ timers: locked_timers.length });
                 await Promise.all(locked_timers.map((t_lock) => {
-                    emitter.emit(`  FIRING TIMER ${t_lock.id} ON HEARTBEAT`);
+                    emitter.emit('silly', 'ENGINE.FIRING_TIMER',`  FIRING TIMER ${t_lock.id} ON HEARTBEAT`, { timer_id: t_lock.id });
                     const timer = Timer.deserialize(t_lock);
                     return timer.run(trx);
                 }));
@@ -90,34 +96,37 @@ class Engine {
         });
         const orphan_process = await Process.getPersist()._db.transaction(async (trx) => {
             try {
-                emitter.emit(`FETCHING ORPHAN PROCESSES ON HEARTBEAT BATCH ${ORPHAN_BATCH}`);
+                emitter.emit('silly', 'ENGINE.ORPHANS_FETCHING',`FETCHING ORPHAN PROCESSES ON HEARTBEAT BATCH ${ORPHAN_BATCH}`);
                 const locked_orphans = await trx("process")
                     .select('process.*')
                     .join('process_state', 'process_state.id', 'process.current_state_id')
                     .where('engine_id', '!=', ENGINE_ID)
                     .where("current_status", "running")
                     .limit(ORPHAN_BATCH).forUpdate().skipLocked();
-                emitter.emit(`  FETCHED ${locked_orphans.length} ORPHANS ON HEARTBEAT`);
+                emitter.emit('silly', 'ENGINE.ORPHANS_FETCHED',`  FETCHED ${locked_orphans.length} ORPHANS ON HEARTBEAT`,{ orphans: locked_orphans.length });
                 return await Promise.all(locked_orphans.map(async (orphan) => {
-                    emitter.emit(`  FETCHING PS FOR ORPHAN ${orphan.id} ON HEARTBEAT`);
+                    emitter.emit('silly', 'ENGINE.ORPHAN_FETCHING',`  FETCHING PS FOR ORPHAN ${orphan.id} ON HEARTBEAT`, { process_id: orphan.id });
                     orphan.state = await trx("process_state")
                         .select().where("id", orphan.current_state_id)
                         .where('engine_id', '!=', ENGINE_ID)
                         .forUpdate().noWait()
                         .first();
-                    emitter.emit(`  FETCHED PS FOR ORPHAN ${orphan.id} ON HEARTBEAT`);
+                    emitter.emit('silly', 'ENGINE.ORPHAN_FETCHED',`  FETCHED PS FOR ORPHAN ${orphan.id} ON HEARTBEAT`, { process_id: orphan.id });
                     if (orphan.state) {
                         return Process.deserialize(orphan);
                     }
                 }));
             } catch (e) {
-                emitter.emit("  ERROR FETCHING ORPHANS ON HEARTBEAT");
+                emitter.emit('silly', 'ENGINE.ORPHANS_ERROR',"  ERROR FETCHING ORPHANS ON HEARTBEAT", { error: e });
                 throw new Error(e);
             }
         });
         const continue_promises = orphan_process.map((process) => {
             if (process) {
-                emitter.emit(`    START CONTINUE ORPHAN PID ${process.id} AND STATE ${process.state.id} ON HEARTBEAT`);
+                emitter.emit('silly', 'ENGINE.ORPHAN.CONTINUE',`    START CONTINUE ORPHAN PID ${process.id} AND STATE ${process.state.id} ON HEARTBEAT`, {
+                    process_id: process.id,
+                    process_state_id: process.state.id
+                });
                 return process.continue({}, process.state._actor_data);
             }
         });
@@ -129,11 +138,13 @@ class Engine {
             try {
                 await Engine._beat();
             } catch (e) {
-                emitter.emit(`HEART FAILURE @ ENGINE_ID ${ENGINE_ID}`);
-                emitter.emit(e);
+                emitter.emit('silly', 'ENGINE.HEART_FAILURE',`HEART FAILURE @ ENGINE_ID ${ENGINE_ID}`, {
+                    engine_id: ENGINE_ID,
+                    error: e
+                });
             } finally {
                 Engine.heart = Engine.setNextHeartBeat();
-                emitter.emit("NEXT HEARTBEAT SET");
+                emitter.emit('silly', 'ENGINE.NEXT',"NEXT HEARTBEAT SET");
             }
         }, process.env.HEART_BEAT || 1000);
     }
@@ -167,13 +178,19 @@ class Engine {
         crypto_manager.setCrypto(crypto);
     }
 
-    async fetchAvailableActivitiesForActor(actor_data, filters = null) {
-        return await ActivityManager.fetchActivitiesForActorFromStatus(ActivityStatus.STARTED,
+    async fetchAvailableActivitiesForActor(actor_data) {
+        const filters = {
+            current_status: [ProcessStatus.WAITING, ProcessStatus.RUNNING, ProcessStatus.DELEGATED, ProcessStatus.PENDING]
+        }
+
+        return await ActivityManager.fetchActivitiesForActorFromStatus(
+            ActivityStatus.STARTED,
             actor_data,
-            filters);
+            filters
+        );
     }
 
-    async fetchDoneActivitiesForActor(actor_data, filters = null) {
+    async fetchDoneActivitiesForActor( actor_data, filters = null) {
         return await ActivityManager.fetchActivitiesForActorFromStatus(ActivityStatus.COMPLETED,
             actor_data,
             filters);
@@ -329,7 +346,10 @@ class Engine {
         const workflow = await this.fetchWorkflow(workflow_id);
         if (workflow) {
             const created_process = await workflow.createProcess(actor_data, initial_bag);
-            emitter.emit(`CREATED PROCESS OF ${workflow.name} PID ${created_process.id}`);
+            emitter.emit('info', 'PROCESS.CREATED',`CREATED PROCESS OF ${workflow.name} PID ${created_process.id}`, {
+                workflow_name: workflow.name,
+                process_id: created_process.id
+            });
             return created_process;
         }
         return undefined;
@@ -358,7 +378,10 @@ class Engine {
     async abortProcess(process_id) {
         const abort_result = await process_manager.abortProcess([process_id]);
         if (abort_result[0].value) {
-            emitter.emit(`PROCESS ABORTED ${process_id} OF ${abort_result[0].value.workflow_name}`);
+            emitter.emit('info', 'PROCESS.ABORTED',`PROCESS ABORTED ${process_id} OF ${abort_result[0].value.workflow_name}`, {
+                workflow_name: abort_result[0].value.workflow_name,
+                process_id: process_id
+            });
         }
         return abort_result[0].value;
     }
