@@ -69,7 +69,9 @@ describe("fetchAvailableActivitiesForActor works", () => {
     expect(process_1.status).toBe(ProcessStatus.WAITING);
 
     const response = await engine.fetchAvailableActivitiesForActor(actors_.simpleton, {workflow_id: uuid()});
-    expect(response).toHaveLength(0);
+    expect(response).toHaveLength(1);
+    expect(response[0].activity_status).toBe('started');
+    expect(response[0].process_status).toBe(ProcessStatus.WAITING);
   });
 
   test("fetchAvailableActivitiesForActor works with status filter", async () => {
@@ -83,7 +85,7 @@ describe("fetchAvailableActivitiesForActor works", () => {
     expect(response).toHaveLength(1);
     response = await engine.fetchAvailableActivitiesForActor(actors_.simpleton,
       {workflow_id: workflow.workflow_id, status: "invalid_status"});
-    expect(response).toHaveLength(0);
+    expect(response).toHaveLength(1);
   });
 
   test("fetchAvailableActivitiesForActor works with invalid filters", async () => {
@@ -116,7 +118,6 @@ describe("fetchDoneActivitiesForActor works", () => {
     const workflow = await engine.saveWorkflow("sample", "sample", blueprints_.identity_user_task);
     const process = await createRunProcess(engine, workflow.id, actors_.simpleton);
     expect(process.status).toBe(ProcessStatus.WAITING);
-    let response = await engine.fetchAvailableActivitiesForActor(actors_.simpleton);
 
     const external_input = {any: "external_input"};
     await engine.commitActivity(process.id, actors_.simpleton, external_input);
@@ -137,7 +138,6 @@ describe("fetchDoneActivitiesForActor works", () => {
     const workflow = await engine.saveWorkflow("sample", "sample", blueprints_.identity_user_task);
     const process = await createRunProcess(engine, workflow.id, actors_.simpleton);
     expect(process.status).toBe(ProcessStatus.WAITING);
-    let response = await engine.fetchAvailableActivitiesForActor(actors_.simpleton);
 
     const external_input = {any: "external_input"};
     await engine.commitActivity(process.id, actors_.simpleton, external_input);
@@ -179,6 +179,16 @@ describe("fetchDoneActivitiesForActor works", () => {
     expect(response).toHaveLength(1);
     response = await engine.fetchDoneActivitiesForActor(actors_.admin);
     expect(response).toHaveLength(2);
+
+    response = await engine.fetchDoneActivitiesForActor(actors_.admin);
+    expect(response[0].current_status).toBe(ProcessStatus.FINISHED);
+    expect(response[1].current_status).toBe(ProcessStatus.FINISHED);
+
+    filters = {
+      current_status: ProcessStatus.UNSTARTED
+    }
+    response = await engine.fetchDoneActivitiesForActor(actors_.admin, filters);
+    expect(response).toHaveLength(0);
   });
 
   test("fetchDoneActivitiesForActor works with workflow_id filters", async () => {

@@ -3,19 +3,24 @@
   "version": "1.2.0",
   "description": "workflow engine from flow-build to work in multiple plataforms",
   "dependencies": {
-    "ajv": "^7.1.1",
+    "-": "0.0.1",
+    "ajv": "^8.1.0",
+    "ajv-formats": "^2.0.2",
     "axios": "^0.21.1",
     "delegates": "^1.0.0",
+    "dotenv": "^8.2.0",
     "eventemitter2": "^6.4.4",
+    "g": "^2.0.1",
     "handlebars": "^4.7.7",
-    "knex": "^0.21.18",
+    "knex": "^0.95.4",
     "lodash": "latest",
     "minimal-lisp": "^1.0.3",
-    "mustache": "^4.1.0",
-    "pg": "^8.5.1",
+    "mustache": "^4.2.0",
+    "pg": "^8.6.0",
     "readline-sync": "^1.4.10",
     "sleep": "^6.3.0",
-    "uuid": "^8.3.2"
+    "uuid": "^8.3.2",
+    "winston": "^3.3.3"
   },
   "devDependencies": {
     "@semantic-release/changelog": "^5.0.1",
@@ -29,13 +34,16 @@
     "axios": "./__mocks__/axios/index.js"
   },
   "scripts": {
-    "test": "echo 'tests unavailable'",
+    "test": "jest --coverage",
     "test-memory": "jest --coverage",
     "db": "knex",
-    "tests": "export test_persist_option='knex' && npm -- test -i",
+    "tests": "export test_persist_option='knex' && npm -- test -i --forceExit",
     "tests-memory": "export test_persist_option='memory' && npm run test-memory -i",
     "seeds": "knex --env ${NODE_ENV} --knexfile knexfile.js seed:run",
     "migrations": "knex --env ${NODE_ENV} --knexfile knexfile.js migrate:latest",
+    "test-example": "node examples/bag_example.js",
+    "seeds:local": "knex --env local_docker_db --knexfile knexfile.js seed:run",
+    "migrations:local": "knex --env local_docker_db --knexfile knexfile.js migrate:latest",
     "get-version": "echo $npm_package_version",
     "release": "semantic-release"
   },

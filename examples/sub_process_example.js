@@ -1,7 +1,7 @@
 const lisp = require("../src/core/lisp");
 const settings = require("../settings/settings");
 const { Engine } = require("../src/engine/engine");
-const startLogger = require("../src/core/utils/logging");
+const startEventListener = require("../src/core/utils/eventEmitter");
 const emitter = require("../src/core/utils/emitter");
 
 const blueprint_spec_son = {
@@ -61,7 +61,7 @@ const blueprint_spec_son = {
       lane_id: "1",
       parameters: {
         input: {
-          string: {
+          son_result_data: {
             "$js": 'Math.random'
           }
         }
@@ -117,9 +117,10 @@ const blueprint_spec_parent = {
           id: "2",
           claims: []
         },
+        workflow_name: "sub_process_example_son_test",
+        valid_response: "finished",
         input: {
-          workflow_name: "sub_process_example_son_test",
-          valid_response: "finished"
+          parent_sample_data: "1234"
         }
       }
     },
@@ -148,10 +149,10 @@ const actor_data = {
 
 const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
 
-startLogger(emitter);
+startEventListener(emitter);
 
 const run_example = async () => {
-  emitter.emit("===  RUNNING sub_process_example  ===");
+  emitter.emit('info', "===  RUNNING sub_process_example  ===");
   const engine = new Engine(...settings.persist_options);
 
   const workflow_parent = await engine.saveWorkflow("sub_process_example_parent", "sub process example showcase", blueprint_spec_parent);
@@ -165,4 +166,4 @@ const run_example = async () => {
   return parent_state_history;
 }
 
-run_example().then(res => { emitter.emit(res); });
+run_example().then(res => { emitter.emit('info', 'res', res); });

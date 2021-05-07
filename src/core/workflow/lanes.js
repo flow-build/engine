@@ -23,9 +23,7 @@ class Lane {
     try {
       retval = lisp.evaluate(rule_call);
     } catch (e) {
-      console.error("ERROR WHILE EVALUATING LANE RULE!");
-      console.error("  LANE RULE ", rule_lisp);
-      console.error(e);
+      emitter.emit('error', "ERROR WHILE EVALUATING LANE RULE!", `  LANE RULE ${rule_lisp}`, e);
     }
 
     return retval;

@@ -1,5 +1,5 @@
 const _ = require("lodash");
-const {v1: uuid }= require('uuid');
+const { v1: uuid } = require("uuid");
 const lisp = require("../../../core/lisp");
 const settings = require("../../../../settings/tests/settings");
 const { Engine } = require("../../engine");

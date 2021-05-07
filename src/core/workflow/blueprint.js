@@ -7,6 +7,7 @@ const { Lane } = require("./lanes");
 const { abstractFactory } = require("../utils/factory");
 const { Validator } = require("../validators");
 const node_factory = require("../utils/node_factory");
+const ajvValidator = require("../utils/ajvValidator");
 
 class Blueprint {
   static get rules() {
@@ -72,6 +73,10 @@ class Blueprint {
     if (!is_nodes_valid) {
       return [false, nodes_error];
     }
+    if (spec.parameters) {
+      ajvValidator.validateBlueprintParameters(spec.parameters);
+    }
+
     return Blueprint.validate_lanes(spec);
   };
 

@@ -13,4 +13,7 @@ async function memory_setup () {
 
 settings.persist_options = ["knex", db];
 
+// Persist options for different logger levels
+// settings.persist_options = ["knex", db, 'silly'];
+
 module.exports = settings;

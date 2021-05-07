@@ -1,7 +1,7 @@
 const lisp = require("../src/core/lisp");
 const settings = require("../settings/settings");
 const { Engine } = require("../src/engine/engine");
-const startLogger = require("../src/core/utils/logging");
+const startEventListener = require("../src/core/utils/eventEmitter");
 const emitter = require("../src/core/utils/emitter");
 
 const blueprint_spec = {
@@ -75,12 +75,11 @@ const actor_data = {
   id: "1",
   claims: []
 };
-
-startLogger(emitter);
+startEventListener(emitter);
 
 const run_example = async() => {
-  emitter.emit("===  RUNNING bag_example  ===");
   const engine = new Engine(...settings.persist_options);
+  emitter.emit('info', "===  RUNNING bag_example  ===");
   const workflow = await engine.saveWorkflow("bag_example", "bag showcase", blueprint_spec);
   const process = await engine.createProcess(workflow.id, actor_data);
   const process_id = process.id;

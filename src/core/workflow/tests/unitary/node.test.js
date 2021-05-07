@@ -1,5 +1,5 @@
 const _ = require("lodash");
-const {v1: uuid }= require('uuid');
+const { v1: uuid } = require("uuid");
 const lisp = require("../../../lisp");
 const obju = require("../../../utils/object");
 const nodes = require("../../../workflow/nodes");
@@ -41,6 +41,7 @@ describe("Constraints test", () => {
       { node_spec: nodes_.set_to_bag_system_task, node: nodes.SetToBagSystemTaskNode },
       { node_spec: nodes_.timer_system_task, node: nodes.TimerSystemTaskNode },
       { node_spec: nodes_.start_process_system_task, node: nodes.StartProcessSystemTaskNode },
+      { node_spec: nodes_.subprocess_task, node: nodes.SubProcessNode },
     ];
 
     for (const { node_spec, node } of spec_base_node_constraint) {
@@ -128,6 +129,7 @@ describe("Constraints test", () => {
       { node_spec: nodes_.set_to_bag_system_task, nodeClass: nodes.SetToBagSystemTaskNode },
       { node_spec: nodes_.timer_system_task, nodeClass: nodes.TimerSystemTaskNode },
       { node_spec: nodes_.start_process_system_task, nodeClass: nodes.StartProcessSystemTaskNode },
+      { node_spec: nodes_.subprocess_task, nodeClass: nodes.SubProcessNode },
     ];
 
     for (const { node_spec, nodeClass } of specs_with_parameter_input) {
@@ -504,6 +506,7 @@ describe("Constraints test", () => {
       { node_spec_name: "set_to_bag_system_task", node_class: nodes.SetToBagSystemTaskNode },
       { node_spec_name: "timer_system_task", node_class: nodes.TimerSystemTaskNode },
       { node_spec_name: "start_process_system_task", node_class: nodes.StartProcessSystemTaskNode },
+      { node_spec_name: "subprocess_task", node_class: nodes.SubProcessNode },
     ];
 
     for (const { node_spec_name, node_class } of nodes_samples_spec_class) {
@@ -1470,7 +1473,7 @@ describe("StartNode", () => {
     const external_input = { data: "external" };
     const node_result = await node.run({bag, input, external_input})
     expect(node_result.status).toEqual(ProcessStatus.ERROR);
-    expect(node_result.error).toMatch("should be string");
+    expect(node_result.error).toMatch("Error: data must be string");
   });
 
   test("Run status running with result error if on_error 'resumeNext", async () => {
@@ -1490,7 +1493,7 @@ describe("StartNode", () => {
     expect(node_result.external_input).toEqual(external_input);
     expect(node_result.error).toBeNull();
     expect(node_result.result.is_error).toEqual(true);
-    expect(node_result.result.error).toMatch("should be string");
+    expect(node_result.result.error).toMatch("Error: data must be string");
   });
 
   test("Valid input_schema", async () => {

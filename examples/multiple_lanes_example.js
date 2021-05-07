@@ -1,7 +1,7 @@
 const lisp = require("../src/core/lisp");
 const settings = require("../settings/settings");
 const { Engine } = require("../src/engine/engine");
-const startLogger = require("../src/core/utils/logging");
+const startEventListener = require("../src/core/utils/eventEmitter");
 const emitter = require("../src/core/utils/emitter");
 
 const blueprint_spec = {
@@ -176,10 +176,10 @@ const consultant_data = {
   claims: ["consultant"]
 };
 
-startLogger(emitter);
+startEventListener(emitter);
 
 const run_first_example = async () => {
-  emitter.emit("===  RUNNING multiple_lanes_example  ===");
+  emitter.emit('info', "===  RUNNING multiple_lanes_example  ===");
   const engine = new Engine(...settings.persist_options);
   const workflow = await engine.saveWorkflow("multiple_lanes_task_example",
     "multiple lanes task showcase",
@@ -199,4 +199,4 @@ const run_first_example = async () => {
   return state_history;
 }
 
-run_first_example().then(res => { emitter.emit(res); });
+run_first_example().then(res => { emitter.emit('info', 'res', res); });

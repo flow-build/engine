@@ -1,4 +1,4 @@
-const {v1: uuid }= require('uuid');
+const { v1: uuid } = require("uuid");
 const settings = require("../../../../settings/tests/settings");
 const { Engine } = require("../../engine");
 const { PersistorProvider } = require("../../../core/persist/provider");
@@ -393,6 +393,9 @@ describe("User task timeout", () => {
       result: { is_continue: true},
     });
 
+    //even when the userTask have expired, the actor_data should be preserved
+    expect(process_state.actor_data).toBeDefined();
+
     process_state = process_state_history[2];
     expect(process_state).toMatchObject({
       step_number: 3,
@@ -567,7 +570,7 @@ describe("User task timeout", () => {
     validateProcessStateHistory(process_state_history);
 
     let activity_managers = await engine.fetchAvailableActivitiesForActor(actors_.simpleton);
-    expect(activity_managers).toHaveLength(1);
+    expect(activity_managers).toHaveLength(0);
     
     jest.runAllTimers();
     await wait(3000);

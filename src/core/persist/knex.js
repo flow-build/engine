@@ -69,7 +69,7 @@ class KnexPersist {
         await this._db(this._table).where('id', obj_id).update(obj);
       }
     } catch (e) {
-      console.log(e);
+      emitter.emit('error', 'UPDATE ERROR ', e);
     }
 
   }
@@ -176,7 +176,7 @@ class ProcessKnexPersist extends KnexPersist {
             .del();
       });
     } catch (e) {
-      console.log(`Unable delete Process with PID ${this.id}`);
+      emitter.emit('error', `Unable delete Process with PID ${this.id}`, e);
     }
   }
 
@@ -260,9 +260,8 @@ class ProcessKnexPersist extends KnexPersist {
         }
       });
     } catch (e) {
-      console.log(`Unable create Process with PID ${this.id}`);
+      emitter.emit('error', `Unable to create Process with PID ${this.id}`, e);
     }
-
   }
 
   async _update(process_id, process, trx=false) {
@@ -279,7 +278,7 @@ class ProcessKnexPersist extends KnexPersist {
           await this._db(this._table).where("id", process_id).update(process).transacting(trx);
         });
       } catch (e) {
-        console.log(`Unable to update Process with PID ${process_id}`);
+        emitter.emit('error', `Unable to update Process with PID ${process_id}`, e);
       }
     }
   }
@@ -329,49 +328,56 @@ class ActivityManagerKnexPersist extends KnexPersist {
 
   async getActivityDataFromStatus(status, filters) {
     return await this._db
-      .select(
-        'am.id',
-        'am.created_at',
-        'am.type',
-        'am.process_state_id',
-        'am.props',
-        'am.parameters',
-        'am.status as activity_status',
-        'ps.process_id',
-        'ps.step_number',
-        'ps.node_id',
-        'ps.next_node_id',
-        'ps.bag',
-        'ps.external_input',
-        'ps.error',
-        'ps.status as process_status',
-        'p.workflow_id',
-        'p.blueprint_spec',
-        'wf.name as workflow_name',
-        'wf.description as workflow_description',
-      )
-      .from('activity_manager AS am')
-      .rightJoin('process_state AS ps', 'am.process_state_id', 'ps.id')
-      .rightJoin('process AS p', 'ps.process_id', 'p.id')
-      .rightJoin('workflow AS wf', 'p.workflow_id', 'wf.id')
-      .where('am.status', '=', status)
-      .modify((builder) => {
-        if (filters) {
-          if (filters.workflow_id) {
-            builder.where({ "wf.id": filters.workflow_id });
+        .select(
+            'am.id',
+            'am.created_at',
+            'am.type',
+            'am.process_state_id',
+            'am.props',
+            'am.parameters',
+            'am.status as activity_status',
+            'ps.process_id',
+            'ps.step_number',
+            'ps.node_id',
+            'ps.next_node_id',
+            'ps.bag',
+            'ps.external_input',
+            'ps.error',
+            'ps.status as process_status',
+            'p.workflow_id',
+            'p.blueprint_spec',
+            'p.current_status as current_status',
+            'wf.name as workflow_name',
+            'wf.description as workflow_description',
+        )
+        .from('activity_manager AS am')
+        .rightJoin('process_state AS ps', 'am.process_state_id', 'ps.id')
+        .rightJoin('process AS p', 'ps.process_id', 'p.id')
+        .rightJoin('workflow AS wf', 'p.workflow_id', 'wf.id')
+        .where('am.status', '=', status)
+        .modify((builder) => {
+          if (filters) {
+            if (filters.workflow_id) {
+              builder.where({ "wf.id": filters.workflow_id });
+            }
+            if (filters.process_id) {
+              builder.where({ "p.id": filters.process_id });
+            }
+            if (filters.status) {
+              builder.where({ "am.status": filters.status });
+            }
+            if (filters.type) {
+              builder.where({ "am.type": filters.type });
+            }
+            if (filters.current_status) {
+              builder.where({"p.current_status": filters.current_status[0]})
+                  .orWhere({"p.current_status": filters.current_status[1]})
+                  .orWhere({"p.current_status": filters.current_status[2]})
+                  .orWhere({"p.current_status": filters.current_status[3]});
+            }
           }
-          if (filters.process_id) {
-            builder.where({ "p.id": filters.process_id });
-          }
-          if (filters.status) {
-            builder.where({ "am.status": filters.status });
-          }
-          if (filters.type) {
-            builder.where({ "am.type": filters.type });
-          }
-        }
-      })
-      .orderBy('am.created_at', 'asc');
+        })
+        .orderBy('am.created_at', 'asc');
   }
 
   async getActivityDataFromId(obj_id) {
