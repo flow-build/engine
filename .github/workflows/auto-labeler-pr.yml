@@ -10,7 +10,7 @@ jobs:
       - uses: actions/labeler@v2
         with:
           configuration-path: .github/label-settings/labeler.yml
-          repo-token: ${{ secrets.GITHUB_TOKEN }}
+          repo-token: ${{ secrets.GH_TOKEN }}
 
   branch-name-labeler:
     runs-on: ubuntu-18.04
@@ -19,4 +19,4 @@ jobs:
         with:
           configuration-path: .github/label-settings/name-pattern-labeler.yml
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
