@@ -89,6 +89,51 @@ test("prepare_has_valid_type constraint works", () => {
   expect(error).toBe("prepare_has_valid_type");
 });
 
+describe("test validate_environment_variable", () => {
+  test("pass with no environment variable", () => {
+    const spec = _.cloneDeep(blueprints_.minimal);
+    const error = Blueprint.validate(spec);
+    expect(error[0]).toBeTruthy();
+    expect(error[1]).toBeNull();
+  });
+
+  test("pass when using an existing environment variable", () => {
+    const spec = _.cloneDeep(blueprints_.existent_environment_variable);
+    const error = Blueprint.validate(spec);
+    expect(error[0]).toBeTruthy();
+    expect(error[1]).toBeNull();
+  });
+
+  test("throw warning when not using an existing environment variable", () => {
+    // Set the variables
+    process.env.API_HOST='www.random_string.com';
+    process.env.TOKEN='random_string';
+
+    const spec = _.cloneDeep(blueprints_.minimal);
+    spec.environment = {path: "PATH"};
+    const error = Blueprint.validate(spec);
+    expect(error[0]).toBeTruthy();
+    expect(error[1][0]).toBe("Environment variable path not found in nodes");
+  });
+
+  test("throw warning when not using an inexistent environment variable", () => {
+    const spec = _.cloneDeep(blueprints_.existent_environment_variable);
+    spec.environment = {inexistent: "INEXISTENT"};
+    const error = Blueprint.validate(spec);
+    expect(error[0]).toBeTruthy();
+    expect(error[1][0]).toBe("Environment variable inexistent not found in ambient");
+    expect(error[2][0]).toBe("Environment variable inexistent not found in nodes");
+  });
+
+  test("throw error when using an inexistent environment variable", () => {
+    const spec = _.cloneDeep(blueprints_.inexistent_environment_variable);
+    console.log(spec);
+    const error = Blueprint.validate(spec);
+    expect(error[0]).toBeFalsy();
+    expect(error[1][0]).toBe("Environment variable inexistent not found in ambient");
+  });
+});
+
 describe("has_valid_start_nodes", () => {
   test("valid minimal blueprint", () => {
     const spec = _.cloneDeep(blueprints_.minimal)
@@ -187,6 +232,24 @@ describe("Blueprint.validate", () => {
     const response = Blueprint.validate(blueprint_spec);
     expect(response[0]).toEqual(false);
     expect(response[1]).toMatch("found existing lane_id");
+  });
+});
+
+describe("Blueprint lane rule validate", () => {
+  test("pass with lisp rule in lane", () => {
+    const blueprint_spec = _.cloneDeep(blueprints_.minimal);
+    const response = Blueprint.validate(blueprint_spec);
+    expect(response[0]).toEqual(true);
+    expect(response[1]).toBeNull();
+  });
+
+  test("pass with JS rule in lane", () => {
+    let minimalBlueprint = _.cloneDeep(blueprints_.minimal);
+    minimalBlueprint.lanes[0].rule = { $js: "() => true" };
+
+    const response = Blueprint.validate(minimalBlueprint);
+    expect(response[0]).toEqual(true);
+    expect(response[1]).toBeNull();
   });
 });
 

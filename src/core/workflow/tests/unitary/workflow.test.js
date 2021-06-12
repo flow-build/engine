@@ -7,6 +7,7 @@ const { Workflow } = require("../../../workflow/workflow");
 const { ProcessStatus } = require("../../../workflow/process_state");
 const { PersistorProvider } = require("../../../persist/provider");
 const { blueprints_, actors_ } = require("./blueprint_samples");
+const JSum = require('jsum');
 
 beforeEach(async () => {
   await _clean();
@@ -43,6 +44,21 @@ test("fetch works", async () => {
   workflow = await workflow.save();
   const fetched_workflow = await Workflow.fetch(workflow.id);
   expect(fetched_workflow.id).toBe(workflow.id);
+});
+
+test("fetch by name works", async () => {
+  let workflow = new Workflow("sample", "sample", blueprints_.minimal);
+  workflow = await workflow.save();
+  const fetched_workflow = await Workflow.fetchWorkflowByName("sample");
+  expect(fetched_workflow.id).toBe(workflow.id);
+});
+
+test("fetch by hash works", async () => {
+  let workflow = new Workflow("sample", "sample", blueprints_.minimal);
+  let blueprint_hash = JSum.digest(blueprints_.minimal, 'SHA256', 'hex');
+  workflow = await workflow.save();
+  const workflows = await Workflow.findWorkflowByBlueprintHash(blueprint_hash);
+  expect(workflows[0].id).toBe(workflow.id);
 });
 
 test("delete works", async () => {
