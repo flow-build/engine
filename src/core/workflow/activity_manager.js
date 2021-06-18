@@ -1,6 +1,5 @@
 const { v1: uuid } = require("uuid");
 const _ = require("lodash");
-const assert = require("assert");
 const { PersistedEntity } = require("./base");
 const { Packages } = require("./packages");
 const { Lane } = require("./lanes");
@@ -124,14 +123,53 @@ class ActivityManager extends PersistedEntity {
   static async get(activity_manager_id, actor_data) {
     let result;
     const activity_manager = await this.getPersist().getActivityDataFromId(activity_manager_id);
+
     if (activity_manager) {
       const allowed_activities = await ActivityManager.checkActorPermission([activity_manager], actor_data);
       if (allowed_activities.length === 1) {
         result = allowed_activities[0];
         result.activities = await this.getPersist().getActivities(result.id);
+
+        const timer = await this.getPersist().getTimerfromResourceId(activity_manager.id);
+        if (timer.length !== 0) {
+          result.expires_at = timer[0].expires_at;
+        }
       }
     }
     return result;
+  }
+
+  static async addTimeInterval(id, timeInterval, resource_type) {
+    let timer = await this.getPersist().getTimerfromResourceId(id);
+
+    if (timer.length !== 0) {
+      const new_expired_date = new Date(timer[0].expires_at.setTime(timer[0].expires_at.getTime() + timeInterval*1000));
+
+      const db = Timer.getPersist()._db;
+      await db('timer')
+          .where("resource_type", resource_type)
+          .andWhere("resource_id", id)
+          .update({expires_at: new_expired_date});
+
+    } else {
+      await ActivityManager.createTimer(id, timeInterval, resource_type);
+    }
+  }
+
+  static async setExpiredDate(id, date, resource_type) {
+    let timer = await this.getPersist().getTimerfromResourceId(id);
+
+    if (timer.length !== 0) {
+      timer.expires_at = new Date (date);
+
+      const db = Timer.getPersist()._db;
+      await db('timer')
+          .where("resource_type", resource_type)
+          .andWhere("resource_id", id)
+          .update({expires_at: timer.expires_at});
+    } else {
+      await ActivityManager.createTimer(id, date, resource_type);
+    }
   }
 
   static async interruptActivityManagerForProcess(process_id) {
@@ -143,6 +181,18 @@ class ActivityManager extends PersistedEntity {
       const activity_manager = ActivityManager.deserialize(activity_manager_data);
       activity_manager.activities = activity_manager_data.activities;
       await activity_manager.interruptActivity(process_id);
+    }
+  }
+
+  static async finishActivityManagerForProcess(process_id) {
+    const full_activity_manager_data = await this.getPersist().getActivityDataFromStatus(
+        ActivityStatus.STARTED,
+        { process_id: process_id }
+    );
+    for (const activity_manager_data of full_activity_manager_data) {
+      const activity_manager = ActivityManager.deserialize(activity_manager_data);
+      activity_manager.activities = activity_manager_data.activities;
+      await activity_manager._validateActivity(process_id);
     }
   }
 
@@ -255,7 +305,7 @@ class ActivityManager extends PersistedEntity {
     //ToDo
     this._status = ActivityStatus.COMPLETED;
     await this.save();
-    emitter.emit("ACTIVITY_MANAGER.COMPLETED", {activity_manager: this});
+    emitter.emit("ACTIVITY_MANAGER.COMPLETED", `ACTIVITY MANAGER COMPLETED AMID: [${this.id}]`, {activity_manager: this});
 
     await this._notifyActivityManager(process_id);
     return true;
@@ -282,19 +332,19 @@ class ActivityManager extends PersistedEntity {
           .andWhere("resource_id", this.id)
           .update({active: false});
 
-      emitter.emit('ACTIVITY_MANAGER.CLEARED_TIMERS',`      CLEARED TIMERS FOR AM ${this.id} `,{ activity_manager_id: this.id });
+      emitter.emit('ACTIVITY_MANAGER_TIMER.CLEARED',`      CLEARED TIMERS FOR AMID [${this.id}]`,{ activity_manager_id: this.id });
 
-      emitter.emit('ACTIVITY_MANAGER.CREATING_NEW_TIMER',`      CREATING NEW TIMER ON AM ${this.id} `,{ activity_manager_id: this.id });
+      emitter.emit('ACTIVITY_MANAGER_TIMER.CREATING_NEW',`      CREATING NEW TIMER ON AMID [${this.id}] `,{ activity_manager_id: this.id });
       const timer = new Timer("ActivityManager", this.id, Timer.timeoutFromNow(this.parameters.timeout), {next_step_number});
       await timer.save(trx);
-      emitter.emit('ACTIVITY_MANAGER.NEW_TIMER',`      NEW TIMER ON AM ${this.id} TIMER ${timer.id}`,{ activity_manager_id: this.id, timer_id: timer.id });
+      emitter.emit('ACTIVITY_MANAGER.NEW_TIMER',`      NEW TIMER ON AMID [${this.id}] TIMER [${timer.id}]`,{ activity_manager_id: this.id, timer_id: timer.id });
 
       this.parameters.timeout_id = timer.id;
     }
   }
 
   async timeout(timer, trx){
-      emitter.emit('ACTIVITY_MANAGER.TIMEOUT_EXPIRED',`TIMEOUT ON AM ${this.id} TIMER ${timer.id}`,{ activity_manager_id: this.id, timer_id: timer.id });
+      emitter.emit('ACTIVITY_MANAGER.TIMEOUT_EXPIRED',`TIMEOUT ON AMID [${this.id}] TIMER [${timer.id}]`,{ activity_manager_id: this.id, timer_id: timer.id });
 
       const activity_manager_data = await ActivityManager.fetch(timer.resource_id);
       if (
@@ -305,7 +355,7 @@ class ActivityManager extends PersistedEntity {
         const activity_manager = ActivityManager.deserialize(activity_manager_data);
         activity_manager.status = ActivityStatus.COMPLETED;
         await activity_manager.save(trx);
-        emitter.emit('ACTIVITY_MANAGER.COMPLETED', { activity_manager: activity_manager });
+        emitter.emit('ACTIVITY_MANAGER.COMPLETED', `COMPLETED AMID [${this.id}]`, { activity_manager: activity_manager });
         
         await activity_manager._notifyActivityManager(activity_manager_data.process_id);
         if (activity_manager.type === "commit") {
@@ -317,6 +367,35 @@ class ActivityManager extends PersistedEntity {
       }
 
   }
+
+  static async createTimer(id, time, resource_type) {
+    emitter.emit('ACTIVITY_MANAGER_TIMER.CREATING_NEW',`      CREATING NEW TIMER ON AMID [${id}]`,{ activity_manager_id: id });
+
+    const db = Timer.getPersist()._db;
+
+    if (time instanceof Date) {
+      await db('timer').insert({
+        id: uuid(),
+        created_at: new Date(),
+        expires_at: new Date(time),
+        active: true,
+        resource_type: 'ActivityManager',
+        resource_id: id,
+        params: {},
+      });
+    } else {
+      await db('timer').insert({
+        id: uuid(),
+        created_at: new Date(),
+        expires_at: new Date(new Date().getTime() + time*1000),
+        active: true,
+        resource_type: resource_type,
+        resource_id: id,
+        params: {},
+      });
+    }
+  }
+
 }
 
 class NotifyActivityManager extends ActivityManager {

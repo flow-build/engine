@@ -11,34 +11,33 @@ function getServiceTask(node_spec) {
         throw new Error("Invalid service task, missing category on spec");
     }
 
-    switch (node_category) {
-        case "http": {
-            resultNode = new nodes.HttpSystemTaskNode(node_spec)
-            break;
-        }
-        case "settobag": {
-            resultNode = new nodes.SetToBagSystemTaskNode(node_spec);
-            break;
-        }
-        case "timer": {
-            resultNode = new nodes.TimerSystemTaskNode(node_spec);
-            break;
-        }
-        case "startprocess": {
-            resultNode = new nodes.StartProcessSystemTaskNode(node_spec);
-            break;
-        }
-        case "abortprocess": {
-            resultNode = new nodes.AbortProcessSystemTaskNode(node_spec);
-            break;
-        }
-        default: {
-            const customClass = extra_system_category_map[node_category];
-            if (customClass) {
-                resultNode = new customClass(node_spec);
-            } else {
+    const customClass = extra_system_category_map[node_category];
+    if (customClass) {
+        resultNode = new customClass(node_spec);
+    } else {
+        switch (node_category) {
+            case "http": {
+                resultNode = new nodes.HttpSystemTaskNode(node_spec)
+                break;
+            }
+            case "settobag": {
+                resultNode = new nodes.SetToBagSystemTaskNode(node_spec);
+                break;
+            }
+            case "timer": {
+                resultNode = new nodes.TimerSystemTaskNode(node_spec);
+                break;
+            }
+            case "startprocess": {
+                resultNode = new nodes.StartProcessSystemTaskNode(node_spec);
+                break;
+            }
+            case "abortprocess": {
+                resultNode = new nodes.AbortProcessSystemTaskNode(node_spec);
+                break;
+            }
+            default: {
                 throw new Error(`Invalid service task, unknow category ${node_category}`);
-
             }
         }
     }

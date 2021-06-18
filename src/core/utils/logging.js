@@ -21,15 +21,14 @@ function createLogger(logerLevel) {
 }
 function printMessage(logMessage) {
 
-    if (logMessage.messageLevel) {
-        logger[logMessage.level](`${JSON.stringify(logMessage.messageLevel)}`);
-    }
-    if (logMessage.messageInfo) {
-        logger[logMessage.level](`${JSON.stringify(logMessage.messageInfo)}`);
-    }
-    if (logMessage.variable) {
-        logger[logMessage.level](`${JSON.stringify(logMessage.variable)}`);
-    }
+    const label = logMessage.section || 'FLOWBUILD'
+    const level = logMessage.level || 'info'
+
+    logger.log({
+        level,
+        message: `[${label}] ${JSON.stringify(logMessage.message)}`
+    })
+
 }
 module.exports = {
     printMessage: printMessage,
