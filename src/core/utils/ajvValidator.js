@@ -102,6 +102,27 @@ function validateBlueprintParameters(data) {
     const is_valid = ajv.validate(schemaBlueprintParametersValidate, data);
 
     if (!is_valid) {
+        return new Error(ajv.errorsText());
+    }
+}
+
+function validateTimeInterval(input) {
+
+    let schemaValidate;
+
+        schemaValidate = {
+            type: 'object',
+            properties: {
+                id: {type: 'string', format: 'uuid'},
+                date: {
+                    oneOf: [{type: 'number'}, {type: 'string', format: 'dateTime'}]
+                },
+                    resource_type: {type: 'string', enum: ['ActivityManager', 'Process', 'Mock']}
+                }
+        }
+
+    const is_valid = ajv.validate(schemaValidate, input);
+    if (!is_valid) {
         throw new Error(ajv.errorsText());
     }
 }
@@ -111,5 +132,6 @@ module.exports = {
     validateSchema: validateSchema,
     validateActivityManager: validateActivityManager,
     validateResult: validateResult,
-    validateBlueprintParameters: validateBlueprintParameters
+    validateBlueprintParameters: validateBlueprintParameters,
+    validateTimeInterval:validateTimeInterval
 };

@@ -100,8 +100,9 @@ class Node {
   }
 
   _processError(error, { bag, external_input, time_elapsed}) {
+    console.log(error);
     if (error instanceof Error) {
-      emitter.emit('NODE.ERROR',`ERROR AT NID ${this.id}`, {
+      emitter.emit('NODE.ERROR',`ERROR AT NID [${this.id}]`, {
         node_id: this.id,
         error: error
       });
@@ -175,7 +176,7 @@ class StartNode extends Node {
         error = err.message;
       }
     }
-    emitter.emit('NODE.START.VALIDATED','START NODE VALIDATED', { is_valid: is_valid, error: error });
+    emitter.emit('NODE.START_VALIDATED','START NODE VALIDATED', { is_valid: is_valid, error: error });
     return [is_valid, error]
   }
 

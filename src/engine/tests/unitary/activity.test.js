@@ -18,7 +18,7 @@ beforeEach(async () => {
 afterAll(async () => {
   await _clean();
   if (settings.persist_options[0] === "knex"){
-    await Process.getPersist()._db.destroy();;
+    await Process.getPersist()._db.destroy();
   }
   Engine.kill();
 });
@@ -479,6 +479,18 @@ describe("fetch works", () => {
 
     expect(fetch_result).toBeUndefined();
   });
+
+  test("activityManager fetch return expires_at", async () => {
+    const engine = new Engine(...settings.persist_options, {});
+
+    const workflow = await engine.saveWorkflow("sample", "sample", blueprints_.user_timeout);
+    const process = await createRunProcess(engine, workflow.id, actors_.simpleton);
+    await engine.runProcess(process.id);
+    const activity_manager = await engine.fetchAvailableActivityForProcess(process.id, actors_.simpleton)
+    let fetch_result = await engine.fetchActivityManager(activity_manager.id, actors_.simpleton);
+
+    expect(fetch_result.expires_at).toBeDefined();
+  });
 });
 
 describe("Deserialize convert activity_manager to correct type", () => {
@@ -521,7 +533,204 @@ describe("Deserialize convert activity_manager to correct type", () => {
       engine.setActivityManagerNotifier();
     }
   });
-})
+
+  test("activityManager fetch checks user permission", async () => {
+    const engine = new Engine(...settings.persist_options, {});
+    try {
+      let activity_manager;
+      engine.setActivityManagerNotifier((data) => activity_manager = data);
+  
+      const workflow = await engine.saveWorkflow("sample", "sample", blueprints_.admin_identity_user_task);
+      const process = await createRunProcess(engine, workflow.id, actors_.admin);
+      expect(process.status).toBe(ProcessStatus.WAITING);
+      
+      expect(activity_manager).toBeDefined();
+      let fetch_result = await engine.fetchActivityManager(activity_manager._id, actors_.simpleton);
+      const deserialize_result = ActivityManager.deserialize(fetch_result);
+      expect(deserialize_result).toBeUndefined();
+    } finally {
+      engine.setActivityManagerNotifier();
+    }
+  });
+
+  test("activityManager addTimeInterval in seconds to expires_at", async () => {
+    const engine = new Engine(...settings.persist_options, {});
+
+    const workflow = await engine.saveWorkflow("sample", "sample", blueprints_.user_timeout);
+    const process = await createRunProcess(engine, workflow.id, actors_.simpleton);
+    await engine.runProcess(process.id);
+    const activity_manager = await engine.fetchAvailableActivityForProcess(process.id, actors_.simpleton)
+
+    let fetch_result = await engine.fetchActivityManager(activity_manager.id, actors_.simpleton);
+    expect(fetch_result.expires_at).toBeDefined();
+    const first_date = fetch_result.expires_at;
+
+    const seconds_interval = 120;
+    await engine.addTimeInterval(activity_manager.id, seconds_interval, 'ActivityManager');
+
+    fetch_result = await engine.fetchActivityManager(activity_manager.id, actors_.simpleton);
+    expect(fetch_result.expires_at).toBeDefined();
+    const second_date = fetch_result.expires_at;
+    expect(parseInt((second_date - first_date)/1000)).toBe(seconds_interval);
+  });
+
+  test("activityManager addTimeInterval create new Timer when it doesn`t exist", async () => {
+    const engine = new Engine(...settings.persist_options, {});
+    const workflow = await engine.saveWorkflow("sample", "sample", blueprints_.identity_user_task);
+    const process = await createRunProcess(engine, workflow.id, actors_.simpleton);
+    expect(process.status).toBe(ProcessStatus.WAITING);
+
+    const activity_manager = await engine.fetchAvailableActivitiesForActor(actors_.simpleton);
+    expect(activity_manager).toHaveLength(1);
+
+    let fetch_result = await engine.fetchActivityManager(activity_manager[0].id, actors_.simpleton);
+    expect(fetch_result.expires_at).toBeUndefined();
+
+    const seconds_interval = 120;
+    await engine.addTimeInterval(activity_manager[0].id, seconds_interval, 'ActivityManager');
+
+    fetch_result = await engine.fetchActivityManager(activity_manager[0].id, actors_.simpleton);
+    expect(fetch_result.expires_at).toBeDefined();
+
+    const first_date = fetch_result.created_at;
+    const second_date = fetch_result.expires_at;
+    expect(parseInt((second_date - first_date)/1000)).toBe(seconds_interval);
+  });
+
+  test("activityManager addTimeInterval return error with no activity manager", async () => {
+    const engine = new Engine(...settings.persist_options, {});
+
+    const workflow = await engine.saveWorkflow("sample", "sample", blueprints_.user_timeout);
+    const process = await createRunProcess(engine, workflow.id, actors_.simpleton);
+    await engine.runProcess(process.id);
+    const activity_manager = await engine.fetchAvailableActivityForProcess(process.id, actors_.simpleton)
+
+    let fetch_result = await engine.fetchActivityManager(activity_manager.id, actors_.simpleton);
+    expect(fetch_result.expires_at).toBeDefined();
+
+    const seconds_interval = 120;
+    fetch_result = await engine.addTimeInterval(uuid(), seconds_interval, 'ActivityManager');
+    expect(fetch_result.error).toBeDefined();
+    expect(fetch_result.error.errorType).toBe('activityManager');
+    expect(fetch_result.error.message).toBe('Activity manager not found');
+  });
+
+  test("activityManager addTimeInterval return error with wrong time interval format", async () => {
+    const engine = new Engine(...settings.persist_options, {});
+
+    const workflow = await engine.saveWorkflow("sample", "sample", blueprints_.user_timeout);
+    const process = await createRunProcess(engine, workflow.id, actors_.simpleton);
+    await engine.runProcess(process.id);
+    const activity_manager = await engine.fetchAvailableActivityForProcess(process.id, actors_.simpleton)
+
+    let fetch_result = await engine.fetchActivityManager(activity_manager.id, actors_.simpleton);
+    expect(fetch_result.expires_at).toBeDefined();
+
+    const seconds_interval = '120';
+
+    try {
+      await engine.addTimeInterval(uuid(), seconds_interval, 'ActivityManager');
+
+    } catch (resultError) {
+      expect(resultError).toBeDefined();
+      expect(resultError.message).toBe('data/date must be number, data/date must match format "dateTime", data/date must match exactly one schema in oneOf');
+    }
+  });
+
+  test("activityManager addTimeInterval return error with wrong resource_type", async () => {
+    const engine = new Engine(...settings.persist_options, {});
+
+    const workflow = await engine.saveWorkflow("sample", "sample", blueprints_.user_timeout);
+    const process = await createRunProcess(engine, workflow.id, actors_.simpleton);
+    await engine.runProcess(process.id);
+    const activity_manager = await engine.fetchAvailableActivityForProcess(process.id, actors_.simpleton)
+
+    let fetch_result = await engine.fetchActivityManager(activity_manager.id, actors_.simpleton);
+    expect(fetch_result.expires_at).toBeDefined();
+
+    const seconds_interval = 120;
+    try {
+      await engine.addTimeInterval(uuid(), seconds_interval, 'activity manager');
+
+    } catch (resultError) {
+      expect(resultError).toBeDefined();
+      expect(resultError.message).toBe('data/resource_type must be equal to one of the allowed values');
+    }
+  });
+
+  test("activityManager set specific date to expires_at with setExpiredDate", async () => {
+    const engine = new Engine(...settings.persist_options, {});
+
+    const workflow = await engine.saveWorkflow("sample", "sample", blueprints_.user_timeout);
+    const process = await createRunProcess(engine, workflow.id, actors_.simpleton);
+    await engine.runProcess(process.id);
+    const activity_manager = await engine.fetchAvailableActivityForProcess(process.id, actors_.simpleton)
+
+    let fetch_result = await engine.fetchActivityManager(activity_manager.id, actors_.simpleton);
+    expect(fetch_result.expires_at).toBeDefined();
+
+    const future_date = '2022-05-13T00:00:00';
+    await engine.setExpiredDate(activity_manager.id, future_date, 'ActivityManager');
+
+    fetch_result = await engine.fetchActivityManager(activity_manager.id, actors_.simpleton);
+    expect(fetch_result.expires_at).toBeDefined();
+    expect(fetch_result.expires_at).toStrictEqual(new Date(future_date));
+  });
+
+  test("activityManager setExpiredDate return error with no activity manager", async () => {
+    const engine = new Engine(...settings.persist_options, {});
+
+    const workflow = await engine.saveWorkflow("sample", "sample", blueprints_.user_timeout);
+    const process = await createRunProcess(engine, workflow.id, actors_.simpleton);
+    await engine.runProcess(process.id);
+    const activity_manager = await engine.fetchAvailableActivityForProcess(process.id, actors_.simpleton)
+
+    let fetch_result = await engine.fetchActivityManager(activity_manager.id, actors_.simpleton);
+    expect(fetch_result.expires_at).toBeDefined();
+
+    const future_date = '2022-05-13T00:00:00';
+    fetch_result = await engine.setExpiredDate(uuid(), future_date, 'ActivityManager');
+    expect(fetch_result.error).toBeDefined();
+    expect(fetch_result.error.errorType).toBe('activityManager');
+    expect(fetch_result.error.message).toBe('Activity manager not found');
+  });
+
+  test("activityManager setExpiredDate return error with wrong date format", async () => {
+    const engine = new Engine(...settings.persist_options, {});
+
+    const workflow = await engine.saveWorkflow("sample", "sample", blueprints_.user_timeout);
+    const process = await createRunProcess(engine, workflow.id, actors_.simpleton);
+    await engine.runProcess(process.id);
+    const activity_manager = await engine.fetchAvailableActivityForProcess(process.id, actors_.simpleton)
+
+    let fetch_result = await engine.fetchActivityManager(activity_manager.id, actors_.simpleton);
+    expect(fetch_result.expires_at).toBeDefined();
+
+    const future_date = '2022-05-13';
+    fetch_result = await engine.setExpiredDate(uuid(), future_date, 'ActivityManager');
+    expect(fetch_result.error).toBeDefined();
+    expect(fetch_result.error.errorType).toBe('activityManager');
+    expect(fetch_result.error.message).toBe('Date should be in YYYY-MM-DDThh:mm:ss format');
+  });
+
+  test("activityManager setExpiredDate return error with wrong resource_type", async () => {
+    const engine = new Engine(...settings.persist_options, {});
+
+    const workflow = await engine.saveWorkflow("sample", "sample", blueprints_.user_timeout);
+    const process = await createRunProcess(engine, workflow.id, actors_.simpleton);
+    await engine.runProcess(process.id);
+    const activity_manager = await engine.fetchAvailableActivityForProcess(process.id, actors_.simpleton)
+
+    let fetch_result = await engine.fetchActivityManager(activity_manager.id, actors_.simpleton);
+    expect(fetch_result.expires_at).toBeDefined();
+
+    const future_date = '2022-05-13T00:00:00';
+    fetch_result = await engine.setExpiredDate(uuid(), future_date, 'activity manager');
+    expect(fetch_result.error).toBeDefined();
+    expect(fetch_result.error.errorType).toBe('activityManager');
+    expect(fetch_result.error.message).toBe('Invalid resource_type');
+  });
+});
 
 const _clean = async () => {
   const persistor = PersistorProvider.getPersistor(...settings.persist_options);

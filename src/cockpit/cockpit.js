@@ -3,7 +3,6 @@ const delegate = require("delegates");
 const bpu = require("../core/utils/blueprint");
 const { Workflow } = require("../core/workflow/workflow");
 const { Process } = require("../core/workflow/process");
-const { Lane } = require("../core/workflow/lanes");
 const { Packages } = require("../core/workflow/packages");
 const { Engine } = require("../engine/engine");
 
@@ -16,12 +15,12 @@ class Cockpit {
     Cockpit._instance = instance;
   }
 
-  constructor(persist_mode, persist_args) {
+  constructor(persist_mode, persist_args, logger_level) {
     if (Cockpit.instance) {
       return Cockpit.instance;
     }
 
-    this._engine = new Engine(persist_mode, persist_args);
+    this._engine = new Engine(persist_mode, persist_args, logger_level);
     delegate(this, "_engine")
       .method("fetchAvailableActivitiesForActor")
       .method("fetchDoneActivitiesForActor")
@@ -73,6 +72,10 @@ class Cockpit {
 
   async getProcessStateHistory(process_id) {
     return await Process.getPersist().getStateHistoryByProcess(process_id);
+  }
+
+  async getWorkflows() {
+    return await Workflow.getPersist().getAll();
   }
 
   async getWorkflowsForActor(actor_data) {
