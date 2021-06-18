@@ -29,10 +29,125 @@ blueprints_.minimal = {
     {
       id: "1",
       name: "the_only_lane",
-      rule: lisp.return_true()
+      rule: {
+        lisp: [
+          "fn",
+          [
+            "&",
+            "args"
+          ],
+          true
+        ]
+      }
     }
   ],
   environment: {},
+};
+
+blueprints_.existent_environment_variable = {
+  requirements: ["core"],
+  prepare: [],
+  nodes: [
+    {
+      id: "1",
+      type: "Start",
+      name: "Start node",
+      parameters: {
+        input_schema: {},
+      },
+      next: "2",
+      lane_id: "1"
+    },
+    {
+      id: "2",
+      type: "SystemTask",
+      category: "HTTP",
+      name: "Call endpoint",
+      next: "3",
+      lane_id: "1",
+      parameters: {
+        input: {
+        },
+        request: {
+          verb: "POST",
+          url: "{{path}}",
+          headers: {
+            "ContentType": "application/json",
+          },
+        },
+      }
+    },
+    {
+      id: "3",
+      type: "Finish",
+      name: "Finish node",
+      next: null,
+      lane_id: "1"
+    }
+  ],
+  lanes: [
+    {
+      id: "1",
+      name: "the_only_lane",
+      rule: lisp.return_true()
+    }
+  ],
+  environment: {
+    path: "PATH"
+  },
+};
+
+blueprints_.inexistent_environment_variable = {
+  requirements: ["core"],
+  prepare: [],
+  nodes: [
+    {
+      id: "1",
+      type: "Start",
+      name: "Start node",
+      parameters: {
+        input_schema: {},
+      },
+      next: "2",
+      lane_id: "1"
+    },
+    {
+      id: "2",
+      type: "SystemTask",
+      category: "HTTP",
+      name: "Call endpoint",
+      next: "3",
+      lane_id: "1",
+      parameters: {
+        input: {
+        },
+        request: {
+          verb: "POST",
+          url: "{{inexistent}}",
+          headers: {
+            "ContentType": "application/json",
+          },
+        },
+      }
+    },
+    {
+      id: "3",
+      type: "Finish",
+      name: "Finish node",
+      next: null,
+      lane_id: "1"
+    }
+  ],
+  lanes: [
+    {
+      id: "1",
+      name: "the_only_lane",
+      rule: lisp.return_true()
+    }
+  ],
+  environment: {
+    inexistent: "INEXISTENT"
+  },
 };
 
 blueprints_.identity_system_task = {
@@ -971,6 +1086,29 @@ blueprints_.environment = {
     },
     {
       id: "2",
+      type: "SystemTask",
+      category: "HTTP",
+      name: "Call endpoint",
+      next: "3",
+      lane_id: "1",
+      parameters: {
+        input: {
+          test: {
+            $mustache: "value bag {{ bag.value }}"
+          }
+        },
+        request: {
+          verb: "POST",
+          url: "{{host}}",
+          headers: {
+            "ContentType": "application/json",
+            "env": "{{node_env}}"
+          },
+        },
+      }
+    },
+    {
+      id: "3",
       type: "Finish",
       name: "Finish node",
       next: null,
@@ -1718,6 +1856,116 @@ blueprints_.start_with_timeout = {
   ],
   environment: {},
 }
+
+blueprints_.user_action = {
+  requirements: [],
+  prepare: [],
+  nodes: [
+    {
+      id: "1",
+      type: "Start",
+      name: "Start node",
+      parameters: {
+        input_schema: {},
+      },
+      next: "2",
+      lane_id: "1"
+    },
+    {
+      id: "2",
+      type: "UserTask",
+      name: "User task node",
+      next: "3",
+      lane_id: "1",
+      parameters: {
+        action: "userAction",
+        input: {}
+      }
+    },
+    {
+      id: "3",
+      type: "Finish",
+      name: "Finish node",
+      next: null,
+      lane_id: "1"
+    }
+  ],
+  lanes: [
+    {
+      id: "1",
+      name: "default",
+      rule: lisp.return_true()
+    }
+  ],
+  environment: {},
+};
+
+blueprints_.user_action_with_system_task = {
+  requirements: [],
+  prepare: [],
+  nodes: [
+    {
+      id: "1",
+      type: "Start",
+      name: "Start node",
+      parameters: {
+        input_schema: {},
+      },
+      next: "2",
+      lane_id: "1"
+    },
+    {
+      id: "2",
+      type: "UserTask",
+      name: "User task node",
+      next: "3",
+      lane_id: "1",
+      parameters: {
+        action: "userAction",
+        input: {}
+      }
+    },
+    {
+      id: "3",
+      type: "ScriptTask",
+      name: "Print user input",
+      next: "4",
+      lane_id: "1",
+      parameters: {
+        input: {
+          userInput: {"$ref": "result.userInput"}
+        },
+        script: {
+          function: [
+            "fn",
+            ["input", "&", "args"],
+            [
+              "println",
+              ["`", "User input: "],
+              ["get", "input", ["`", "userInput"]],
+            ],
+          ],
+        },
+      },
+    },
+    {
+      id: "4",
+      type: "Finish",
+      name: "Finish node",
+      next: null,
+      lane_id: "1"
+    }
+  ],
+  lanes: [
+    {
+      id: "1",
+      name: "default",
+      rule: lisp.return_true()
+    }
+  ],
+  environment: {},
+};
+
 
 actors_.sys_admin = {
   "actor_id": "1",

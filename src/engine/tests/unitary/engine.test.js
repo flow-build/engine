@@ -118,6 +118,92 @@ test("create and run process with requirements lisp functions", async () => {
   expect(process.state.bag).toStrictEqual({"new_bag": "New Bag 1"});
 });
 
+describe("create and run process with different lane rules", () => {
+  test("works with simple lisp lane rules", async () => {
+    const engine = new Engine(...settings.persist_options);
+    const workflow = await engine.saveWorkflow("sample", "sample", blueprints_.minimal);
+    const process = await createRunProcess(engine, workflow.id, actors_.simpleton);
+    const process_state_history = await engine.fetchProcessStateHistory(process.id);
+    expect(process_state_history[0].status).toBe(ProcessStatus.FINISHED);
+  });
+
+  test("works with simple JS lane rules", async () => {
+    let minimalBlueprint = _.cloneDeep(blueprints_.minimal);
+    minimalBlueprint.lanes[0].rule = { $js: "() => { return true }"};
+
+    const engine = new Engine(...settings.persist_options);
+    const workflow = await engine.saveWorkflow("sample", "sample", minimalBlueprint);
+    const process = await createRunProcess(engine, workflow.id, actors_.simpleton);
+    const process_state_history = await engine.fetchProcessStateHistory(process.id);
+    expect(process_state_history[0].status).toBe(ProcessStatus.FINISHED);
+  });
+
+  test("works when checking bag info into lisp lane rules", async () => {
+    let minimalBlueprint = _.cloneDeep(blueprints_.minimal);
+    minimalBlueprint.lanes[0].rule = { lisp: [
+        "fn",
+        ["actor_data", "bag"],
+        [
+          "if",
+          [
+            "get",
+            "bag",
+            ["`", "isPrivate"]
+          ],
+          [
+            "=",
+            [
+              "get",
+              "bag",
+              ["`", "creatorId"]
+            ],
+            [
+              "get",
+              "actor_data",
+              ["`", "id"]
+            ]
+          ],
+          lisp.return_true()
+        ]
+      ]};
+
+    const engine = new Engine(...settings.persist_options);
+    const workflow = await engine.saveWorkflow("sample", "sample", minimalBlueprint);
+    const process = await createRunProcess(engine, workflow.id, actors_.simpleton);
+    const process_state_history = await engine.fetchProcessStateHistory(process.id);
+    expect(process_state_history[0].status).toBe(ProcessStatus.FINISHED);
+  });
+
+  test("works when checking present info in bag with JS lane rules", async () => {
+    let minimalBlueprint = _.cloneDeep(blueprints_.minimal);
+    minimalBlueprint.lanes[0].rule = {"$js":"() => {if (bag.var === 'foo') { return true } else { return false }}"};
+
+    const engine = new Engine(...settings.persist_options);
+    const workflow = await engine.saveWorkflow("sample", "sample", minimalBlueprint);
+    const initial_bag = {
+      var: "foo"
+    }
+    let process = await engine.createProcess(workflow.id, actors_.simpleton, initial_bag);
+    process = await engine.runProcess(process.id, actors_.simpleton);
+    const process_state_history = await engine.fetchProcessStateHistory(process.id);
+    expect(process_state_history[0].status).toBe(ProcessStatus.FINISHED);
+  });
+
+  test("fails when checking not present info in bag with JS lane rules", async () => {
+    let minimalBlueprint = _.cloneDeep(blueprints_.minimal);
+    minimalBlueprint.lanes[0].rule = {"$js":"() => {if (bag.var === 'foo') { return true } else { return false }}"};
+
+    const engine = new Engine(...settings.persist_options);
+    const workflow = await engine.saveWorkflow("sample", "sample", minimalBlueprint);
+    const initial_bag = {
+      var: "not_foo"
+    }
+
+    let process = await engine.createProcess(workflow.id, actors_.simpleton, initial_bag);
+    expect(process.status).toBe(ProcessStatus.FORBIDDEN);
+  });
+});
+
 test("create and run process with default encryption", async () => {
   const engine = new Engine(...settings.persist_options);
 
@@ -519,13 +605,13 @@ const _clean = async () => {
   const timer_persist = persistor.getPersistInstance("Timer");
   
   await activity_persist.deleteAll();
-  await sleep(10);
+  await sleep(15);
   await activity_manager_persist.deleteAll();
-  await sleep(10);
+  await sleep(15);
   await process_persist.deleteAll();
-  await sleep(10);
+  await sleep(15);
   await workflow_persist.deleteAll();
-  await sleep(10);
+  await sleep(15);
   await timer_persist.deleteAll();
   if (settings.persist_options[0] === "knex"){
     await Process.getPersist()._db.delete()
