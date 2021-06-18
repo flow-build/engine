@@ -69,7 +69,7 @@ class KnexPersist {
         await this._db(this._table).where('id', obj_id).update(obj);
       }
     } catch (e) {
-      emitter.emit('error', 'UPDATE ERROR ', e);
+      emitter.emit('KNEX.UPDATE_ERROR', 'Unable to update object', { error: e, id: obj_id });
     }
 
   }
@@ -106,6 +106,14 @@ class WorkflowKnexPersist extends KnexPersist {
       .orderBy("version", "desc")
       .first();
   }
+
+  async getByHash(hash) {
+    return await this._db
+      .select("*")
+      .from(this._table)
+      .where("blueprint_hash", "=", hash);
+  }
+  
 }
 
 class PackagesKnexPersist extends KnexPersist {
@@ -120,6 +128,7 @@ class PackagesKnexPersist extends KnexPersist {
       .where("name", "=", obj_name)
       .first();
   }
+
 }
 
 class ProcessKnexPersist extends KnexPersist {
@@ -176,7 +185,7 @@ class ProcessKnexPersist extends KnexPersist {
             .del();
       });
     } catch (e) {
-      emitter.emit('error', `Unable delete Process with PID ${this.id}`, e);
+      emitter.emit('KNEX.DELETE_PROCESS_ERROR', `Unable delete Process with PID [${this.id}]`, { error: e, process_id: this.id });
     }
   }
 
@@ -260,7 +269,7 @@ class ProcessKnexPersist extends KnexPersist {
         }
       });
     } catch (e) {
-      emitter.emit('error', `Unable to create Process with PID ${this.id}`, e);
+      emitter.emit('KNEX.CREATE_PROCESS_ERROR', `Unable to create Process with PID [${this.id}]`, { error: e, process_id: this.id } );
     }
   }
 
@@ -278,7 +287,7 @@ class ProcessKnexPersist extends KnexPersist {
           await this._db(this._table).where("id", process_id).update(process).transacting(trx);
         });
       } catch (e) {
-        emitter.emit('error', `Unable to update Process with PID ${process_id}`, e);
+        emitter.emit('KNEX.UPDATE_PROCESS_ERROR', `Unable to update Process with PID [${process_id}]`, { error: e, process_id } );
       }
     }
   }
@@ -419,11 +428,25 @@ class ActivityManagerKnexPersist extends KnexPersist {
       .first();
   }
 
+  async getActivityManagerByProcessStateId(process_state_id) {
+    return await this._db
+        .select('*')
+        .from('activity_manager')
+        .where('process_state_id', '=', process_state_id);
+  }
+
   async getActivities(activity_manager_id) {
     return await this._db
       .select()
       .from(this._activity_table)
       .where("activity_manager_id", activity_manager_id);
+  }
+
+  async getTimerfromResourceId(resource_id) {
+    return await this._db
+        .select()
+        .from('timer')
+        .where("resource_id", resource_id);
   }
 }
 

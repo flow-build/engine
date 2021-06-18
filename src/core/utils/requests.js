@@ -1,11 +1,35 @@
 const Axios = require('axios');
 const axios = Axios.create();
+const TraceParent = require("traceparent");
+const emitter = require("../utils/emitter");
+
+function setTraceparent(headers) {
+  emitter.emit('REQUESTS.TRACE.START',`SETTING TRACEPARENT`, {});
+  const tracesettings = { transactionSampleRate: 1 };
+  let parent;
+  let traceparent;
+
+  if(!headers) {
+    headers = {
+      traceparent: ''
+    }
+  } else if (headers.traceparent) {
+    emitter.emit('REQUESTS.TRACE.OLD',`OLD TRACEPARENT`, { traceparent: headers.traceparent });
+    parent = TraceParent.fromString(headers.traceparent);
+  }
+  
+  traceparent = TraceParent.startOrResume(parent, tracesettings);
+
+  headers.traceparent = traceparent.toString();
+  emitter.emit('REQUESTS.TRACE.NEW',`NEW TRACEPARENT`, { traceparent: headers.traceparent });
+  return headers;
+}
 
 module.exports = {
   request: {
     POST: async (endpoint, payload, headers, { http_timeout, max_content_length }) => {
       const request_config = {
-        headers: headers,
+        headers: setTraceparent(headers),
         timeout: http_timeout,
         maxContentLength: max_content_length,
       };
@@ -14,7 +38,7 @@ module.exports = {
     },
     GET: async (endpoint, payload, headers, { http_timeout, max_content_length }) => {
       const request_config = {
-        headers: headers,
+        headers: setTraceparent(headers),
         timeout: http_timeout,
         maxContentLength: max_content_length,
       };
@@ -23,7 +47,7 @@ module.exports = {
     },
     DELETE: async (endpoint, payload, headers, { http_timeout, max_content_length }) => {
       const request_config = {
-        headers: headers,
+        headers: setTraceparent(headers),
         timeout: http_timeout,
         maxContentLength: max_content_length,
       };
@@ -32,7 +56,7 @@ module.exports = {
     },
     PATCH: async (endpoint, payload, headers, { http_timeout, max_content_length }) => {
       const request_config = {
-        headers: headers,
+        headers: setTraceparent(headers),
         timeout: http_timeout,
         maxContentLength: max_content_length,
       };
@@ -41,7 +65,7 @@ module.exports = {
     },
     PUT: async (endpoint, payload, headers, { http_timeout, max_content_length }) => {
       const request_config = {
-        headers: headers,
+        headers: setTraceparent(headers),
         timeout: http_timeout,
         maxContentLength: max_content_length,
       };
@@ -50,7 +74,7 @@ module.exports = {
     },
     HEAD: async (endpoint, payload, headers, { http_timeout, max_content_length }) => {
       const request_config = {
-        headers: headers,
+        headers: setTraceparent(headers),
         timeout: http_timeout,
         maxContentLength: max_content_length,
       };

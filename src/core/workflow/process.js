@@ -3,8 +3,6 @@ const { PersistedEntity } = require("./base");
 const { Packages } = require("../workflow/packages");
 const { ProcessState, ENGINE_ID } = require("./process_state");
 const { ProcessStatus } = require("./process_state");
-const { SubProcess } = require("./sub_process")
-const { Workflow } = require("./workflow")
 const { Blueprint } = require("../workflow/blueprint");
 const { Lane } = require("../workflow/lanes");
 const { Timer } = require("./timer");
@@ -12,10 +10,9 @@ const { getProcessStateNotifier, getActivityManagerNotifier } = require("../noti
 const { getAllowedStartNodes } = require("../utils/blueprint");
 const { ActivityManager } = require("./activity_manager");
 const { validateResult } = require("./../utils/ajvValidator.js");
-const { v1: uuid } = require("uuid");
-const { blueprints_ } = require("../../core/workflow/tests/unitary/blueprint_samples");
 const process_manager = require("../../core/workflow/process_manager.js");
 const emitter = require('../utils/emitter');
+const { ActivityStatus } = require('./activity');
 
 class Process extends PersistedEntity {
 
@@ -144,7 +141,7 @@ class Process extends PersistedEntity {
   }
 
   async run(actor_data, execution_input) {
-    emitter.emit('debug', 'PROCESS.RUN',`RUN ON PID ${this.id}`,{ process_id: this.id });
+    emitter.emit('PROCESS.RUN',`RUN ON PID [${this.id}]`,{ process_id: this.id });
 
     this.state = await this.getPersist().getLastStateByProcess(this._id);
     let current_node = this._blueprint.fetchNode(this._state.node_id);
@@ -167,7 +164,7 @@ class Process extends PersistedEntity {
     if (is_lane_valid) {
       const node_result = await this._runNode(current_node, external_input, custom_lisp, actor_data);
       if (node_result.error) {
-        emitter.emit('error', 'PROCESS.ERROR',`ERROR ON PROCESS ${this.id} DATA ${this.workflow_name}: ${current_node._spec.name}`,{ process_id: this.id, workflow_name: this.workflow_name, node_id: current_node._spec.id, node_name: current_node._spec.name });
+        emitter.emit('PROCESS.EDGE.ERROR',`ERROR ON PROCESS PID [${this.id}] DATA [${this.workflow_name}]:[${current_node._spec.name}]`,{ process_id: this.id, workflow_name: this.workflow_name, node_id: current_node._spec.id, node_name: current_node._spec.name });
       }
       this.state = await this._createStateFromNodeResult(node_result, actor_data);
       await this.save();
@@ -178,10 +175,10 @@ class Process extends PersistedEntity {
           && this.state.result
           && this.state.result.timeout
         ) {
-        emitter.emit('debug', 'PROCESS.CREATING_TIMER',`  CREATING PROCESS TIMER ON PID ${this.id} `, { process_id: this.id });
+        emitter.emit('PROCESS.TIMER.CREATING',`  CREATING PROCESS TIMER ON PID [${this.id}]`, { process_id: this.id });
         let timer = new Timer("Process", this.id, Timer.timeoutFromNow(this.state.result.timeout), { actor_data });
         await timer.save();
-        emitter.emit('debug', 'PROCESS.NEW_TIMER',`  PROCESS TIMER ON PID ${this.id} TIMER ${timer.id}`, { process_id: this.id, timer_id: timer.id });
+        emitter.emit('PROCESS.TIMER.NEW',`  PROCESS TIMER ON PID [${this.id}] TIMER [${timer.id}]`, { process_id: this.id, timer_id: timer.id });
       }
 
       await this._executionLoop(custom_lisp, actor_data);
@@ -197,7 +194,7 @@ class Process extends PersistedEntity {
   }
 
   async continue(result_data, actor_data, trx) {
-    emitter.emit('debug', 'PROCESS.CONTINUE',`CONTINUE ON PID ${this.id}`, { process_id: this.id });
+    emitter.emit('PROCESS.CONTINUE',`CONTINUE ON PID [${this.id}]`, { process_id: this.id });
     if (!this.state) {
       this.state = await this.getPersist().getLastStateByProcess(this._id);
     }
@@ -236,7 +233,7 @@ class Process extends PersistedEntity {
   }
 
   async runPendingProcess(actor_data, trx=false) {
-    emitter.emit('debug', 'PROCESS.RUN_PENDING',`RUN PENDING PID ${this.id}`, { process_id: this.id });
+    emitter.emit('PROCESS.RUN_PENDING',`RUN PENDING PID [${this.id}]`, { process_id: this.id });
     this.state = await this.getPersist().getLastStateByProcess(this._id);
     if (this.status !== ProcessStatus.PENDING) {
       throw new Error(`Process on invalid status ${this.status}`);
@@ -257,7 +254,7 @@ class Process extends PersistedEntity {
   }
 
   async expireProcess(trx=false) {
-    emitter.emit('debug', 'PROCESS.EXPIRING',`EXPIRE PID ${this.id}`, { process_id: this.id });
+    emitter.emit('PROCESS.EDGE.EXPIRING',`EXPIRE PID [${this.id}]`, { process_id: this.id });
     const next_step_number = await this.getNextStepNumber();
     this.state = new ProcessState(
       this._id,
@@ -282,7 +279,7 @@ class Process extends PersistedEntity {
   }
 
   async abort() {
-    emitter.emit('debug', 'PROCESS.ABORTING',`ABORT PID ${this.id}`, { process_id: this.id });
+    emitter.emit('PROCESS.EDGE.ABORTING',`ABORT PID [${this.id}]`, { process_id: this.id });
     const next_step_number = await this.getNextStepNumber();
     this.state = new ProcessState(
       this._id,
@@ -306,7 +303,7 @@ class Process extends PersistedEntity {
   }
 
   async setState({ bag, result, next_node_id }) {
-    emitter.emit('debug', 'PROCESS.SET_STATE',`SET STATE ON PID ${this.id}`, {
+    emitter.emit('PROCESS.STATE.SET',`SET STATE ON PID [${this.id}]`, {
       process_id: this.id 
     });
 
@@ -347,9 +344,9 @@ class Process extends PersistedEntity {
       .first()
       .forUpdate().noWait();
     if (!p_lock) {
-      throw new Error(`No process found for lock, process_id ${this.id} current_state_id ${current_state_id}`);
+      throw new Error(`No process found for lock, process_id [${this.id}] current_state_id [${current_state_id}]`);
     }
-    emitter.emit('debug', 'PROCESS.LOCK',`      LOCK PID ${p_lock.id}`,{
+    emitter.emit('INNERLOOP.LOCK',`      LOCK PID ${p_lock.id}`,{
       process_id: p_lock.id 
     });
 
@@ -358,9 +355,9 @@ class Process extends PersistedEntity {
       .where("id", current_state_id)
       .forUpdate().noWait();
     if (!ps_lock) {
-      throw new Error(`No lock for process state ${current_state_id}`);
+      throw new Error(`No lock for process state [${current_state_id}]`);
     }
-    emitter.emit('debug', 'PROCESS.STATE_LOCK',`      LOCK PID ${p_lock.id} PS ${ps_lock.id}`,{
+    emitter.emit('INNERLOOP.STATE_LOCK',`      LOCK PID [${p_lock.id}] PS [${ps_lock.id}]`,{
       process_id: p_lock.id, 
       process_state_id: ps_lock.id 
     });
@@ -384,7 +381,7 @@ class Process extends PersistedEntity {
     let am = null;
     let timer = null;
 
-    emitter.emit('info', 'PROCESS.START_NODE_RUN',`      START NODE RUN ${this.next_node._spec.type}:${this.next_node._spec.category}:${this.next_node._spec.name} ON PID ${this.id}`,{
+    emitter.emit('PROCESS.START_NODE_RUN',`      START NODE RUN [${this.next_node._spec.type}]:[${this.next_node._spec.category}]:[${this.next_node._spec.name}] ON PID ${this.id}`,{
       process_id: this.id, 
       node_type: this.next_node._spec.type,
       node_category: this.next_node._spec.category,
@@ -394,7 +391,7 @@ class Process extends PersistedEntity {
 
     let result_state;
     if (!this.IsJsonString(node_result.result)) {
-      emitter.emit('error', 'PROCESS.NODE_RESULT_ERROR', `NODE RESULT FROM NODE ID ${this.next_node._spec.id} IS A INVALID JSON ON PID ${this.id}`, {
+      emitter.emit('PROCESS.EDGE.NODE_RESULT_ERROR', `NODE RESULT FROM NODE ID [${this.next_node._spec.id}] IS A INVALID JSON ON PID [${this.id}]`, {
         process_id: this.id, 
         node_id: this.next_node._spec.id,
         node_name: this.next_node._spec.name
@@ -410,7 +407,7 @@ class Process extends PersistedEntity {
       result_state = await this._createStateFromNodeResult(node_result, actor_data, this.next_node._spec.result_schema);
     }
 
-    emitter.emit('info', 'PROCESS.END_NODE_RUN',`      END NODE RUN STATUS ${node_result.status}`, {
+    emitter.emit('PROCESS.END_NODE_RUN',`      END NODE RUN STATUS [${node_result.status}]`, {
       process_id: this.id,
       node_name: this.next_node._spec.name,
       node_status: node_result.status
@@ -419,7 +416,7 @@ class Process extends PersistedEntity {
  if (result_state.step_number === next_step_number) {
       this.state = result_state;
       await this.save(trx);
-      emitter.emit('debug', 'PROCESS.NEW_STATE',`      NEW STATE ON PID ${p_lock.id} PS ${this.state.id}`, {
+      emitter.emit('PROCESS_STATE.NEW',`      NEW STATE ON PID [${p_lock.id}] PS [${this.state.id}]`, {
         process_id: this.id, 
         process_state_id: this.state.id
       });
@@ -427,31 +424,31 @@ class Process extends PersistedEntity {
       await this._notifyProcessState(actor_data);
 
       if (result_state.status === ProcessStatus.PENDING && result_state.result.timeout) {
-        emitter.emit('debug', 'PROCESS.CREATING_NEW_TIMER',`      CREATING NEW TIMER ON PID ${p_lock.id} `, {
+        emitter.emit('PROCESS.TIMER.CREATING',`      CREATING NEW TIMER ON PID [${p_lock.id}]`, {
           process_id: p_lock.id 
         });
 
         timer = new Timer("Process", this.id, Timer.timeoutFromNow(result_state.result.timeout), { actor_data });
         await timer.save(trx);
-        emitter.emit('debug', 'PROCESS.NEW_TIMER',`      NEW TIMER ON PID ${p_lock.id} TIMER ${timer.id}`, {
+        emitter.emit('PROCESS.TIMER.NEW',`      NEW TIMER ON PID [${p_lock.id}] TIMER [${timer.id}]`, {
           process_id: this.id, 
           timer_id: timer.id 
         });
 
       } else if (node_result.activity_manager) {
-        emitter.emit('debug', 'PROCESS.CREATING_ACTIVITY_MANAGER',`      CREATING NEW ACTIVITY MANAGER ON PID ${p_lock.id} `, {
+        emitter.emit('PROCESS.AM.CREATING',`      CREATING NEW ACTIVITY MANAGER ON PID [${p_lock.id}]`, {
           process_id: p_lock.id 
         });
         
         am = await this._createActivityManager(node_result.activity_manager, Process.calculateNextStep(next_step_number), trx, node_result.activity_schema);
         
-        emitter.emit('debug', 'PROCESS.NEW_ACTIVITY_MANAGER',`      NEW ACTIVITY MANAGER ON PID ${p_lock.id} AM ${am.id}`, {
+        emitter.emit('PROCESS.AM.NEW',`      NEW ACTIVITY MANAGER ON PID [${p_lock.id}] AM [${am.id}]`, {
           process_id: p_lock.id, 
           activity_manager_id: am.id 
         });
 
       } else if (result_state.status === ProcessStatus.DELEGATED) {
-          emitter.emit('debug', 'PROCESS.CREATING_SUBPROCESS',`      CREATING NEW SUBPROCESS ON PID ${p_lock.id} `, { process_id: p_lock.id, sub_workflow_name: node_result.workflow_name });
+          emitter.emit('PROCESS.SUBPROCESS.CREATING',`      CREATING NEW SUBPROCESS ON PID [${p_lock.id}]`, { process_id: p_lock.id, sub_workflow_name: node_result.workflow_name });
           const initial_bag = result_state.result;
           const parent_data = {
             id: this.id,
@@ -459,7 +456,7 @@ class Process extends PersistedEntity {
           }
           initial_bag.parent_process_data = parent_data;
           const child_process = await process_manager.createProcessByWorkflowName(node_result.workflow_name, actor_data, initial_bag);
-          emitter.emit('debug', 'PROCESS.NEW_SUBPROCESS',`      NEW SUBPROCESS ON PID ${p_lock.id} SPID ${child_process.id}`, {
+          emitter.emit('PROCESS.SUBPROCESS.NEW',`      NEW SUBPROCESS ON PID [${p_lock.id}] SPID [${child_process.id}]`, {
             process_id: p_lock.id, 
             sub_process_id: child_process.id 
           });
@@ -467,12 +464,12 @@ class Process extends PersistedEntity {
           process_manager.runProcess(child_process.id, actor_data, {});
 
       } else if (result_state.status === ProcessStatus.FINISHED ) {
-        emitter.emit('info', 'PROCESS.FINISHED',`      FINISHED PID ${p_lock.id}`, {
+        emitter.emit('PROCESS.FINISHED',`      FINISHED PID [${p_lock.id}]`, {
           process_id: p_lock.id,
           result_data: result_state.result
         });
         if ( result_state.bag.parent_process_data) {
-          emitter.emit('info', 'PROCESS.SUBPROCESS_UPSTREAM',`      SUBPROCESS UPSTREAM ON PID ${p_lock.id} PPID ${result_state.bag.parent_process_data.id}`, {
+          emitter.emit('PROCESS.SUBPROCESS.UPSTREAM',`      SUBPROCESS UPSTREAM ON PID [${p_lock.id}] PPID [${result_state.bag.parent_process_data.id}]`, {
             process_id: p_lock.id, 
             parent_process_id: result_state.bag.parent_process_data.id
           });
@@ -483,7 +480,7 @@ class Process extends PersistedEntity {
       return [result_state, am, timer];
 
     } else {
-      throw new Error(`Process ${this.id} on invalid step`);
+      throw new Error(`Process [${this.id}] on invalid step`);
     }
   }
 
@@ -497,7 +494,7 @@ class Process extends PersistedEntity {
         return true;
       }
     } catch (e) {
-      emitter.emit('error', 'NODE.RESULT_ERROR',`ERROR AT JSON PARSE NODE`, {
+      emitter.emit('NODE.RESULT_ERROR',`ERROR AT JSON PARSE NODE`, {
         error: e
       });
       return false;
@@ -505,64 +502,91 @@ class Process extends PersistedEntity {
   }
 
   async _executionLoop(custom_lisp, actor_data, trx=false) {
-    emitter.emit('debug', 'EXECUTION_LOOP.START',`CALLED EXECUTION LOOP PID ${this.id} STATUS ${this.status}`,{
-      process_id: this.id, 
+    emitter.emit('EXECUTION_LOOP.START',`CALLED EXECUTION LOOP PID [${this.id}] STATUS [${this.status}]`,{
+      process_id: this.id,
       engine_id: ENGINE_ID,
-      status: this.status 
+      status: this.status
     });
 
     let execution_success = true;
+    let [activity_manager, timer] = [null,null];
     while (execution_success && this.status === ProcessStatus.RUNNING) {
       const db = Process.getPersist()._db;
 
-      let [ps, activity_manager, timer] = [null, null, null]
+      let ps = null;
       try {
         await db.transaction(async (trx) => {
-          emitter.emit('debug', 'EXECUTION_LOOP.TRANSACTION',`    BEGIN TRANSACTION FOR PID ${this.id} - ENGINE_ID ${ENGINE_ID}`,{
-            process_id: this.id, 
-            engine_id: ENGINE_ID 
+          emitter.emit('EXECUTION_LOOP.TRANSACTION',`    BEGIN TRANSACTION FOR PID [${this.id}] - ENGINE_ID [${ENGINE_ID}]`,{
+            process_id: this.id,
+            engine_id: ENGINE_ID
           });
-          
+
           [ps, activity_manager, timer] = await this.__inerLoop.call(this, this._current_state_id, { custom_lisp, actor_data }, trx);
 
-          emitter.emit('debug', 'EXECUTION_LOOP.COMMIT',`      COMMIT ON EXEC PID ${this.id} ON INNER LOOP - ENGINE_ID ${ENGINE_ID}`,{
-            process_id: this.id, 
-            engine_id: ENGINE_ID 
+          emitter.emit('EXECUTION_LOOP.COMMIT',`      COMMIT ON EXEC PID [${this.id}] ON INNER LOOP - ENGINE_ID [${ENGINE_ID}]`,{
+            process_id: this.id,
+            engine_id: ENGINE_ID
           });
         });
 
-        ps && emitter.emit('debug', 'PROCESS.STEP_CREATED','',{});
-
-        activity_manager && emitter.emit('debug', "PROCESS.ACTIVITY_MANAGER_CREATED", {
-          process: this,
-          activity_manager,
-          timer
-        })
+        ps && emitter.emit('PROCESS.STEP_CREATED','',{});
 
       } catch (e) {
         execution_success = false;
-        emitter.emit('error', 'EXECUTION_LOOP.ROLLBACK',`      ROLLBACK ON EXEC PID ${this.id}  ON INNER LOOP - ENGINE_ID ${ENGINE_ID}`,{
-          process_id: this.id, 
+        emitter.emit('EXECUTION_LOOP.ROLLBACK',`      ROLLBACK ON EXEC PID [${this.id}]  ON INNER LOOP - ENGINE_ID [${ENGINE_ID}]`,{
+          process_id: this.id,
           engine_id: ENGINE_ID,
-          error: e 
+          error: e
         });
       }
 
-      emitter.emit('debug', 'EXECUTION_LOOP.END',`  END LOOP PID ${this.id} STATUS ${this.status} EXECUTION SUCCESS ${execution_success}`,{
-        process_id: this.id, 
+      emitter.emit('EXECUTION_LOOP.END',`  END LOOP PID [${this.id}] STATUS [${this.status}] EXECUTION SUCCESS [${execution_success}]`,{
+        process_id: this.id,
         engine_id: ENGINE_ID,
-        status: this.status 
+        status: this.status
       });
+
+      //this condition is necessary for am type = notify, whose processStatus is RUNNING, therefore the am will be overwritten by the next am and it would not be notified by the emitter outside the loop.
+      if(this.status === ProcessStatus.RUNNING && activity_manager) { 
+        emitter.emit("PROCESS.ACTIVITY_MANAGER.CREATED",`ACTIVITY MANAGER NOTIFY CREATED ON PID [${this.id}]`, {
+          process: this,
+          activity_manager,
+          timer
+        });
+      }
     }
-    emitter.emit('debug', 'EXECUTION_LOOP.LEFT',`LEFT EXECUTION LOOP PID ${this.id} STATUS ${this.status}`,{
-      process_id: this.id, 
+
+    activity_manager && emitter.emit("PROCESS.ACTIVITY_MANAGER.CREATED",`ACTIVITY MANAGER CREATED ON PID [${this.id}]`, {
+      process: this,
+      activity_manager,
+      timer
+    });
+
+    let active_activity_manager;
+    switch (this.status) {
+      case ProcessStatus.ERROR:
+        active_activity_manager = await ActivityManager.fetchActivityManagerFromProcessId(this.id, actor_data, ActivityStatus.STARTED);
+        if (active_activity_manager) {
+          await ActivityManager.interruptActivityManagerForProcess(this._id);
+        }
+        break;
+      case ProcessStatus.FINISHED || ProcessStatus.INTERRUPTED || ProcessStatus.FORBIDDEN:
+        active_activity_manager = await ActivityManager.fetchActivityManagerFromProcessId(this.id, actor_data, ActivityStatus.STARTED);
+        if (active_activity_manager) {
+          await ActivityManager.finishActivityManagerForProcess(this._id);
+        }
+        break;
+    }
+
+    emitter.emit('EXECUTION_LOOP.LEFT',`LEFT EXECUTION LOOP PID [${this.id}] STATUS [${this.status}]`,{
+      process_id: this.id,
       engine_id: ENGINE_ID,
-      status: this.status 
+      status: this.status
     });
   }
 
   async timeout(timer, trx=false){
-    emitter.emit('debug', 'PROCESS.TIMEOUT',`TIMEOUT ON PID ${this.id} TIMER ${timer.id}`,{
+    emitter.emit('PROCESS.TIMEOUT',`TIMEOUT ON PID [${this.id}] TIMER [${timer.id}]`,{
       process_id: this.id, 
       timer_id: timer.id 
     });
@@ -578,7 +602,7 @@ class Process extends PersistedEntity {
         break;
       case ProcessStatus.RUNNING:
         //TODO: Avaliar como expirar um processo running.
-        emitter.emit('debug', 'PROCESS.TIMEOUT.BAIL',`  CANNOT EXPIRE RUNNING PROCESS PID ${this.id}`,{
+        emitter.emit('PROCESS.TIMEOUT.BAIL',`  CANNOT EXPIRE RUNNING PROCESS PID [${this.id}]`,{
           process_id: this.id, 
           timer_id: timer.id 
         });
@@ -610,6 +634,10 @@ class Process extends PersistedEntity {
     }
   }
 
+  async _fetchActivityManagerFromProcessId(process_id, actor_data, status ) {
+    return await ActivityManager.fetchActivityManagerFromProcessId(process_id, actor_data, status);
+  }
+
   async _createActivityManager(activity_manager, next_step_number, trx=false, activity_schema) {
       activity_manager.parameters.next_step_number = next_step_number;
       activity_manager.parameters.activity_schema = activity_schema;
@@ -631,7 +659,7 @@ class Process extends PersistedEntity {
     if (result_schema) {
       const resultSchemaError = validateResult(result_schema, result.data);
       if (resultSchemaError) {
-        emitter.emit('debug', 'PROCESS.ERROR.RESULT_SCHEMA', resultSchemaError, {
+        emitter.emit('PROCESS.RESULT_SCHEMA.ERROR', resultSchemaError, {
           process_id: this.id,
           message: resultSchemaError.message
         });

@@ -169,6 +169,76 @@ describe("Run existing process", () => {
     expect(activity_managers).toHaveLength(0);
   });
 
+  test("Engine finish activity manager on process error", async () => {
+    const actor_data = {
+      id: "1",
+      claims: []
+    };
+
+    const process = await createProcess(blueprints_.user_action_with_system_task, actor_data);
+    await engine.runProcess(process.id, actor_data);
+
+    let state_history = await engine.fetchProcess(process.id);
+    expect(state_history.status).toEqual(ProcessStatus.WAITING);
+
+    await engine.runProcess(process.id, actor_data, {});
+    state_history = await engine.fetchProcess(process.id);
+    expect(state_history.status).toEqual(ProcessStatus.ERROR);
+
+    const available_activity_managers = await engine.fetchAvailableActivitiesForActor(actor_data);
+    expect(available_activity_managers).toHaveLength(0);
+
+    const interrupted_activity_manager = await process._fetchActivityManagerFromProcessId(process.id, actor_data, 'interrupted');
+    expect(interrupted_activity_manager.activity_status).toBe('interrupted');
+  });
+
+  test("Engine finish activity manager on process finished", async () => {
+    const actor_data = {
+      id: "1",
+      claims: []
+    };
+
+    const process = await createProcess(blueprints_.user_action, actor_data);
+    await engine.runProcess(process.id, actor_data);
+
+    let  state_history = await engine.fetchProcess(process.id);
+    expect(state_history.status).toEqual(ProcessStatus.WAITING);
+
+    await engine.runProcess(process.id, actor_data, {userInput: 'user input'});
+    state_history = await engine.fetchProcess(process.id);
+    expect(state_history.status).toEqual(ProcessStatus.FINISHED);
+
+    const available_activity_managers = await engine.fetchAvailableActivitiesForActor(actor_data);
+    expect(available_activity_managers).toHaveLength(0);
+
+    const completed_activity_manager = await process._fetchActivityManagerFromProcessId(process.id, actor_data, 'completed');
+    expect(completed_activity_manager.activity_status).toBe('completed');
+  });
+
+  test("Engine finish activity manager on process interrupted", async () => {
+    const actor_data = {
+      id: "1",
+      claims: []
+    };
+
+    const process = await createProcess(blueprints_.user_action_with_system_task, actor_data);
+    await engine.runProcess(process.id, actor_data);
+
+    let state_history = await engine.fetchProcess(process.id);
+    expect(state_history.status).toEqual(ProcessStatus.WAITING);
+
+    await engine.abortProcess(process.id);
+
+    state_history = await engine.fetchProcess(process.id);
+    expect(state_history.status).toEqual(ProcessStatus.INTERRUPTED);
+
+    const available_activity_managers = await engine.fetchAvailableActivitiesForActor(actor_data);
+    expect(available_activity_managers).toHaveLength(0);
+
+    const interrupted_activity_manager = await process._fetchActivityManagerFromProcessId(process.id, actor_data, 'interrupted');
+    expect(interrupted_activity_manager.activity_status).toBe('interrupted');
+  });
+
 });
 
 test("process state notifier", async() => {
