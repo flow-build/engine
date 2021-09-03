@@ -9,8 +9,8 @@
 ## Dependencies:
 
 ```
-node v12.13.0 (lts)
-npm v6.12.0
+node v14.16.1 (lts)
+npm v6.14.12
 ```
 
 ## Development guidelines
