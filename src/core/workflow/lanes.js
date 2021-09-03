@@ -15,15 +15,24 @@ class Lane {
   }
 
   static runRule(spec, actor_data, bag = {}, lisp) {
-    const rule_lisp = spec.rule;
-    const rule_call = [rule_lisp, actor_data, bag];
+    let rule_lisp;
+    if (spec.rule.lisp || spec.rule.$js) {
+      rule_lisp = spec.rule.lisp || spec.rule.$js;
+    } else {
+      rule_lisp = spec.rule;
+    }
 
+    const rule_call = [rule_lisp, actor_data, bag];
     let retval = false;
 
     try {
-      retval = lisp.evaluate(rule_call);
+      if ( spec.rule.$js ) {
+        retval = eval(spec.rule.$js)();
+      } else {
+        retval = lisp.evaluate(rule_call);
+      }
     } catch (e) {
-      emitter.emit('error', "ERROR WHILE EVALUATING LANE RULE!", `  LANE RULE ${rule_lisp}`, e);
+      emitter.emit('LANE.EVAL_ERROR', "ERROR WHILE EVALUATING LANE RULE!", { rule: rule_lisp, error: e });
     }
 
     return retval;
