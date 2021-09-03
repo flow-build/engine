@@ -2,6 +2,7 @@ const { PersistedEntity } = require("./base");
 const { Process } = require("./process");
 const { Blueprint } = require("./blueprint");
 const JSum = require('jsum');
+const { v1: uuid } = require("uuid");
 class Workflow extends PersistedEntity {
 
   static getEntityClass() {
@@ -47,11 +48,12 @@ class Workflow extends PersistedEntity {
     return workflow;
   }
 
-  constructor(name, description, blueprint_spec) {
+  constructor(name, description, blueprint_spec, id = null) {
     super();
 
     Blueprint.assert_is_valid(blueprint_spec);
-
+    
+    this._id = id || uuid() ;
     this._name = name;
     this._description = description;
     this._blueprint_spec = blueprint_spec;

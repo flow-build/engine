@@ -71,7 +71,7 @@ class Blueprint {
     };
     const nodesString = JSON.stringify(spec.nodes);
     for (const variable in spec.environment) {
-      if (!process.env[spec.environment[variable]] && (spec.environment[variable].toLowerCase() === variable)) {
+      if (!process.env[spec.environment[variable]] && (spec?.environment[variable]?.toLowerCase() === variable)) {
         if (!process.env[variable.toUpperCase()]) {
           const error_message = `Environment variable ${variable} not found in ambient`;
           validate_info.ambient.push (error_message);

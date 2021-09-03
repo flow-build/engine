@@ -1,18 +1,15 @@
 const _ = require("lodash");
-const assert = require("assert");
-const sleep = require("sleep");
 const obju = require("../utils/object");
 const { prepare } = require("../utils/input");
 const { ProcessStatus } = require("./process_state");
 const { Validator } = require("../validators");
 const { request } = require('../utils/requests');
-const { ActivityStatus } = require("./activity");
 const { getActivityManager } = require("../utils/activity_manager_factory");
 const ajvValidator = require("../utils/ajvValidator");
 const process_manager = require("./process_manager");
 const crypto_manager = require("../crypto_manager");
-const lisp = require("../../core/lisp");
 const emitter = require("../utils/emitter");
+const { timeoutParse } = require("../utils/node");
 
 const writeJsFunction = (function_name) => {
   return ["fn", ["&", "args"],
@@ -54,11 +51,11 @@ class Node {
     return Node.validate(this._spec);
   }
 
-  async run({ bag = {}, input = {}, external_input = {}, actor_data = {}, environment = {} }, lisp) {
+  async run({ bag = {}, input = {}, external_input = {}, actor_data = {}, environment = {} , parameters = {}}, lisp) {
     const hrt_run_start = process.hrtime();
     try {
 
-      const execution_data = this._preProcessing({ bag, input, actor_data, environment });
+      const execution_data = this._preProcessing({ bag, input, actor_data, environment, parameters });
       const [result, status] = await this._run(
         execution_data,
         lisp
@@ -91,8 +88,8 @@ class Node {
     );
   }
 
-  _preProcessing({ bag, input, actor_data, environment }) {
-    return { ...bag, ...input };
+  _preProcessing({ bag, input, actor_data, environment, parameters }) {
+    return { ...bag, ...input, actor_data, environment, parameters };
   }
 
   _setBag(bag, result) {
@@ -182,9 +179,8 @@ class StartNode extends Node {
 
   _run(execution_data, lisp) {
     ajvValidator.validateData(this._spec.parameters.input_schema, execution_data.bag);
-    let result;
-    if(this._spec.parameters.timeout) {
-      result = { timeout: this._spec.parameters.timeout };
+    let result = {
+      timeout: timeoutParse(this._spec.parameters, execution_data)
     }
     return [result, ProcessStatus.RUNNING];
   }
@@ -297,7 +293,7 @@ class UserTaskNode extends ParameterizedNode {
   static get rules() {
     const parameters_rules = {
       "parameters_has_action": [obju.hasField, "action"],
-      "timeout_has_valid_type": [obju.isFieldTypeIn, "timeout", ["undefined", "number"]],
+      "timeout_has_valid_type": [obju.isFieldTypeIn, "timeout", ["undefined", "number", "object"]],
       "channels_has_valid_type": [(obj, field) => obj[field] === undefined || obj[field] instanceof Array, "channels"],
       "encrypted_data_has_valid_type": [(obj, field) => obj[field] === undefined || obj[field] instanceof Array, "encrypted_data"],
     };
@@ -323,9 +319,9 @@ class UserTaskNode extends ParameterizedNode {
           action: this._spec.parameters.action,
         }
         activity_manager.parameters = {};
-        if (this._spec.parameters.timeout) {
-          activity_manager.parameters.timeout = this._spec.parameters.timeout;
-        }
+
+        activity_manager.parameters.timeout = timeoutParse(this._spec.parameters, execution_data);
+
         if (this._spec.parameters.channels) {
           activity_manager.parameters.channels = this._spec.parameters.channels;
         }
@@ -544,9 +540,9 @@ class HttpSystemTaskNode extends SystemTaskNode {
     return [result, ProcessStatus.RUNNING];
   }
 
-  _preProcessing({ bag, input, actor_data, environment }) {
-    this.request = prepare(this._spec.parameters.request, { bag, result: input, actor_data, environment });
-    return super._preProcessing({ bag, input, actor_data, environment });
+  _preProcessing({ bag, input, actor_data, environment, parameters }) {
+    this.request = prepare(this._spec.parameters.request, { bag, result: input, actor_data, environment, parameters });
+    return super._preProcessing({ bag, input, actor_data, environment, parameters });
   }
 }
 
@@ -554,7 +550,7 @@ class TimerSystemTaskNode extends SystemTaskNode {
   static get rules() {
     const parameters_rules = {
       "parameters_has_timeout": [obju.hasField, "timeout"],
-      "parameters_timeout_has_valid_type": [obju.isFieldOfType, "timeout", "number"]
+      "parameters_timeout_has_valid_type": [obju.isFieldTypeIn, "timeout", ["undefined", "number", "object"]]
     };
 
     return {
@@ -568,9 +564,8 @@ class TimerSystemTaskNode extends SystemTaskNode {
   }
 
   async _run(execution_data, lisp) {
-    const parameters = this._spec.parameters;
+    execution_data["timeout"] = timeoutParse(this._spec.parameters, execution_data);
 
-    execution_data["timeout"] = parameters.timeout;
     return [execution_data, ProcessStatus.PENDING];
   }
 }

@@ -692,7 +692,8 @@ class Process extends PersistedEntity {
         actor_data: actor_data,
         environment: this._blueprint_spec.environment,
         result_schema: node._spec.result_schema,
-        process_id: this.id
+        process_id: this.id,
+        parameters: this._blueprint_spec.parameters
       },
       custom_lisp
     );

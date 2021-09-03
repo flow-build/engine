@@ -1,6 +1,3 @@
-const _ = require("lodash");
-const bpu = require("../core/utils/blueprint");
-const {Lane} = require("../core/workflow/lanes");
 const {Workflow} = require("../core/workflow/workflow");
 const {Blueprint} = require("../core/workflow/blueprint");
 const {Process} = require("../core/workflow/process");
@@ -19,6 +16,7 @@ const emitter = require("../core/utils/emitter");
 const { createLogger } = require("../core/utils/logging");
 const { ProcessStatus } = require("./../core/workflow/process_state");
 const { validateTimeInterval } = require("../core/utils/ajvValidator");
+const { validate:uuidValidate } = require('uuid');
 
 function getActivityManagerFromData(activity_manager_data) {
     const activity_manager = ActivityManager.deserialize(activity_manager_data);
@@ -443,8 +441,26 @@ class Engine {
         return abort_result[0].value;
     }
 
-    async saveWorkflow(name, description, blueprint_spec) {
-        return await new Workflow(name, description, blueprint_spec).save();
+    async saveWorkflow(name, description, blueprint_spec, workflow_id = null) {
+        if(workflow_id) {
+            if(uuidValidate(workflow_id)) {
+                const wf = await Workflow.fetch(workflow_id);
+                if(wf) return {
+                    error: {
+                      errorType: 'workflow',
+                      message: 'workflow already exists'
+                    }
+                }
+            } else {
+                return {
+                    error: {
+                      errorType: 'workflow',
+                      message: 'invalid workflow_id format'
+                    }
+                }
+            }
+        }
+        return await new Workflow(name, description, blueprint_spec, workflow_id).save();
     }
 
     async fetchWorkflow(workflow_id) {
