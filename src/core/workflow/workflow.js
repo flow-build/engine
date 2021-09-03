@@ -1,7 +1,8 @@
 const { PersistedEntity } = require("./base");
 const { Process } = require("./process");
 const { Blueprint } = require("./blueprint");
-
+const JSum = require('jsum');
+const { v1: uuid } = require("uuid");
 class Workflow extends PersistedEntity {
 
   static getEntityClass() {
@@ -16,7 +17,8 @@ class Workflow extends PersistedEntity {
       name: workflow._name,
       description: workflow._description,
       blueprint_spec: workflow._blueprint_spec,
-      version: workflow._version
+      version: workflow._version,
+      blueprint_hash: workflow._blueprint_hash
     };
   }
 
@@ -29,6 +31,7 @@ class Workflow extends PersistedEntity {
       workflow._id = serialized.id;
       workflow._created_at = serialized.created_at;
       workflow._version = serialized.version;
+      workflow._blueprint_hash = serialized.blueprint_hash;
 
       return workflow;
     }
@@ -40,14 +43,21 @@ class Workflow extends PersistedEntity {
     return Workflow.deserialize(workflow);
   }
 
-  constructor(name, description, blueprint_spec) {
+  static async findWorkflowByBlueprintHash(blueprint_hash) {
+    const workflow = await this.getPersist().getByHash(blueprint_hash);
+    return workflow;
+  }
+
+  constructor(name, description, blueprint_spec, id = null) {
     super();
 
     Blueprint.assert_is_valid(blueprint_spec);
-
+    
+    this._id = id || uuid() ;
     this._name = name;
     this._description = description;
     this._blueprint_spec = blueprint_spec;
+    this._blueprint_hash = JSum.digest(blueprint_spec, 'SHA256', 'hex');
   }
 
   get name() {
