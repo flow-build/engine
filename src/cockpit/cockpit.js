@@ -3,7 +3,6 @@ const delegate = require("delegates");
 const bpu = require("../core/utils/blueprint");
 const { Workflow } = require("../core/workflow/workflow");
 const { Process } = require("../core/workflow/process");
-const { Lane } = require("../core/workflow/lanes");
 const { Packages } = require("../core/workflow/packages");
 const { Engine } = require("../engine/engine");
 
