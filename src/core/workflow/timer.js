@@ -1,5 +1,4 @@
 const { PersistedEntity } = require("./base");
-const Knex = require("knex");
 const _ = require("lodash");
 
 
