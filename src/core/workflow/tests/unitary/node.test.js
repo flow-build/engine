@@ -244,14 +244,6 @@ describe("Constraints test", () => {
         expect(error).toEqual("timeout_has_valid_type");
       });
 
-      test("fails with null", () => {
-        const spec = _.cloneDeep(nodes_.user_task);
-        spec.parameters.timeout = null;
-        const [is_valid, error] = nodes.UserTaskNode.validate(spec);
-        expect(is_valid).toEqual(false);
-        expect(error).toEqual("timeout_has_valid_type");
-      });
-
       test("valid with undefined", () => {
         const spec = _.cloneDeep(nodes_.user_task);
         spec.parameters.timeout = undefined;
