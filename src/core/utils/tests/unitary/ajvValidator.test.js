@@ -527,4 +527,40 @@ describe("validateResult", () => {
         expect(resultError).toBeDefined();
         expect(resultError.message).toMatch("data/input must have required property 'password'");
     });
+
+    describe("validateTimeInterval", () => {
+
+        test("Pass with date type number", () => {
+            const input = {
+                id: '3d2f6ce3-ed63-40aa-89bb-048fed01c15c',
+                date: 120,
+                resource_type: 'ActivityManager'
+            }
+            const resultError = ajvValidator.validateTimeInterval(input);
+            expect(resultError).toBeUndefined();
+        });
+
+        test("Pass with date type dateTime", () => {
+            const input = {
+                id: '3d2f6ce3-ed63-40aa-89bb-048fed01c15c',
+                date: '2022-05-13T00:00:00',
+                resource_type: 'ActivityManager'
+            }
+            const resultError = ajvValidator.validateTimeInterval(input);
+            expect(resultError).toBeUndefined();
+        });
+
+        test("Throw error with invalid date type", () => {
+            const input = {
+                id: '3d2f6ce3-ed63-40aa-89bb-048fed01c15c',
+                date: '120',
+                resource_type: 'ActivityManager'
+            }
+            try {
+                ajvValidator.validateTimeInterval(input);
+            } catch (resultError) {
+                expect(resultError).toBeDefined();
+            }
+        });
+    })
 });
