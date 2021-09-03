@@ -64,6 +64,31 @@ class Blueprint {
     return [true, null];
   }
 
+  static validate_environment_variable(spec) {
+    let validate_info = {
+      nodes: [],
+      ambient: []
+    };
+    const nodesString = JSON.stringify(spec.nodes);
+    for (const variable in spec.environment) {
+      if (!process.env[spec.environment[variable]] && (spec?.environment[variable]?.toLowerCase() === variable)) {
+        if (!process.env[variable.toUpperCase()]) {
+          const error_message = `Environment variable ${variable} not found in ambient`;
+          validate_info.ambient.push (error_message);
+        }
+      }
+      if (!nodesString.includes(`{{${variable}}}`)) {
+        const error_message = `Environment variable ${variable} not found in nodes`;
+        validate_info.nodes.push (error_message);
+      }
+    }
+    if (lodash.isEmpty(validate_info.nodes) && lodash.isEmpty(validate_info.ambient)) {
+      return [true, null];
+    } else {
+      return validate_info;
+    }
+  }
+
   static validate(spec) {
     const [is_valid, error] = new Validator(this.rules).validate(spec);
     if (!is_valid) {
@@ -73,6 +98,19 @@ class Blueprint {
     if (!is_nodes_valid) {
       return [false, nodes_error];
     }
+    const blueprint_env_status = Blueprint.validate_environment_variable(spec);
+    if (!lodash.isEmpty(blueprint_env_status.nodes) && !lodash.isEmpty(blueprint_env_status.ambient) ) {
+      emitter.emit('BLUEPRINT.UNUSED_VARIABLES','UNUSED ENVIRONMENT VARIABLES', { nodes: blueprint_env_status.nodes, ambient: blueprint_env_status.ambient } );
+      return [true, blueprint_env_status.ambient, blueprint_env_status.nodes];
+    } else if (!lodash.isEmpty(blueprint_env_status.nodes)) {
+      emitter.emit('BLUEPRINT.UNUSED_VARIABLES','UNUSED ENVIRONMENT VARIABLES', { nodes: blueprint_env_status.nodes } );
+      return [true, blueprint_env_status.nodes];
+    } else if (!lodash.isEmpty(blueprint_env_status.ambient)) {
+      console.log('hey!')
+      emitter.emit('BLUEPRINT.NON_EXISTENT_VARIABLES','NON EXISTENT ENVIRONMENT VARIABLES', { ambient: blueprint_env_status.ambient } );
+      return [false, blueprint_env_status.ambient];
+    }
+
     if (spec.parameters) {
       ajvValidator.validateBlueprintParameters(spec.parameters);
     }
