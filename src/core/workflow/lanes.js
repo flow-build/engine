@@ -27,7 +27,7 @@ class Lane {
 
     try {
       if ( spec.rule.$js ) {
-        retval = eval(spec.rule.$js)();
+        retval = eval(spec.rule.$js)({actor_data, bag});
       } else {
         retval = lisp.evaluate(rule_call);
       }
