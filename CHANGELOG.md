@@ -1,3 +1,9 @@
+## [2.3.2] (2021-10-14)
+
+### Bug Fixes
+
+- fetchPackages returning a new id to the package
+
 ## [2.3.1] (2021-10-04)
 
 ### Bug Fixes
