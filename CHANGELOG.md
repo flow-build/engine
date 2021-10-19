@@ -1,3 +1,10 @@
+## [2.3.3] (2021-10-19)
+
+### Bug Fixes
+
+- fix subProcess to prevent the engine from crashing when the child_process cannot be created
+- fix subProcess use actor_data from parameters instead of current state actor_data
+
 ## [2.3.2] (2021-10-14)
 
 ### Bug Fixes
