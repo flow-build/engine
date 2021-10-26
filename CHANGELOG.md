@@ -1,3 +1,9 @@
+## [TBD] (2021-10-26)
+
+### Feature
+
+- add filtering by process_id, workflow_name, status and limits to fetch all processes
+
 ## [2.3.3] (2021-10-19)
 
 ### Bug Fixes
