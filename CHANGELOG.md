@@ -1,8 +1,8 @@
-## [TBD] (2021-10-26)
+## [2.4.0] (2021-10-30)
 
 ### Feature
 
-- add filtering by process_id, workflow_name, status and limits to fetch all processes
+- add filtering by process_id, workflow_name, status and limit and offset to method fetchAll processes
 
 ## [2.3.3] (2021-10-19)
 
