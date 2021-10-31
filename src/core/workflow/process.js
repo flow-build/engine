@@ -57,6 +57,41 @@ class Process extends PersistedEntity {
   }
 
   static async fetchAll(filters) {
+    const filtersSchema = {
+      type: "object",
+      properties: {
+        workflow_name: {
+          oneOf: [{ type: "string" }, { type: "array", items: { type: "string" } }],
+        },
+        workflow_id: {
+          oneOf: [
+            { type: "string", format: "uuid" },
+            { type: "array", items: { type: "string", format: "uuid" } },
+          ],
+        },
+        process_id: {
+          oneOf: [
+            { type: "string", format: "uuid" },
+            { type: "array", items: { type: "string", format: "uuid" } },
+          ],
+        },
+        current_status: {
+          oneOf: [{ type: "string" }, { type: "array", items: { type: "string" } }],
+        },
+        limit: { type: "integer" },
+        offset: { type: "integer" },
+      },
+    };
+
+    if (filters) {
+      const validationErrors = validateResult(filtersSchema, filters);
+      if (validationErrors) {
+        return { error: validationErrors.message };
+      }
+      filters["process.id"] = filters.process_id;
+      filters["name"] = filters.workflow_name;
+    }
+
     const processes = await this.getPersist().getAll(filters);
     return _.map(processes, (process) => Process.deserialize(process));
   }
