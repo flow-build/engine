@@ -1,3 +1,9 @@
+## [2.4.1] (2021-11-11)
+
+### Bugfix
+
+- fix a condition checkActorPermission would fail if the activity manager has no parameters.
+
 ## [2.4.0] (2021-10-30)
 
 ### Feature
