@@ -649,12 +649,14 @@ class Process extends PersistedEntity {
       }
     }
 
-    activity_manager &&
+    if (activity_manager) {
       emitter.emit("PROCESS.ACTIVITY_MANAGER.CREATED", `ACTIVITY MANAGER CREATED ON PID [${this.id}]`, {
         process: this,
         activity_manager,
         timer,
       });
+      await this._notifyActivityManager(activity_manager);
+    }
 
     let active_activity_manager;
     switch (this.status) {
@@ -749,7 +751,6 @@ class Process extends PersistedEntity {
     activity_manager.parameters.activity_schema = activity_schema;
     activity_manager.process_state_id = this._state.id;
     const am = await activity_manager.save(trx);
-    await this._notifyActivityManager(activity_manager);
     return am;
   }
 
