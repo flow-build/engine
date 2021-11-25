@@ -1,9 +1,9 @@
 {
   "name": "@flowbuild/engine",
-  "version": "2.4.1",
+  "version": "2.4.2",
   "description": "workflow engine from flow-build to work in multiple plataforms",
   "dependencies": {
-    "ajv": "^8.6.3",
+    "ajv": "^8.8.2",
     "ajv-formats": "^2.1.1",
     "axios": "^0.24.0",
     "delegates": "^1.0.0",
@@ -25,11 +25,11 @@
   "devDependencies": {
     "@semantic-release/changelog": "^6.0.1",
     "@semantic-release/git": "^10.0.1",
-    "@semantic-release/npm": "^8.0.2",
+    "@semantic-release/npm": "^8.0.3",
     "conventional-changelog-conventionalcommits": "^4.6.1",
-    "eslint": "^8.1.0",
+    "eslint": "^8.3.0",
     "jest": "^27.3.1",
-    "semantic-release": "^18.0.0"
+    "semantic-release": "^18.0.1"
   },
   "moduleNameMapper": {
     "axios": "./__mocks__/axios/index.js"

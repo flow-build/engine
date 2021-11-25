@@ -1,3 +1,9 @@
+## [2.4.2] (2021-11-25)
+
+### Bugfix
+
+- change notify activity manager to only fire after commiting transaction at event loop.
+
 ## [2.4.1] (2021-11-11)
 
 ### Bugfix
