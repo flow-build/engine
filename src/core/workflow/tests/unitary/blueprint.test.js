@@ -1,10 +1,6 @@
 const _ = require("lodash");
-const settings = require("../../../../../settings/tests/settings");
-const { AssertionError } = require("assert");
 const { Blueprint } = require("../../../workflow/blueprint");
-const { PersistorSingleton } = require("../../../persist/persist");
 const { blueprints_ } = require("./blueprint_samples");
-const { nodes_ } = require("./node_samples");
 
 test("constructor works for valid spec", () => {
   expect(() => {
@@ -50,7 +46,7 @@ test("has_environment constraint works", () => {
   delete spec.environment;
   const [is_valid, error] = Blueprint.validate(spec);
   expect(is_valid).toEqual(false);
-  expect(error).toEqual("has_environment")
+  expect(error).toEqual("has_environment");
 });
 
 test("environment_has_valid_type constraint works", () => {
@@ -59,7 +55,7 @@ test("environment_has_valid_type constraint works", () => {
   const [is_valid, error] = Blueprint.validate(spec);
   expect(is_valid).toEqual(false);
   expect(error).toEqual("environment_has_valid_type");
-})
+});
 
 test("nodes_has_valid_type constraint works", () => {
   const spec = _.cloneDeep(blueprints_.minimal);
@@ -106,11 +102,11 @@ describe("test validate_environment_variable", () => {
 
   test("throw warning when not using an existing environment variable", () => {
     // Set the variables
-    process.env.API_HOST='www.random_string.com';
-    process.env.TOKEN='random_string';
+    process.env.API_HOST = "www.random_string.com";
+    process.env.TOKEN = "random_string";
 
     const spec = _.cloneDeep(blueprints_.minimal);
-    spec.environment = {path: "PATH"};
+    spec.environment = { path: "PATH" };
     const error = Blueprint.validate(spec);
     expect(error[0]).toBeTruthy();
     expect(error[1][0]).toBe("Environment variable path not found in nodes");
@@ -118,7 +114,7 @@ describe("test validate_environment_variable", () => {
 
   test("throw warning when not using an inexistent environment variable", () => {
     const spec = _.cloneDeep(blueprints_.existent_environment_variable);
-    spec.environment = {inexistent: "INEXISTENT"};
+    spec.environment = { inexistent: "INEXISTENT" };
     const error = Blueprint.validate(spec);
     expect(error[0]).toBeTruthy();
     expect(error[1][0]).toBe("Environment variable inexistent not found in ambient");
@@ -136,14 +132,14 @@ describe("test validate_environment_variable", () => {
 
 describe("has_valid_start_nodes", () => {
   test("valid minimal blueprint", () => {
-    const spec = _.cloneDeep(blueprints_.minimal)
+    const spec = _.cloneDeep(blueprints_.minimal);
     const [is_valid, error] = Blueprint.validate(spec);
     expect(is_valid).toEqual(true);
     expect(error).toBeNull();
   });
 
   test("valid multiple start blueprint", () => {
-    const spec = _.cloneDeep(blueprints_.multiple_starts)
+    const spec = _.cloneDeep(blueprints_.multiple_starts);
     const [is_valid, error] = Blueprint.validate(spec);
     expect(is_valid).toEqual(true);
     expect(error).toBeNull();
@@ -177,7 +173,7 @@ describe("has_at_least_one_finish_node", () => {
     expect(is_valid).toEqual(true);
     expect(error).toBeNull();
   });
-  
+
   test("has_at_least_one_finish_node constraint works", () => {
     const spec = _.cloneDeep(blueprints_.minimal);
     delete spec.nodes[spec.nodes.length - 1];
@@ -212,13 +208,13 @@ describe("Blueprint.validate", () => {
       next: "2",
       lane_id: "1",
       parameters: {
-        input: {}
-      }
+        input: {},
+      },
     });
 
     const response = Blueprint.validate(blueprint_spec);
     expect(response[0]).toEqual(false);
-    expect(response[1]).toMatch("found existing node_id");
+    expect(response[1]).toMatch("are_all_nodes_present");
   });
 
   test("fails if lane_id repeats", () => {
@@ -226,7 +222,7 @@ describe("Blueprint.validate", () => {
     blueprint_spec.lanes.push({
       id: blueprint_spec.lanes[0].id,
       name: "the_only_lane",
-      rule: ["fn", ["&", "args"], true]
+      rule: ["fn", ["&", "args"], true],
     });
 
     const response = Blueprint.validate(blueprint_spec);
@@ -254,7 +250,7 @@ describe("Blueprint lane rule validate", () => {
 });
 
 test("fetchNode works for existing nodes", () => {
-  const node_id = 2;
+  const node_id = "minimal_2";
   const spec = blueprints_.minimal;
   const id_two_node = spec.nodes[1];
   const blueprint = new Blueprint(spec);
