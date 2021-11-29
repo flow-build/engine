@@ -646,6 +646,7 @@ class Process extends PersistedEntity {
           activity_manager,
           timer,
         });
+        await this._notifyActivityManager(activity_manager);
       }
     }
 
