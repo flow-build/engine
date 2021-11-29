@@ -1,16 +1,14 @@
 const { PersistedEntity } = require("./base");
 const { Process } = require("./process");
 const { Blueprint } = require("./blueprint");
-const JSum = require('jsum');
+const JSum = require("jsum");
 const { v1: uuid } = require("uuid");
 class Workflow extends PersistedEntity {
-
   static getEntityClass() {
     return Workflow;
   }
 
   static serialize(workflow) {
-    const state = workflow.state;
     return {
       id: workflow._id,
       created_at: workflow._created_at,
@@ -18,16 +16,13 @@ class Workflow extends PersistedEntity {
       description: workflow._description,
       blueprint_spec: workflow._blueprint_spec,
       version: workflow._version,
-      blueprint_hash: workflow._blueprint_hash
+      blueprint_hash: workflow._blueprint_hash,
     };
   }
 
   static deserialize(serialized) {
     if (serialized) {
-      const workflow = new Workflow(
-        serialized.name,
-        serialized.description,
-        serialized.blueprint_spec);
+      const workflow = new Workflow(serialized.name, serialized.description, serialized.blueprint_spec);
       workflow._id = serialized.id;
       workflow._created_at = serialized.created_at;
       workflow._version = serialized.version;
@@ -52,12 +47,12 @@ class Workflow extends PersistedEntity {
     super();
 
     Blueprint.assert_is_valid(blueprint_spec);
-    
-    this._id = id || uuid() ;
+
+    this._id = id || uuid();
     this._name = name;
     this._description = description;
     this._blueprint_spec = blueprint_spec;
-    this._blueprint_hash = JSum.digest(blueprint_spec, 'SHA256', 'hex');
+    this._blueprint_hash = JSum.digest(blueprint_spec, "SHA256", "hex");
   }
 
   get name() {
@@ -73,7 +68,10 @@ class Workflow extends PersistedEntity {
   }
 
   async createProcess(actor_data, initial_bag = {}) {
-    return await new Process({ id: this._id, name: this._name }, Blueprint.parseSpec(this._blueprint_spec)).create(actor_data, initial_bag);
+    return await new Process({ id: this._id, name: this._name }, Blueprint.parseSpec(this._blueprint_spec)).create(
+      actor_data,
+      initial_bag
+    );
   }
 }
 

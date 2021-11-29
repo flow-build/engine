@@ -8,38 +8,31 @@ blueprints_.minimal = {
   prepare: [],
   nodes: [
     {
-      id: "1",
+      id: "minimal_1",
       type: "Start",
       name: "Start node",
       parameters: {
         input_schema: {},
       },
-      next: "2",
-      lane_id: "1"
+      next: "minimal_2",
+      lane_id: "1",
     },
     {
-      id: "2",
+      id: "minimal_2",
       type: "Finish",
       name: "Finish node",
       next: null,
-      lane_id: "1"
-    }
+      lane_id: "1",
+    },
   ],
   lanes: [
     {
       id: "1",
       name: "the_only_lane",
       rule: {
-        lisp: [
-          "fn",
-          [
-            "&",
-            "args"
-          ],
-          true
-        ]
-      }
-    }
+        lisp: ["fn", ["&", "args"], true],
+      },
+    },
   ],
   environment: {},
 };
@@ -49,51 +42,50 @@ blueprints_.existent_environment_variable = {
   prepare: [],
   nodes: [
     {
-      id: "1",
+      id: "env_1",
       type: "Start",
       name: "Start node",
       parameters: {
         input_schema: {},
       },
-      next: "2",
-      lane_id: "1"
+      next: "env_2",
+      lane_id: "1",
     },
     {
-      id: "2",
+      id: "env_2",
       type: "SystemTask",
       category: "HTTP",
       name: "Call endpoint",
-      next: "3",
+      next: "env_3",
       lane_id: "1",
       parameters: {
-        input: {
-        },
+        input: {},
         request: {
           verb: "POST",
           url: "{{path}}",
           headers: {
-            "ContentType": "application/json",
+            ContentType: "application/json",
           },
         },
-      }
+      },
     },
     {
-      id: "3",
+      id: "env_3",
       type: "Finish",
       name: "Finish node",
       next: null,
-      lane_id: "1"
-    }
+      lane_id: "1",
+    },
   ],
   lanes: [
     {
       id: "1",
       name: "the_only_lane",
-      rule: lisp.return_true()
-    }
+      rule: lisp.return_true(),
+    },
   ],
   environment: {
-    path: "PATH"
+    path: "PATH",
   },
 };
 
@@ -109,7 +101,7 @@ blueprints_.inexistent_environment_variable = {
         input_schema: {},
       },
       next: "2",
-      lane_id: "1"
+      lane_id: "1",
     },
     {
       id: "2",
@@ -119,34 +111,33 @@ blueprints_.inexistent_environment_variable = {
       next: "3",
       lane_id: "1",
       parameters: {
-        input: {
-        },
+        input: {},
         request: {
           verb: "POST",
           url: "{{inexistent}}",
           headers: {
-            "ContentType": "application/json",
+            ContentType: "application/json",
           },
         },
-      }
+      },
     },
     {
       id: "3",
       type: "Finish",
       name: "Finish node",
       next: null,
-      lane_id: "1"
-    }
+      lane_id: "1",
+    },
   ],
   lanes: [
     {
       id: "1",
       name: "the_only_lane",
-      rule: lisp.return_true()
-    }
+      rule: lisp.return_true(),
+    },
   ],
   environment: {
-    inexistent: "INEXISTENT"
+    inexistent: "INEXISTENT",
   },
 };
 
@@ -162,7 +153,7 @@ blueprints_.identity_system_task = {
         input_schema: {},
       },
       next: "2",
-      lane_id: "1"
+      lane_id: "1",
     },
     {
       id: "2",
@@ -172,23 +163,23 @@ blueprints_.identity_system_task = {
       next: "3",
       lane_id: "1",
       parameters: {
-        input: {}
-      }
+        input: {},
+      },
     },
     {
       id: "3",
       type: "Finish",
       name: "Finish name",
       next: null,
-      lane_id: "1"
-    }
+      lane_id: "1",
+    },
   ],
   lanes: [
     {
       id: "1",
       name: "the_only_lane",
-      rule: lisp.return_true()
-    }
+      rule: lisp.return_true(),
+    },
   ],
   environment: {},
 };
@@ -208,7 +199,7 @@ blueprints_.start_with_data = {
             number: { type: "number" },
             name: { type: "string" },
           },
-          required: ['number', 'name'],
+          required: ["number", "name"],
         },
       },
       next: "2",
@@ -223,26 +214,26 @@ blueprints_.start_with_data = {
       parameters: {
         action: "do something",
         input: {
-          start_data: { $ref: "result" }
-        }
-      }
+          start_data: { $ref: "result" },
+        },
+      },
     },
     {
       id: "3",
       type: "Finish",
       name: "Finish node",
       next: null,
-      lane_id: "1"
-    }
+      lane_id: "1",
+    },
   ],
   lanes: [
     {
       id: "1",
       name: "the_only_lane",
-      rule: lisp.return_true()
-    }
+      rule: lisp.return_true(),
+    },
   ],
-  environment: {}
+  environment: {},
 };
 
 blueprints_.identity_user_task = {
@@ -268,24 +259,24 @@ blueprints_.identity_user_task = {
       parameters: {
         action: "do something",
         input: {
-          question: "Insert some input."
-        }
-      }
+          question: "Insert some input.",
+        },
+      },
     },
     {
       id: "3",
       type: "Finish",
       name: "Finish node",
       next: null,
-      lane_id: "1"
-    }
+      lane_id: "1",
+    },
   ],
   lanes: [
     {
       id: "1",
       name: "the_only_lane",
-      rule: lisp.return_true()
-    }
+      rule: lisp.return_true(),
+    },
   ],
   environment: {},
 };
@@ -313,9 +304,9 @@ blueprints_.user_task_user_task = {
       parameters: {
         action: "first",
         input: {
-          question: "Insert some input."
-        }
-      }
+          question: "Insert some input.",
+        },
+      },
     },
     {
       id: "3",
@@ -326,24 +317,24 @@ blueprints_.user_task_user_task = {
       parameters: {
         action: "second",
         input: {
-          question: "Insert some input."
-        }
-      }
+          question: "Insert some input.",
+        },
+      },
     },
     {
       id: "9",
       type: "Finish",
       name: "Finish node",
       next: null,
-      lane_id: "1"
-    }
+      lane_id: "1",
+    },
   ],
   lanes: [
     {
       id: "1",
       name: "the_only_lane",
-      rule: lisp.return_true()
-    }
+      rule: lisp.return_true(),
+    },
   ],
   environment: {},
 };
@@ -372,24 +363,24 @@ blueprints_.notify_user_task = {
         action: "do something",
         activity_manager: "notify",
         input: {
-          question: "Insert some input."
-        }
-      }
+          question: "Insert some input.",
+        },
+      },
     },
     {
       id: "3",
       type: "Finish",
       name: "Finish node",
       next: null,
-      lane_id: "1"
-    }
+      lane_id: "1",
+    },
   ],
   lanes: [
     {
       id: "1",
       name: "the_only_lane",
-      rule: lisp.return_true()
-    }
+      rule: lisp.return_true(),
+    },
   ],
   environment: {},
 };
@@ -405,9 +396,10 @@ blueprints_.notify_and_user_task = {
       next: "2",
       lane_id: "1",
       parameters: {
-        input_schema: {}
-      }
-    },{
+        input_schema: {},
+      },
+    },
+    {
       id: "2",
       type: "UserTask",
       name: "Identity user task notify",
@@ -417,9 +409,9 @@ blueprints_.notify_and_user_task = {
         action: "do something",
         activity_manager: "notify",
         input: {
-          question: "Insert some input."
-        }
-      }
+          question: "Insert some input.",
+        },
+      },
     },
     {
       id: "3",
@@ -430,35 +422,35 @@ blueprints_.notify_and_user_task = {
       parameters: {
         action: "do something",
         input: {
-          question: "Insert some input."
+          question: "Insert some input.",
         },
         activity_schema: {
           type: "object",
           properties: {
             textParamTwo: {
-              type: "string"
-            }
+              type: "string",
+            },
           },
-          required: ['textParamTwo']
-        }
-      }
+          required: ["textParamTwo"],
+        },
+      },
     },
     {
       id: "99",
       type: "Finish",
       name: "Finish node",
       next: null,
-      lane_id: "1"
-    }
+      lane_id: "1",
+    },
   ],
   lanes: [
     {
       id: "1",
       name: "the_only_lane",
-      rule: lisp.return_true()
-    }
+      rule: lisp.return_true(),
+    },
   ],
-  environment: {}
+  environment: {},
 };
 
 blueprints_.admin_identity_system_task = {
@@ -473,7 +465,7 @@ blueprints_.admin_identity_system_task = {
         input_schema: {},
       },
       next: "2",
-      lane_id: "1"
+      lane_id: "1",
     },
     {
       id: "2",
@@ -483,23 +475,23 @@ blueprints_.admin_identity_system_task = {
       next: "3",
       lane_id: "1",
       parameters: {
-        input: {}
-      }
+        input: {},
+      },
     },
     {
       id: "3",
       type: "Finish",
       name: "Finish node",
       next: null,
-      lane_id: "1"
-    }
+      lane_id: "1",
+    },
   ],
   lanes: [
     {
       id: "1",
       name: "admin",
-      rule: lisp.validate_claim("admin")
-    }
+      rule: lisp.validate_claim("admin"),
+    },
   ],
   environment: {},
 };
@@ -509,44 +501,43 @@ blueprints_.admin_identity_user_task = {
   prepare: [],
   nodes: [
     {
-      id: "1",
+      id: "admin_identity_user_task_1",
       type: "Start",
       name: "Start node",
       parameters: {
         input_schema: {},
       },
-      next: "2",
+      next: "admin_identity_user_task_2",
       lane_id: "1",
     },
     {
-      id: "2",
+      id: "admin_identity_user_task_2",
       type: "UserTask",
       name: "User task",
-      next: "3",
+      next: "admin_identity_user_task_3",
       lane_id: "1",
       parameters: {
         action: "do something",
-        input: {}
-      }
+        input: {},
+      },
     },
     {
-      id: "3",
+      id: "admin_identity_user_task_3",
       type: "Finish",
       name: "Finish node",
       next: null,
-      lane_id: "1"
-    }
+      lane_id: "1",
+    },
   ],
   lanes: [
     {
       id: "1",
       name: "admin",
-      rule: lisp.validate_claim("admin")
-    }
+      rule: lisp.validate_claim("admin"),
+    },
   ],
   environment: {},
 };
-
 
 blueprints_.restricted_multilane_identity_user_task = {
   requirements: ["core"],
@@ -570,8 +561,8 @@ blueprints_.restricted_multilane_identity_user_task = {
       next: "3",
       lane_id: "2",
       parameters: {
-        input: {}
-      }
+        input: {},
+      },
     },
     {
       id: "3",
@@ -581,8 +572,8 @@ blueprints_.restricted_multilane_identity_user_task = {
       next: "4",
       lane_id: "1",
       parameters: {
-        input: {}
-      }
+        input: {},
+      },
     },
     {
       id: "4",
@@ -592,28 +583,28 @@ blueprints_.restricted_multilane_identity_user_task = {
       lane_id: "1",
       parameters: {
         action: "do something",
-        input: {}
-      }
+        input: {},
+      },
     },
     {
       id: "5",
       type: "Finish",
       name: "Finish node",
       next: null,
-      lane_id: "2"
-    }
+      lane_id: "2",
+    },
   ],
   lanes: [
     {
       id: "1",
       name: "sys_admin",
-      rule: lisp.validate_claim("sys_admin")
+      rule: lisp.validate_claim("sys_admin"),
     },
     {
       id: "2",
       name: "admin",
-      rule: lisp.validate_claim("admin")
-    }
+      rule: lisp.validate_claim("admin"),
+    },
   ],
   environment: {},
 };
@@ -641,7 +632,7 @@ blueprints_.extra_nodes = {
       lane_id: "1",
       parameters: {
         input: {},
-      }
+      },
     },
     {
       id: "3",
@@ -652,35 +643,30 @@ blueprints_.extra_nodes = {
       lane_id: "1",
       parameters: {
         input: {},
-        example: "data"
-      }
+        example: "data",
+      },
     },
     {
       id: "4",
       type: "Finish",
       name: "Finish node",
       next: null,
-      lane_id: "1"
-    }
+      lane_id: "1",
+    },
   ],
   lanes: [
     {
       id: "1",
       name: "sys_admin",
-      rule: lisp.return_true()
-    }
+      rule: lisp.return_true(),
+    },
   ],
   environment: {},
 };
 
 blueprints_.lisp_prepare = {
   requirements: ["core"],
-  prepare: ["do",
-    ["def", "test_function",
-      ["fn", ["&", "args"],
-        { "result": "Prepare New Bag" }]],
-    null
-  ],
+  prepare: ["do", ["def", "test_function", ["fn", ["&", "args"], { result: "Prepare New Bag" }]], null],
   nodes: [
     {
       id: "1",
@@ -702,9 +688,9 @@ blueprints_.lisp_prepare = {
         input: {},
         script: {
           package: "core",
-          function: "test_function"
-        }
-      }
+          function: "test_function",
+        },
+      },
     },
     {
       id: "3",
@@ -715,33 +701,30 @@ blueprints_.lisp_prepare = {
       lane_id: "1",
       parameters: {
         input: {
-          new_bag: { "$ref": "result.result" }
-        }
-      }
+          new_bag: { $ref: "result.result" },
+        },
+      },
     },
     {
       id: "4",
       type: "Finish",
       name: "Finish node",
       next: null,
-      lane_id: "1"
-    }
+      lane_id: "1",
+    },
   ],
   lanes: [
     {
       id: "1",
       name: "sys_admin",
-      rule: lisp.return_true()
-    }
+      rule: lisp.return_true(),
+    },
   ],
   environment: {},
 };
 
 blueprints_.lisp_requirements = {
-  requirements: [
-    "core",
-    "test_package"
-  ],
+  requirements: ["core", "test_package"],
   prepare: [],
   nodes: [
     {
@@ -764,9 +747,9 @@ blueprints_.lisp_requirements = {
         input: {},
         script: {
           package: "core",
-          function: "test_core_1"
-        }
-      }
+          function: "test_core_1",
+        },
+      },
     },
     {
       id: "3",
@@ -777,39 +760,31 @@ blueprints_.lisp_requirements = {
       lane_id: "1",
       parameters: {
         input: {
-          new_bag: { "$ref": "result.result" },
-        }
-      }
+          new_bag: { $ref: "result.result" },
+        },
+      },
     },
     {
       id: "4",
       type: "Finish",
       name: "Finish node",
       next: null,
-      lane_id: "1"
-    }
+      lane_id: "1",
+    },
   ],
   lanes: [
     {
       id: "1",
       name: "sys_admin",
-      rule: lisp.return_true()
-    }
+      rule: lisp.return_true(),
+    },
   ],
   environment: {},
 };
 
 blueprints_.lisp_requirements_prepare = {
-  requirements: [
-    "core",
-    "test_package"
-  ],
-  prepare: ["do",
-    ["def", "test_function",
-      ["fn", ["&", "args"],
-        { "new_bag": "New Bag" }]],
-    null
-  ],
+  requirements: ["core", "test_package"],
+  prepare: ["do", ["def", "test_function", ["fn", ["&", "args"], { new_bag: "New Bag" }]], null],
   nodes: [
     {
       id: "1",
@@ -831,9 +806,9 @@ blueprints_.lisp_requirements_prepare = {
         input: {},
         script: {
           package: "core",
-          function: "test_function"
-        }
-      }
+          function: "test_function",
+        },
+      },
     },
     {
       id: "3",
@@ -844,9 +819,9 @@ blueprints_.lisp_requirements_prepare = {
       lane_id: "1",
       parameters: {
         input: {
-          new_bag: { "$ref": "result.new_bag" }
-        }
-      }
+          new_bag: { $ref: "result.new_bag" },
+        },
+      },
     },
     {
       id: "4",
@@ -857,9 +832,9 @@ blueprints_.lisp_requirements_prepare = {
       parameters: {
         action: "do something",
         input: {
-          new_bag: { "$ref": "bag.new_bag" },
-        }
-      }
+          new_bag: { $ref: "bag.new_bag" },
+        },
+      },
     },
     {
       id: "5",
@@ -872,9 +847,9 @@ blueprints_.lisp_requirements_prepare = {
         script: {
           package: "core",
           function: "test_core_2_js",
-          type: "js"
-        }
-      }
+          type: "js",
+        },
+      },
     },
     {
       id: "6",
@@ -885,27 +860,27 @@ blueprints_.lisp_requirements_prepare = {
       lane_id: "1",
       parameters: {
         input: {
-          new_bag: { "$ref": "result.result" }
-        }
-      }
+          new_bag: { $ref: "result.result" },
+        },
+      },
     },
     {
       id: "7",
       type: "Finish",
       name: "Finish node",
       next: null,
-      lane_id: "1"
-    }
+      lane_id: "1",
+    },
   ],
   lanes: [
     {
       id: "1",
       name: "simpleton",
-      rule: lisp.return_true()
-    }
+      rule: lisp.return_true(),
+    },
   ],
   environment: {},
-}
+};
 
 blueprints_.use_actor_data = {
   requirements: [],
@@ -970,11 +945,11 @@ blueprints_.use_actor_data = {
     {
       id: "1",
       name: "simpleton",
-      rule: lisp.return_true()
-    }
+      rule: lisp.return_true(),
+    },
   ],
   environment: {},
-}
+};
 
 blueprints_.missing_requirements = {
   requirements: [],
@@ -1000,27 +975,27 @@ blueprints_.missing_requirements = {
         input: {},
         script: {
           package: "core",
-          function: "test_core_1"
-        }
-      }
+          function: "test_core_1",
+        },
+      },
     },
     {
       id: "3",
       type: "Finish",
       name: "Finish node",
       next: null,
-      lane_id: "1"
-    }
+      lane_id: "1",
+    },
   ],
   lanes: [
     {
       id: "1",
       name: "simpleton",
-      rule: lisp.return_true()
-    }
+      rule: lisp.return_true(),
+    },
   ],
   environment: {},
-}
+};
 
 blueprints_.syntax_error = {
   requirements: ["core"],
@@ -1044,28 +1019,28 @@ blueprints_.syntax_error = {
       lane_id: "1",
       parameters: {
         input: {
-          internal_key: { "$ref": "bag.inexistant" }
+          internal_key: { $ref: "bag.inexistant" },
         },
         script: {
           package: "core",
-          function: ["fn", ["&", "args"], ["nth", "args", 0]]
-        }
-      }
+          function: ["fn", ["&", "args"], ["nth", "args", 0]],
+        },
+      },
     },
     {
       id: "3",
       type: "Finish",
       name: "Finish node",
       next: null,
-      lane_id: "1"
-    }
+      lane_id: "1",
+    },
   ],
   lanes: [
     {
       id: "1",
       name: "simpleton",
-      rule: lisp.return_true()
-    }
+      rule: lisp.return_true(),
+    },
   ],
   environment: {},
 };
@@ -1081,8 +1056,8 @@ blueprints_.environment = {
       next: "2",
       lane_id: "1",
       parameters: {
-        input_schema: {}
-      }
+        input_schema: {},
+      },
     },
     {
       id: "2",
@@ -1094,33 +1069,33 @@ blueprints_.environment = {
       parameters: {
         input: {
           test: {
-            $mustache: "value bag {{ bag.value }}"
-          }
+            $mustache: "value bag {{ bag.value }}",
+          },
         },
         request: {
           verb: "POST",
           url: "{{host}}",
           headers: {
-            "ContentType": "application/json",
-            "env": "{{node_env}}"
+            ContentType: "application/json",
+            env: "{{node_env}}",
           },
         },
-      }
+      },
     },
     {
       id: "3",
       type: "Finish",
       name: "Finish node",
       next: null,
-      lane_id: "1"
-    }
+      lane_id: "1",
+    },
   ],
   lanes: [
     {
       id: "1",
       name: "the_only_lane",
-      rule: lisp.return_true()
-    }
+      rule: lisp.return_true(),
+    },
   ],
   environment: {
     node_env: "NODE_ENV",
@@ -1139,8 +1114,8 @@ blueprints_.reference_environment = {
       next: "2",
       lane_id: "1",
       parameters: {
-        input_schema: {}
-      }
+        input_schema: {},
+      },
     },
     {
       id: "2",
@@ -1149,11 +1124,11 @@ blueprints_.reference_environment = {
       name: "Set to bag node",
       parameters: {
         input: {
-          environment: { $ref: "environment.environment" }
-        }
+          environment: { $ref: "environment.environment" },
+        },
       },
       next: "3",
-      lane_id: "1"
+      lane_id: "1",
     },
     {
       id: "3",
@@ -1183,15 +1158,11 @@ blueprints_.reference_environment = {
           threshold: { $ref: "environment.threshold" },
         },
         script: {
-          function: [
-            "fn",
-            ["input", "&", "args"],
-            "input",
-          ],
-        }
+          function: ["fn", ["input", "&", "args"], "input"],
+        },
       },
       next: "5",
-      lane_id: "1"
+      lane_id: "1",
     },
     {
       id: "5",
@@ -1204,22 +1175,22 @@ blueprints_.reference_environment = {
         action: "refenceEnvironment",
       },
       next: "99",
-      lane_id: "1"
+      lane_id: "1",
     },
     {
       id: "99",
       type: "Finish",
       name: "Finish node",
       next: null,
-      lane_id: "1"
-    }
+      lane_id: "1",
+    },
   ],
   lanes: [
     {
       id: "1",
       name: "the_only_lane",
-      rule: lisp.return_true()
-    }
+      rule: lisp.return_true(),
+    },
   ],
   environment: {
     environment: "ENVIRONMENT",
@@ -1241,7 +1212,7 @@ blueprints_.multiple_starts = {
         input_schema: {},
       },
       next: "2",
-      lane_id: "1"
+      lane_id: "1",
     },
     {
       id: "10",
@@ -1251,15 +1222,15 @@ blueprints_.multiple_starts = {
         input_schema: {},
       },
       next: "2",
-      lane_id: "2"
+      lane_id: "2",
     },
     {
       id: "2",
       type: "Finish",
       name: "Finish node",
       next: null,
-      lane_id: "1"
-    }
+      lane_id: "1",
+    },
   ],
   lanes: [
     {
@@ -1288,7 +1259,7 @@ blueprints_.multiple_finish = {
         input_schema: {},
       },
       next: "2",
-      lane_id: "1"
+      lane_id: "1",
     },
     {
       id: "2",
@@ -1301,7 +1272,7 @@ blueprints_.multiple_finish = {
       },
       next: {
         value: "98",
-        default: "99"
+        default: "99",
       },
       lane_id: "1",
     },
@@ -1310,22 +1281,22 @@ blueprints_.multiple_finish = {
       type: "Finish",
       name: "Finish node",
       next: null,
-      lane_id: "1"
+      lane_id: "1",
     },
     {
       id: "99",
       type: "Finish",
       name: "Finish node",
       next: null,
-      lane_id: "1"
-    }
+      lane_id: "1",
+    },
   ],
   lanes: [
     {
       id: "1",
       name: "the_only_lane",
-      rule: lisp.return_true()
-    }
+      rule: lisp.return_true(),
+    },
   ],
   environment: {},
 };
@@ -1342,7 +1313,7 @@ blueprints_.create_process_minimal = {
         input_schema: {},
       },
       next: "2",
-      lane_id: "1"
+      lane_id: "1",
     },
     {
       id: "2",
@@ -1352,25 +1323,25 @@ blueprints_.create_process_minimal = {
       parameters: {
         workflow_name: "minimal",
         input: {},
-        actor_data: { $ref: "actor_data" }
+        actor_data: { $ref: "actor_data" },
       },
       next: "3",
-      lane_id: "1"
+      lane_id: "1",
     },
     {
       id: "3",
       type: "Finish",
       name: "Finish node",
       next: null,
-      lane_id: "1"
-    }
+      lane_id: "1",
+    },
   ],
   lanes: [
     {
       id: "1",
       name: "the_only_lane",
-      rule: lisp.return_true()
-    }
+      rule: lisp.return_true(),
+    },
   ],
   environment: {},
 };
@@ -1387,7 +1358,7 @@ blueprints_.abort_process_minimal = {
         input_schema: {},
       },
       next: "2",
-      lane_id: "1"
+      lane_id: "1",
     },
     {
       id: "2",
@@ -1396,26 +1367,26 @@ blueprints_.abort_process_minimal = {
       name: "Abort process node",
       parameters: {
         input: {
-          $ref: "bag.process_list"
+          $ref: "bag.process_list",
         },
       },
       next: "3",
-      lane_id: "1"
+      lane_id: "1",
     },
     {
       id: "3",
       type: "Finish",
       name: "Finish node",
       next: null,
-      lane_id: "1"
-    }
+      lane_id: "1",
+    },
   ],
   lanes: [
     {
       id: "1",
       name: "the_only_lane",
-      rule: lisp.return_true()
-    }
+      rule: lisp.return_true(),
+    },
   ],
   environment: {},
 };
@@ -1459,10 +1430,10 @@ blueprints_.user_timeout = {
       id: "1",
       name: "only_lane",
       rule: lisp.return_true(),
-    }
+    },
   ],
   environment: {},
-}
+};
 
 blueprints_.user_timeout_user = {
   requirements: [],
@@ -1514,10 +1485,10 @@ blueprints_.user_timeout_user = {
       id: "1",
       name: "only_lane",
       rule: lisp.return_true(),
-    }
+    },
   ],
   environment: {},
-}
+};
 
 blueprints_.timer = {
   requirements: [],
@@ -1558,10 +1529,10 @@ blueprints_.timer = {
       id: "1",
       name: "only_lane",
       rule: lisp.return_true(),
-    }
+    },
   ],
   environment: {},
-}
+};
 
 blueprints_.user_encrypt = {
   requirements: [],
@@ -1584,9 +1555,7 @@ blueprints_.user_encrypt = {
       parameters: {
         action: "example_action",
         input: {},
-        encrypted_data: [
-          "value"
-        ],
+        encrypted_data: ["value"],
       },
       next: "3",
       lane_id: "1",
@@ -1618,200 +1587,182 @@ blueprints_.user_encrypt = {
       id: "1",
       name: "only_lane",
       rule: lisp.return_true(),
-    }
+    },
   ],
   environment: {},
-}
+};
 
 blueprints_.sub_process = {
-  "name": "pizzaTest",
-  "description": "desc",
-  "blueprint_spec": {
-    "requirements": ["core"],
-    "prepare": [],
-    "nodes": [
+  name: "pizzaTest",
+  description: "desc",
+  blueprint_spec: {
+    requirements: ["core"],
+    prepare: [],
+    nodes: [
       {
-        "id": "1",
-        "type": "Start",
-        "name": "Start node",
-        "parameters": {
-          "input_schema": {}
+        id: "1",
+        type: "Start",
+        name: "Start node",
+        parameters: {
+          input_schema: {},
         },
-        "next": "2",
-        "lane_id": "1"
+        next: "2",
+        lane_id: "1",
       },
       {
-        "id": "2",
-        "type": "ScriptTask",
-        "name": "Create values for bag",
-        "next": "3",
-        "lane_id": "1",
-        "parameters": {
-          "input": {},
-          "script": {
-            "package": "",
-            "function": [
+        id: "2",
+        type: "ScriptTask",
+        name: "Create values for bag",
+        next: "3",
+        lane_id: "1",
+        parameters: {
+          input: {},
+          script: {
+            package: "",
+            function: [
               "fn",
               ["&", "args"],
               {
-                "example": "bag_example",
-                "value": "bag_value"
-              }
-            ]
-          }
-        }
-      },
-      {
-        "id": "3",
-        "type": "SystemTask",
-        "category": "SetToBag",
-        "name": "Set values on bag",
-        "next": "4",
-        "lane_id": "1",
-        "parameters": {
-          "input": {
-            "example": { "$ref": "result.example" },
-            "valueResult": { "$ref": "result.value" }
-          }
-        }
-      },
-      {
-        "id": "4",
-        "type": "SubProcess",
-        "name": "Sub Process base in User task node",
-        "next": "5",
-        "lane_id": "1",
-        "parameters": {
-          "actor_data": {
-            "id": "2",
-            "claims": []
+                example: "bag_example",
+                value: "bag_value",
+              },
+            ],
           },
-          "input": {},
-          "workflow_name": "blueprint_spec_son",
-          "workflow": {
-            "requirements": ["core"],
-            "prepare": [],
-            "nodes": [
+        },
+      },
+      {
+        id: "3",
+        type: "SystemTask",
+        category: "SetToBag",
+        name: "Set values on bag",
+        next: "4",
+        lane_id: "1",
+        parameters: {
+          input: {
+            example: { $ref: "result.example" },
+            valueResult: { $ref: "result.value" },
+          },
+        },
+      },
+      {
+        id: "4",
+        type: "SubProcess",
+        name: "Sub Process base in User task node",
+        next: "5",
+        lane_id: "1",
+        parameters: {
+          actor_data: {
+            id: "2",
+            claims: [],
+          },
+          input: {},
+          workflow_name: "blueprint_spec_son",
+          workflow: {
+            requirements: ["core"],
+            prepare: [],
+            nodes: [
               {
-                "id": "1",
-                "type": "Start",
-                "name": "Start node",
-                "parameters": {
-                  "input_schema": {}
+                id: "1",
+                type: "Start",
+                name: "Start node",
+                parameters: {
+                  input_schema: {},
                 },
-                "next": "2",
-                "lane_id": "1"
+                next: "2",
+                lane_id: "1",
               },
               {
-                "id": "2",
-                "type": "ScriptTask",
-                "name": "Create values for bag",
-                "next": "3",
-                "lane_id": "1",
-                "parameters": {
-                  "input": {},
-                  "script": {
-                    "package": "",
-                    "function": [
+                id: "2",
+                type: "ScriptTask",
+                name: "Create values for bag",
+                next: "3",
+                lane_id: "1",
+                parameters: {
+                  input: {},
+                  script: {
+                    package: "",
+                    function: [
                       "fn",
                       ["&", "args"],
                       {
-                        "example": "bag_example",
-                        "value": "bag_value"
-                      }
-                    ]
-                  }
-                }
+                        example: "bag_example",
+                        value: "bag_value",
+                      },
+                    ],
+                  },
+                },
               },
               {
-                "id": "3",
-                "type": "SystemTask",
-                "category": "SetToBag",
-                "name": "Set values on bag",
-                "next": "4",
-                "lane_id": "1",
-                "parameters": {
-                  "input": {
-                    "example": { "$ref": "result.example" },
-                    "valueResult": { "$ref": "result.value" }
-                  }
-                }
+                id: "3",
+                type: "SystemTask",
+                category: "SetToBag",
+                name: "Set values on bag",
+                next: "4",
+                lane_id: "1",
+                parameters: {
+                  input: {
+                    example: { $ref: "result.example" },
+                    valueResult: { $ref: "result.value" },
+                  },
+                },
               },
               {
-                "id": "4",
-                "type": "Finish",
-                "name": "Finish node",
-                "next": null,
-                "lane_id": "1"
-              }
+                id: "4",
+                type: "Finish",
+                name: "Finish node",
+                next: null,
+                lane_id: "1",
+              },
             ],
-            "lanes": [
+            lanes: [
               {
-                "id": "1",
-                "name": "default",
-                "rule": [
-          "fn",
-          [
-            "&",
-            "args"
-          ],
-          true
-        ]
-              }
+                id: "1",
+                name: "default",
+                rule: ["fn", ["&", "args"], true],
+              },
             ],
-            "environment": {}
+            environment: {},
           },
-          "valid_response": "finished"
-        }
+          valid_response: "finished",
+        },
       },
       {
-        "id": "5",
-        "type": "ScriptTask",
-        "name": "Print user input",
-        "next": "7",
-        "lane_id": "1",
-        "parameters": {
-          "input": {
-            "userInput": { "$ref": "result.userInput" }
+        id: "5",
+        type: "ScriptTask",
+        name: "Print user input",
+        next: "7",
+        lane_id: "1",
+        parameters: {
+          input: {
+            userInput: { $ref: "result.userInput" },
           },
-          "script": {
-            "function": [
+          script: {
+            function: [
               "fn",
               ["input", "&", "args"],
-              [
-                "println",
-                ["`", "User input: "],
-                ["get", "input", ["`", "userInput"]]
-              ]
-            ]
-          }
-        }
+              ["println", ["`", "User input: "], ["get", "input", ["`", "userInput"]]],
+            ],
+          },
+        },
       },
       {
-        "id": "7",
-        "type": "Finish",
-        "name": "Finish node",
-        "next": null,
-        "lane_id": "1"
-      }
+        id: "7",
+        type: "Finish",
+        name: "Finish node",
+        next: null,
+        lane_id: "1",
+      },
     ],
-    "lanes": [
+    lanes: [
       {
-        "id": "1",
-        "name": "the_only_lane",
-        "rule": [
-          "fn",
-          [
-            "&",
-            "args"
-          ],
-          true
-        ]
-      }
+        id: "1",
+        name: "the_only_lane",
+        rule: ["fn", ["&", "args"], true],
+      },
     ],
-    "environment": {}
-  }
-}
+    environment: {},
+  },
+};
 
 blueprints_.start_with_timeout = {
   requirements: [],
@@ -1823,7 +1774,7 @@ blueprints_.start_with_timeout = {
       name: "start  node",
       parameters: {
         input_schema: {},
-        timeout: 5
+        timeout: 5,
       },
       next: "2",
       lane_id: "1",
@@ -1834,7 +1785,7 @@ blueprints_.start_with_timeout = {
       name: "user task node",
       parameters: {
         action: "example_action",
-        input: {}
+        input: {},
       },
       next: "99",
       lane_id: "1",
@@ -1852,10 +1803,10 @@ blueprints_.start_with_timeout = {
       id: "1",
       name: "only_lane",
       rule: lisp.return_true(),
-    }
+    },
   ],
   environment: {},
-}
+};
 
 blueprints_.user_action = {
   requirements: [],
@@ -1869,7 +1820,7 @@ blueprints_.user_action = {
         input_schema: {},
       },
       next: "2",
-      lane_id: "1"
+      lane_id: "1",
     },
     {
       id: "2",
@@ -1879,30 +1830,96 @@ blueprints_.user_action = {
       lane_id: "1",
       parameters: {
         action: "userAction",
-        input: {}
-      }
+        input: {},
+      },
     },
     {
       id: "3",
       type: "Finish",
       name: "Finish node",
       next: null,
-      lane_id: "1"
-    }
+      lane_id: "1",
+    },
   ],
   lanes: [
     {
       id: "1",
       name: "default",
-      rule: lisp.return_true()
-    }
+      rule: lisp.return_true(),
+    },
   ],
   environment: {},
 };
 
 blueprints_.user_action_with_system_task = {
-  requirements: [],
+  requirements: ["core"],
   prepare: [],
+  nodes: [
+    {
+      id: "user_action_with_system_task_1",
+      type: "Start",
+      name: "Start node",
+      parameters: {
+        input_schema: {},
+      },
+      next: "user_action_with_system_task_2",
+      lane_id: "1",
+    },
+    {
+      id: "user_action_with_system_task_2",
+      type: "UserTask",
+      name: "User task node",
+      next: "user_action_with_system_task_3",
+      lane_id: "1",
+      parameters: {
+        action: "userAction",
+        input: {},
+      },
+    },
+    {
+      id: "user_action_with_system_task_3",
+      type: "ScriptTask",
+      name: "Print user input",
+      next: "user_action_with_system_task_4",
+      lane_id: "1",
+      parameters: {
+        input: {
+          userInput: { $ref: "result.userInput" },
+        },
+        script: {
+          function: [
+            "fn",
+            ["input", "&", "args"],
+            ["println", ["`", "User input: "], ["get", "input", ["`", "userInput"]]],
+          ],
+        },
+      },
+    },
+    {
+      id: "user_action_with_system_task_4",
+      type: "Finish",
+      name: "Finish node",
+      next: null,
+      lane_id: "1",
+    },
+  ],
+  lanes: [
+    {
+      id: "1",
+      name: "default",
+      rule: lisp.return_true(),
+    },
+  ],
+  environment: {},
+};
+
+blueprints_.parameters = {
+  requirements: ["core"],
+  prepare: [],
+  parameters: {
+    param1: "one value",
+    param2: "two value",
+  },
   nodes: [
     {
       id: "1",
@@ -1912,39 +1929,41 @@ blueprints_.user_action_with_system_task = {
         input_schema: {},
       },
       next: "2",
-      lane_id: "1"
+      lane_id: "1",
     },
     {
       id: "2",
-      type: "UserTask",
-      name: "User task node",
+      type: "ScriptTask",
+      name: "Create values for bag",
       next: "3",
       lane_id: "1",
       parameters: {
-        action: "userAction",
-        input: {}
-      }
+        input: {},
+        script: {
+          package: "",
+          function: [
+            "fn",
+            ["&", "args"],
+            {
+              example: "bag_example",
+              value: "bag_value",
+            },
+          ],
+        },
+      },
     },
     {
       id: "3",
-      type: "ScriptTask",
-      name: "Print user input",
+      type: "SystemTask",
+      category: "SetToBag",
+      name: "Set values on bag",
       next: "4",
       lane_id: "1",
       parameters: {
         input: {
-          userInput: {"$ref": "result.userInput"}
-        },
-        script: {
-          function: [
-            "fn",
-            ["input", "&", "args"],
-            [
-              "println",
-              ["`", "User input: "],
-              ["get", "input", ["`", "userInput"]],
-            ],
-          ],
+          example: { $ref: "result.example" },
+          valueResult: { $ref: "result.value" },
+          pvalues: { $ref: "parameters.param1" },
         },
       },
     },
@@ -1953,41 +1972,39 @@ blueprints_.user_action_with_system_task = {
       type: "Finish",
       name: "Finish node",
       next: null,
-      lane_id: "1"
-    }
+      lane_id: "1",
+    },
   ],
   lanes: [
     {
       id: "1",
       name: "default",
-      rule: lisp.return_true()
-    }
+      rule: lisp.return_true(),
+    },
   ],
   environment: {},
 };
 
-
 actors_.sys_admin = {
-  "actor_id": "1",
-  "claims": ["sys_admin", "admin", "simpleton"]
-},
-
-  actors_.admin = {
-    "actor_id": "2",
-    "claims": ["admin", "simpleton"]
-  };
+  actor_id: "1",
+  claims: ["sys_admin", "admin", "simpleton"],
+};
+actors_.admin = {
+  actor_id: "2",
+  claims: ["admin", "simpleton"],
+};
 
 actors_.manager = {
-  "actor_id": "3",
-  "claims": ["manager", "simpleton"]
+  actor_id: "3",
+  claims: ["manager", "simpleton"],
 };
 
 actors_.simpleton = {
-  "actor_id": "4",
-  "claims": ["simpleton"]
+  actor_id: "4",
+  claims: ["simpleton"],
 };
 
 module.exports = {
   blueprints_: blueprints_,
-  actors_: actors_
+  actors_: actors_,
 };
