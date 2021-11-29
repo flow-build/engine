@@ -203,12 +203,13 @@ class ParameterizedNode extends Node {
     return ParameterizedNode.validate(this._spec);
   }
 
-  _preProcessing({ bag, input, actor_data, environment }) {
+  _preProcessing({ bag, input, actor_data, environment, parameters = {} }) {
     return prepare(this._spec.parameters.input, {
-      bag: bag,
+      bag,
       result: input,
-      actor_data: actor_data,
-      environment: environment,
+      actor_data,
+      environment,
+      parameters,
     });
   }
 }
@@ -233,13 +234,14 @@ class FinishNode extends Node {
     return null;
   }
 
-  _preProcessing({ bag, input, actor_data, environment }) {
+  _preProcessing({ bag, input, actor_data, environment, parameters = {} }) {
     if (this._spec.parameters && this._spec.parameters.input) {
       return prepare(this._spec.parameters.input, {
-        bag: bag,
+        bag,
         result: input,
-        actor_data: actor_data,
-        environment: environment,
+        actor_data,
+        environment,
+        parameters,
       });
     }
     return {};
@@ -266,9 +268,9 @@ class FlowNode extends ParameterizedNode {
     return FlowNode.validate(this._spec);
   }
 
-  async run({ bag = {}, input = {}, external_input = {}, actor_data = {}, environment = {} }, lisp) {
+  async run({ bag = {}, input = {}, external_input = {}, actor_data = {}, environment = {}, parameters = {} }, lisp) {
     try {
-      const execution_data = this._preProcessing({ bag, input, actor_data, environment });
+      const execution_data = this._preProcessing({ bag, input, actor_data, environment, parameters });
       return {
         node_id: this.id,
         bag: bag,
@@ -316,10 +318,10 @@ class UserTaskNode extends ParameterizedNode {
     return UserTaskNode.validate(this._spec);
   }
 
-  async run({ bag, input, external_input = null, actor_data, environment = {} }, lisp) {
+  async run({ bag, input, external_input = null, actor_data, environment = {}, parameters = {} }, lisp) {
     try {
       if (!external_input) {
-        const execution_data = this._preProcessing({ bag, input, actor_data, environment });
+        const execution_data = this._preProcessing({ bag, input, actor_data, environment, parameters });
 
         const activity_manager = getActivityManager(this._spec.parameters.activity_manager);
         activity_manager.props = {
@@ -454,9 +456,9 @@ class SystemTaskNode extends ParameterizedNode {
 }
 
 class SetToBagSystemTaskNode extends SystemTaskNode {
-  async run({ bag = {}, input = {}, external_input = {}, actor_data = {}, environment = {} }, lisp) {
+  async run({ bag = {}, input = {}, external_input = {}, actor_data = {}, environment = {}, parameters = {} }, lisp) {
     try {
-      const execution_data = this._preProcessing({ bag, input, actor_data, environment });
+      const execution_data = this._preProcessing({ bag, input, actor_data, environment, parameters });
       return {
         node_id: this.id,
         bag: { ...bag, ...execution_data },
@@ -600,20 +602,25 @@ class StartProcessSystemTaskNode extends SystemTaskNode {
     return StartProcessSystemTaskNode.validate(this._spec);
   }
 
-  _preProcessing({ bag, input, actor_data, environment }) {
-    const prepared_input = super._preProcessing({ bag: bag, input, actor_data: actor_data, environment: environment });
-    const prepared_workflow_name = prepare(this._spec.parameters.workflow_name, {
-      bag: bag,
+  _preProcessing({ bag, input, actor_data, environment, parameters }) {
+    const context = {
+      bag,
       result: input,
-      actor_data: actor_data,
-      environment: environment,
+      actor_data,
+      environment,
+      parameters,
+    };
+
+    const prepared_input = super._preProcessing({
+      bag,
+      input,
+      actor_data,
+      environment,
+      parameters,
     });
-    const prepared_actor_data = prepare(this._spec.parameters.actor_data, {
-      bag: bag,
-      result: input,
-      actor_data: actor_data,
-      environment: environment,
-    });
+    const prepared_workflow_name = prepare(this._spec.parameters.workflow_name, context);
+    const prepared_actor_data = prepare(this._spec.parameters.actor_data, context);
+
     return {
       workflow_name: prepared_workflow_name,
       input: prepared_input,
@@ -670,15 +677,16 @@ class SubProcessNode extends ParameterizedNode {
     return SubProcessNode.validate(this._spec);
   }
 
-  async run({ bag, input, external_input = null, actor_data, environment = {} }, lisp) {
+  async run({ bag, input, external_input = null, actor_data, environment = {}, parameters = {} }, lisp) {
     try {
       if (!external_input) {
-        const execution_data = this._preProcessing({ bag, input, actor_data, environment });
+        const execution_data = this._preProcessing({ bag, input, actor_data, environment, parameters });
         const prepared_actor_data = prepare(this._spec.parameters.actor_data, {
           bag,
           result: input,
           actor_data,
           environment,
+          parameters,
         });
 
         return {
