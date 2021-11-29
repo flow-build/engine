@@ -129,7 +129,7 @@ describe("Process test", () => {
       expect(result.state.next_node_id).toEqual("99");
       expect(result.state.process_id).toEqual(process_id);
       expect(result.state.step_number).toEqual(2);
-      expect(result.state.node_id).toEqual("1");
+      expect(result.state.node_id).toEqual("minimal_1");
     });
 
     test("notify setted state", async () => {
@@ -163,7 +163,7 @@ describe("Process test", () => {
         expect(notified_process_state.next_node_id).toEqual("99");
         expect(notified_process_state.process_id).toEqual(process_id);
         expect(notified_process_state.step_number).toEqual(2);
-        expect(notified_process_state.node_id).toEqual("1");
+        expect(notified_process_state.node_id).toEqual("minimal_1");
         expect(notified_process_state.workflow_name).toEqual("sample");
       } finally {
         engine.setProcessStateNotifier();
