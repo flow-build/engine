@@ -101,7 +101,6 @@ describe("test validate_environment_variable", () => {
   });
 
   test("throw warning when not using an existing environment variable", () => {
-    // Set the variables
     process.env.API_HOST = "www.random_string.com";
     process.env.TOKEN = "random_string";
 
