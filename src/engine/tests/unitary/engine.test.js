@@ -4,7 +4,7 @@ const lisp = require("../../../core/lisp");
 const settings = require("../../../../settings/tests/settings");
 const { Engine } = require("../../engine");
 const { PersistorProvider } = require("../../../core/persist/provider");
-const { ProcessState, ProcessStatus } = require("../../../core/workflow/process_state");
+const { ProcessStatus } = require("../../../core/workflow/process_state");
 const { Process } = require("../../../core/workflow/process");
 const { Workflow } = require("../../../core/workflow/workflow");
 const { Packages } = require("../../../core/workflow/packages");
@@ -19,7 +19,7 @@ beforeEach(async () => {
 afterAll(async () => {
   Engine.kill();
   await _clean();
-  if (settings.persist_options[0] === "knex"){
+  if (settings.persist_options[0] === "knex") {
     await Process.getPersist()._db.destroy();
   }
 });
@@ -71,18 +71,18 @@ test("create and run process for restricted user tasks", async () => {
   expect(process.status).toBe(ProcessStatus.FORBIDDEN);
 });
 
-test("create and run process for restricted multilane system tasks", async() => {
+test("create and run process for restricted multilane system tasks", async () => {
   const engine = new Engine(...settings.persist_options);
   const workflow = await engine.saveWorkflow("sample", "sample", blueprints_.restricted_multilane_identity_user_task);
   let process = await createRunProcess(engine, workflow.id, actors_.sys_admin);
-  process = await engine.runProcess(process.id, actors_.sys_admin, {"data": 1});
+  process = await engine.runProcess(process.id, actors_.sys_admin, { data: 1 });
   expect(process.status).toBe(ProcessStatus.FINISHED);
 
   process = await createRunProcess(engine, workflow.id, actors_.admin);
   expect(process.status).toBe(ProcessStatus.WAITING);
   expect(process.state.node_id).toBe("4");
 
-  process = await engine.runProcess(process.id, actors_.admin, {"data": 1});
+  process = await engine.runProcess(process.id, actors_.admin, { data: 1 });
   expect(process.status).toBe(ProcessStatus.FORBIDDEN);
 
   process = await createRunProcess(engine, workflow.id, actors_.simpleton);
@@ -92,7 +92,9 @@ test("create and run process for restricted multilane system tasks", async() => 
 test("create and run process accordingly when node run throws error", async () => {
   const StartNode = require("../../../core/workflow/nodes").StartNode;
   const spy = jest.spyOn(StartNode.prototype, "_run");
-  spy.mockImplementation(() => { throw new Error("mock"); });
+  spy.mockImplementation(() => {
+    throw new Error("mock");
+  });
 
   const engine = new Engine(...settings.persist_options);
   const workflow = await engine.saveWorkflow("sample", "sample", blueprints_.minimal);
@@ -107,7 +109,7 @@ test("create and run process with prepare lisp function", async () => {
   const workflow = await engine.saveWorkflow("sample", "sample", blueprints_.lisp_prepare);
   const process = await createRunProcess(engine, workflow.id, actors_.simpleton);
   expect(process.status).toBe(ProcessStatus.FINISHED);
-  expect(process.state.bag).toStrictEqual({"new_bag": "Prepare New Bag"});
+  expect(process.state.bag).toStrictEqual({ new_bag: "Prepare New Bag" });
 });
 
 test("create and run process with requirements lisp functions", async () => {
@@ -115,7 +117,7 @@ test("create and run process with requirements lisp functions", async () => {
   const workflow = await engine.saveWorkflow("sample", "sample", blueprints_.lisp_requirements);
   const process = await createRunProcess(engine, workflow.id, actors_.simpleton);
   expect(process.status).toBe(ProcessStatus.FINISHED);
-  expect(process.state.bag).toStrictEqual({"new_bag": "New Bag 1"});
+  expect(process.state.bag).toStrictEqual({ new_bag: "New Bag 1" });
 });
 
 describe("create and run process with different lane rules", () => {
@@ -129,7 +131,7 @@ describe("create and run process with different lane rules", () => {
 
   test("works with simple JS lane rules", async () => {
     let minimalBlueprint = _.cloneDeep(blueprints_.minimal);
-    minimalBlueprint.lanes[0].rule = { $js: "() => { return true }"};
+    minimalBlueprint.lanes[0].rule = { $js: "() => { return true }" };
 
     const engine = new Engine(...settings.persist_options);
     const workflow = await engine.saveWorkflow("sample", "sample", minimalBlueprint);
@@ -140,32 +142,18 @@ describe("create and run process with different lane rules", () => {
 
   test("works when checking bag info into lisp lane rules", async () => {
     let minimalBlueprint = _.cloneDeep(blueprints_.minimal);
-    minimalBlueprint.lanes[0].rule = { lisp: [
+    minimalBlueprint.lanes[0].rule = {
+      lisp: [
         "fn",
         ["actor_data", "bag"],
         [
           "if",
-          [
-            "get",
-            "bag",
-            ["`", "isPrivate"]
-          ],
-          [
-            "=",
-            [
-              "get",
-              "bag",
-              ["`", "creatorId"]
-            ],
-            [
-              "get",
-              "actor_data",
-              ["`", "id"]
-            ]
-          ],
-          lisp.return_true()
-        ]
-      ]};
+          ["get", "bag", ["`", "isPrivate"]],
+          ["=", ["get", "bag", ["`", "creatorId"]], ["get", "actor_data", ["`", "id"]]],
+          lisp.return_true(),
+        ],
+      ],
+    };
 
     const engine = new Engine(...settings.persist_options);
     const workflow = await engine.saveWorkflow("sample", "sample", minimalBlueprint);
@@ -176,13 +164,13 @@ describe("create and run process with different lane rules", () => {
 
   test("works when checking present info in bag with JS lane rules", async () => {
     let minimalBlueprint = _.cloneDeep(blueprints_.minimal);
-    minimalBlueprint.lanes[0].rule = {"$js":"() => {if (bag.var === 'foo') { return true } else { return false }}"};
+    minimalBlueprint.lanes[0].rule = { $js: "() => {if (bag.var === 'foo') { return true } else { return false }}" };
 
     const engine = new Engine(...settings.persist_options);
     const workflow = await engine.saveWorkflow("sample", "sample", minimalBlueprint);
     const initial_bag = {
-      var: "foo"
-    }
+      var: "foo",
+    };
     let process = await engine.createProcess(workflow.id, actors_.simpleton, initial_bag);
     process = await engine.runProcess(process.id, actors_.simpleton);
     const process_state_history = await engine.fetchProcessStateHistory(process.id);
@@ -191,13 +179,13 @@ describe("create and run process with different lane rules", () => {
 
   test("fails when checking not present info in bag with JS lane rules", async () => {
     let minimalBlueprint = _.cloneDeep(blueprints_.minimal);
-    minimalBlueprint.lanes[0].rule = {"$js":"() => {if (bag.var === 'foo') { return true } else { return false }}"};
+    minimalBlueprint.lanes[0].rule = { $js: "() => {if (bag.var === 'foo') { return true } else { return false }}" };
 
     const engine = new Engine(...settings.persist_options);
     const workflow = await engine.saveWorkflow("sample", "sample", minimalBlueprint);
     const initial_bag = {
-      var: "not_foo"
-    }
+      var: "not_foo",
+    };
 
     let process = await engine.createProcess(workflow.id, actors_.simpleton, initial_bag);
     expect(process.status).toBe(ProcessStatus.FORBIDDEN);
@@ -228,10 +216,10 @@ test("runProcess works with prepare and requirements lisp functions", async () =
   const workflow = await engine.saveWorkflow("sample", "sample", blueprints_.lisp_requirements_prepare);
   let process = await createRunProcess(engine, workflow.id, actors_.simpleton);
   expect(process.status).toBe(ProcessStatus.WAITING);
-  expect(process.state.bag).toStrictEqual({"new_bag": "New Bag"});
-  process = await engine.runProcess(process.id, actors_.simpleton, {external_input: "external_input"});
+  expect(process.state.bag).toStrictEqual({ new_bag: "New Bag" });
+  process = await engine.runProcess(process.id, actors_.simpleton, { external_input: "external_input" });
   expect(process.status).toBe(ProcessStatus.FINISHED);
-  expect(process.state.bag).toStrictEqual({"new_bag": "New Bag 2"});
+  expect(process.state.bag).toStrictEqual({ new_bag: "New Bag 2" });
 });
 
 test("runProcess works for user tasks", async () => {
@@ -240,17 +228,17 @@ test("runProcess works for user tasks", async () => {
   let process = await createRunProcess(engine, workflow.id, actors_.simpleton);
   expect(process.status).toBe(ProcessStatus.WAITING);
 
-  process = await engine.runProcess(process.id, actors_.simpleton, {"data": 1});
+  process = await engine.runProcess(process.id, actors_.simpleton, { data: 1 });
   expect(process.status).toBe(ProcessStatus.FINISHED);
 });
 
-test("runProcess works for restricted multilane system tasks", async() => {
+test("runProcess works for restricted multilane system tasks", async () => {
   const engine = new Engine(...settings.persist_options);
   const workflow = await engine.saveWorkflow("sample", "sample", blueprints_.restricted_multilane_identity_user_task);
   let process = await createRunProcess(engine, workflow.id, actors_.admin);
   expect(process.status).toBe(ProcessStatus.WAITING);
 
-  process = await engine.runProcess(process.id, actors_.admin, {"data": 1});
+  process = await engine.runProcess(process.id, actors_.admin, { data: 1 });
   expect(process.status).toBe(ProcessStatus.FORBIDDEN);
 
   process = await createRunProcess(engine, workflow.id, actors_.simpleton);
@@ -259,27 +247,27 @@ test("runProcess works for restricted multilane system tasks", async() => {
   process = await createRunProcess(engine, workflow.id, actors_.admin);
   expect(process.status).toBe(ProcessStatus.WAITING);
 
-  process = await engine.runProcess(process.id, actors_.simpleton, {"data": 1});
+  process = await engine.runProcess(process.id, actors_.simpleton, { data: 1 });
   expect(process.status).toBe(ProcessStatus.FORBIDDEN);
 
   process = await createRunProcess(engine, workflow.id, actors_.admin);
   expect(process.status).toBe(ProcessStatus.WAITING);
 
-  process = await engine.runProcess(process.id, actors_.sys_admin, {"data": 1});
+  process = await engine.runProcess(process.id, actors_.sys_admin, { data: 1 });
   expect(process.status).toBe(ProcessStatus.FINISHED);
 });
 
-test("runProcess that uses actor_data", async() => {
+test("runProcess that uses actor_data", async () => {
   const engine = new Engine(...settings.persist_options);
   const workflow = await engine.saveWorkflow("sample", "sample", blueprints_.use_actor_data);
   let process = await createRunProcess(engine, workflow.id, actors_.manager);
   expect(process.status).toEqual(ProcessStatus.WAITING);
 
-  process = await engine.runProcess(process.id, actors_.admin, {data: 22});
+  process = await engine.runProcess(process.id, actors_.admin, { data: 22 });
   expect(process.status).toEqual(ProcessStatus.FINISHED);
 
-  expect(process._state._bag).toStrictEqual({ runUser: actors_.manager, continueUser: actors_.admin});
-})
+  expect(process._state._bag).toStrictEqual({ runUser: actors_.manager, continueUser: actors_.admin });
+});
 
 describe("abortProcess", () => {
   test("abortProcess works", async () => {
@@ -292,10 +280,10 @@ describe("abortProcess", () => {
 
       const mock_process_state_notifier = jest.fn();
       engine.setProcessStateNotifier(mock_process_state_notifier);
-    
+
       process = await engine.abortProcess(process.id);
       expect(process.status).toBe(ProcessStatus.INTERRUPTED);
-  
+
       expect(mock_process_state_notifier).toHaveBeenCalledTimes(1);
       const notify_call_args = mock_process_state_notifier.mock.calls[0];
       expect(notify_call_args).toHaveLength(2);
@@ -309,7 +297,7 @@ describe("abortProcess", () => {
 
   test("abortProcess returns undefined if failed", async () => {
     const engine = new Engine(...settings.persist_options);
-  
+
     const process = await engine.abortProcess(uuid());
     expect(process).toBeUndefined();
   });
@@ -348,6 +336,7 @@ test("fetchPackage works", async () => {
   expect(package_).toBeInstanceOf(Packages);
   const fetched_package = await engine.fetchPackage(package_.id);
   expect(fetched_package).toBeInstanceOf(Packages);
+  expect(fetched_package.id).toBe(package_.id);
 });
 
 test("deletePackage works", async () => {
@@ -380,7 +369,7 @@ test("Validation of extra node works", async () => {
   const engine = new Engine(...settings.persist_options);
   engine.addCustomSystemCategory(extra_nodes);
   const custom_bluprint = _.cloneDeep(blueprints_.extra_nodes);
-  const exampleNode = custom_bluprint.nodes.find((node) => node.category === 'example');
+  const exampleNode = custom_bluprint.nodes.find((node) => node.category === "example");
   delete exampleNode.parameters.example;
   await expect(engine.saveWorkflow("sample", "sample", custom_bluprint)).rejects.toThrowError("parameters_has_example");
 });
@@ -393,7 +382,7 @@ test("Extra node works", async () => {
   expect(process.status).toBe(ProcessStatus.FINISHED);
 });
 
-describe('submitActivity', () => {
+describe("submitActivity", () => {
   test("submit process external_input with activities", async () => {
     const engine = new Engine(...settings.persist_options);
     const workflow = await engine.saveWorkflow("user_task", "user_task", blueprints_.identity_user_task);
@@ -404,7 +393,11 @@ describe('submitActivity', () => {
     expect(activity_manager.id).toBeDefined();
 
     const activity_data = { userInput: "example user input" };
-    const { processPromise, error } = await engine.submitActivity(activity_manager.id, actors_.simpleton, activity_data);
+    const { processPromise, error } = await engine.submitActivity(
+      activity_manager.id,
+      actors_.simpleton,
+      activity_data
+    );
     expect(error).toBeUndefined();
     expect(processPromise).toBeDefined();
 
@@ -465,7 +458,7 @@ describe('submitActivity', () => {
     expect(notify_activity_manager._type).toEqual("notify");
 
     const external_input = {
-      data: "exampleData"
+      data: "exampleData",
     };
 
     const submit_result = await engine.submitActivity(notify_activity_manager._id, actors_.simpleton, external_input);
@@ -495,7 +488,7 @@ describe('submitActivity', () => {
     expect(commit_activity_manager._type).toEqual("commit");
 
     const external_input = {
-      textParamTwo: "exampleData"
+      textParamTwo: "exampleData",
     };
 
     const submit_result = await engine.submitActivity(commit_activity_manager._id, actors_.simpleton, external_input);
@@ -511,8 +504,8 @@ describe('submitActivity', () => {
 
   test("submit do not continue if process on another step", async () => {
     const engine = new Engine(...settings.persist_options);
-    await engine.saveWorkflow("user_user", "user_user", blueprints_.user_task_user_task);;
-    
+    await engine.saveWorkflow("user_user", "user_user", blueprints_.user_task_user_task);
+
     const activity_managers = [];
     engine.setActivityManagerNotifier((activityManager) => activity_managers.push(activityManager));
 
@@ -550,7 +543,11 @@ describe('submitActivity', () => {
     let activity_manager = await engine.fetchAvailableActivityForProcess(process.id, actors_.simpleton);
     expect(activity_manager.id).toBeDefined();
 
-    const { error } = await engine.submitActivity(activity_manager.id, actors_.simpleton, "Wrong external_input parameter");
+    const { error } = await engine.submitActivity(
+      activity_manager.id,
+      actors_.simpleton,
+      "Wrong external_input parameter"
+    );
     expect(error).toBeDefined();
     expect(error.errorType).toEqual("commitActivity");
     expect(error.message).toContain("invalid input syntax for type json");
@@ -593,8 +590,8 @@ describe('submitActivity', () => {
 });
 
 function sleep(ms) {
-  return new Promise(resolve => setTimeout(resolve, ms));
-};
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
 
 const _clean = async () => {
   const persistor = PersistorProvider.getPersistor(...settings.persist_options);
@@ -603,7 +600,7 @@ const _clean = async () => {
   const process_persist = persistor.getPersistInstance("Process");
   const workflow_persist = persistor.getPersistInstance("Workflow");
   const timer_persist = persistor.getPersistInstance("Timer");
-  
+
   await activity_persist.deleteAll();
   await sleep(15);
   await activity_manager_persist.deleteAll();
@@ -613,9 +610,7 @@ const _clean = async () => {
   await workflow_persist.deleteAll();
   await sleep(15);
   await timer_persist.deleteAll();
-  if (settings.persist_options[0] === "knex"){
-    await Process.getPersist()._db.delete()
-                              .from("packages")
-                              .where("name", "sample");
-  };
+  if (settings.persist_options[0] === "knex") {
+    await Process.getPersist()._db.delete().from("packages").where("name", "sample");
+  }
 };

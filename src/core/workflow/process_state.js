@@ -4,7 +4,6 @@ const { v1: uuid } = require("uuid");
 const ENGINE_ID = process.env.engine_id || uuid();
 
 class ProcessStatus {
-
   static get UNSTARTED() {
     return "unstarted";
   }
@@ -38,7 +37,6 @@ class ProcessStatus {
 }
 
 class ProcessState extends BaseEntity {
-
   static serialize(state) {
     return {
       id: state._id,
@@ -54,7 +52,7 @@ class ProcessState extends BaseEntity {
       status: state._status,
       actor_data: state._actor_data,
       engine_id: state._engine_id,
-      time_elapsed: state._time_elapsed
+      time_elapsed: state._time_elapsed,
     };
   }
 
@@ -81,8 +79,19 @@ class ProcessState extends BaseEntity {
     return undefined;
   }
 
-  constructor(process_id, step_number, node_id, bag, external_input,
-              result, error, status, next_node_id, actor_data, time_elapsed) {
+  constructor(
+    process_id,
+    step_number,
+    node_id,
+    bag,
+    external_input,
+    result,
+    error,
+    status,
+    next_node_id,
+    actor_data,
+    time_elapsed
+  ) {
     super();
 
     this._process_id = process_id;
@@ -99,15 +108,15 @@ class ProcessState extends BaseEntity {
     this._time_elapsed = time_elapsed;
   }
 
-  get time_elapsed(){
-    return this._time_elapsed
+  get time_elapsed() {
+    return this._time_elapsed;
   }
 
-  set time_elapsed(t){
+  set time_elapsed(t) {
     this._time_elapsed = t;
   }
 
-  get engine_id(){
+  get engine_id() {
     return this._engine_id;
   }
 
@@ -155,5 +164,5 @@ class ProcessState extends BaseEntity {
 module.exports = {
   ProcessStatus: ProcessStatus,
   ProcessState: ProcessState,
-  ENGINE_ID: ENGINE_ID
+  ENGINE_ID: ENGINE_ID,
 };
