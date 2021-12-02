@@ -23,7 +23,8 @@ jobs:
         run: npm ci
       - name: Get version from package.json before release step
         id: initversion
-        run: echo "::set-output name=version::$(npm run get-version --silent)"
+#        run: echo "::set-output name=version::$(npm run get-version --silent)"
+        run: echo "2.4.3"
       - name: Release to NPM and GitHub
         id: release
         env:
