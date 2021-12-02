@@ -33,6 +33,7 @@ jobs:
           GIT_AUTHOR_EMAIL: bot.flowbuild@gmail.com
           GIT_COMMITTER_NAME: bot-flowbuilld
           GIT_COMMITTER_EMAIL: bot.flowbuild@gmail.com
+          ACTIONS_ALLOW_UNSECURE_COMMANDS: true
         run: npm run release
       - name: Get version from package.json after release step
         id: extractver
