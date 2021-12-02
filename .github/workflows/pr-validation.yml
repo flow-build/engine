@@ -28,7 +28,7 @@ jobs:
       - name: start database
         run: docker-compose up -d postgres
 
-      - name: start database
+      - name: start app
         run: docker-compose up app
 
       - name: Upload coverage to Codecov
