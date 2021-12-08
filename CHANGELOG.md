@@ -1,3 +1,10 @@
+## [2.1.0](https://github.com/flow-build/engine/compare/v2.0.6...v2.1.0) (2021-12-08)
+
+
+### Features
+
+* **package:** fix on release version ([1038afb](https://github.com/flow-build/engine/commit/1038afb30313bf942e3ed251d5e11b1b9c629b35))
+
 ### [2.0.6](https://github.com/flow-build/engine/compare/v2.0.5...v2.0.6) (2021-12-08)
 
 
