@@ -38,8 +38,14 @@ class Workflow extends PersistedEntity {
     return undefined;
   }
 
-  static async fetchWorkflowByName(workflow_name) {
-    const workflow = await this.getPersist().getByName(workflow_name);
+  static async fetchWorkflowByName(workflow_name, version) {
+    let workflow;
+    if (!version || version === "latest") {
+      workflow = await this.getPersist().getByName(workflow_name);
+    } else {
+      workflow = await this.getPersist().getByNameAndVersion(workflow_name, version);
+    }
+
     return Workflow.deserialize(workflow);
   }
 
