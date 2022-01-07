@@ -95,6 +95,17 @@ class WorkflowKnexPersist extends KnexPersist {
     return await this._db.select("*").from(this._table).where("name", "=", obj_name).orderBy("version", "desc").first();
   }
 
+  async getByNameAndVersion(name, version) {
+    return await this._db
+      .select("*")
+      .from(this._table)
+      .where({
+        name,
+        version,
+      })
+      .first();
+  }
+
   async getByHash(hash) {
     return await this._db.select("*").from(this._table).where("blueprint_hash", "=", hash);
   }
