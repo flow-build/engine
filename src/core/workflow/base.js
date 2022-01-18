@@ -2,11 +2,12 @@ const { v1: uuid } = require("uuid");
 const { PersistorSingleton } = require("../persist/persist");
 
 class BaseEntity {
-
+  // eslint-disable-next-line no-unused-vars
   static serialize(instance) {
     throw Error("Subclass and implement");
   }
 
+  // eslint-disable-next-line no-unused-vars
   static deserialize(serialized) {
     throw Error("Subclass and implement");
   }
@@ -16,7 +17,7 @@ class BaseEntity {
     this._created_at = new Date();
   }
 
-  get id () {
+  get id() {
     return this._id;
   }
 
@@ -30,14 +31,12 @@ class BaseEntity {
 }
 
 class PersistedEntity extends BaseEntity {
-
   static getEntityClass() {
     throw Error("Subclass and implement");
-  };
+  }
 
   static getPersist() {
-    return new PersistorSingleton()
-      .getPersistInstance(this.getEntityClass().name);
+    return new PersistorSingleton().getPersistInstance(this.getEntityClass().name);
   }
 
   static async fetch(...args) {
@@ -74,5 +73,5 @@ class PersistedEntity extends BaseEntity {
 
 module.exports = {
   BaseEntity: BaseEntity,
-  PersistedEntity: PersistedEntity
+  PersistedEntity: PersistedEntity,
 };

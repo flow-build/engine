@@ -2,7 +2,6 @@ const { PersistedEntity } = require("./base");
 const lisp = require("../lisp");
 
 class Packages extends PersistedEntity {
-
   static getEntityClass() {
     return Packages;
   }
@@ -13,17 +12,14 @@ class Packages extends PersistedEntity {
       created_at: required_package._created_at,
       name: required_package._name,
       description: required_package._description,
-      code: JSON.stringify(required_package._code)
-    }
+      code: JSON.stringify(required_package._code),
+    };
   }
 
   static deserialize(serialized) {
     if (serialized) {
-      const required_package = new Packages(
-        serialized.name,
-        serialized.description,
-        JSON.parse(serialized.code)
-      );
+      const required_package = new Packages(serialized.name, serialized.description, JSON.parse(serialized.code));
+      required_package._id = serialized.id;
       return required_package;
     }
     return undefined;
@@ -42,12 +38,12 @@ class Packages extends PersistedEntity {
       for (let requirement of requirements) {
         const required_package = await Packages.fetchPackageByName(requirement);
         required_codes.push(required_package._code);
-      };
-    };
+      }
+    }
 
     if (prepare.length > 0) {
       required_codes.push(prepare);
-    };
+    }
 
     if (required_codes.length > 0) {
       custom_lisp = Packages._evaluateLisp(required_codes);
@@ -90,5 +86,5 @@ class Packages extends PersistedEntity {
 }
 
 module.exports = {
-  Packages: Packages
+  Packages: Packages,
 };

@@ -1,4 +1,3 @@
-const { v1: uuid } = require("uuid");
 const settings = require("../../../../settings/tests/settings");
 const { Engine } = require("../../engine");
 const { PersistorProvider } = require("../../../core/persist/provider");
@@ -696,7 +695,7 @@ describe("User task timeout", () => {
 
 test("Commit activity only on type 'commit' activity manager", async () => {
   const engine = new Engine(...settings.persist_options);
-  const workflow = await engine.saveWorkflow("sample", "sample", blueprints_.notify_and_user_task);
+  await engine.saveWorkflow("sample", "sample", blueprints_.notify_and_user_task);
 
   let process = await engine.createProcessByWorkflowName("sample", actors_.simpleton);
 
