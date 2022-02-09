@@ -39,10 +39,6 @@ class KnexPersist {
     return await this._db.select("*").from(this._table).where("id", obj_id).first();
   }
 
-  async getAll() {
-    return await this._db.select("*").from(this._table).orderBy("created_at", "desc");
-  }
-
   async _create(obj, trx = false) {
     if (trx) {
       await this._db(this._table).transacting(trx).insert(obj);
@@ -330,14 +326,6 @@ class ActivityManagerKnexPersist extends KnexPersist {
     this._activity_table = "activity";
   }
 
-  async getActiveActivityManagers() {
-    return await this._db(this._table).where("status", "started");
-  }
-
-  async getCompletedActivityManagers() {
-    return await this._db(this._table).where("status", "completed");
-  }
-
   async getActivityDataFromStatus(status, filters) {
     return await this._db
       .select(
@@ -422,14 +410,6 @@ class ActivityManagerKnexPersist extends KnexPersist {
       .rightJoin("workflow AS wf", "p.workflow_id", "wf.id")
       .where("am.id", "=", obj_id)
       .first();
-  }
-
-  async getProcessId(process_state_id) {
-    return await this._db.select("process_id").from("process_state").where("id", "=", process_state_id).first();
-  }
-
-  async getActivityManagerByProcessStateId(process_state_id) {
-    return await this._db.select("*").from("activity_manager").where("process_state_id", "=", process_state_id);
   }
 
   async getActivities(activity_manager_id) {
