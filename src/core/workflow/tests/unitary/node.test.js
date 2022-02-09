@@ -1,9 +1,7 @@
 const _ = require("lodash");
 const { v1: uuid } = require("uuid");
 const lisp = require("../../../lisp");
-const obju = require("../../../utils/object");
 const nodes = require("../../../workflow/nodes");
-const activity_managers = require("../../../workflow/activity_manager");
 const settings = require("../../../../../settings/tests/settings");
 const { Packages } = require("../../../workflow/packages");
 const { PersistorProvider } = require("../../../persist/provider");
@@ -27,7 +25,6 @@ afterAll(async () => {
 });
 
 describe("Constraints test", () => {
-
   describe("Base node validators", () => {
     const spec_base_node_constraint = [
       { node_spec: nodes_.node, node: nodes.Node },
@@ -115,9 +112,9 @@ describe("Constraints test", () => {
         const [is_valid, error] = node.validate(spec);
         expect(is_valid).toEqual(false);
         expect(error).toBe("lane_id_has_valid_type");
-      })
+      });
     }
-  })
+  });
 
   describe("Parameter with input constraints", () => {
     const specs_with_parameter_input = [
@@ -178,7 +175,7 @@ describe("Constraints test", () => {
 
     test("has_parameters constraint works", () => {
       const node_spec = _.cloneDeep(nodes_.start);
-      delete node_spec.parameters
+      delete node_spec.parameters;
       const [is_valid, error] = nodes.StartNode.validate(node_spec);
       expect(is_valid).toEqual(false);
       expect(error).toEqual("has_parameters");
@@ -208,7 +205,6 @@ describe("Constraints test", () => {
       expect(error).toEqual("input_schema_has_valid_type");
     });
   });
-
 
   test("FinishNode next_is_null constraint works", () => {
     const spec = _.cloneDeep(nodes_.finish);
@@ -247,14 +243,14 @@ describe("Constraints test", () => {
       test("valid with undefined", () => {
         const spec = _.cloneDeep(nodes_.user_task);
         spec.parameters.timeout = undefined;
-        const [is_valid, error] = nodes.UserTaskNode.validate(spec);
+        const [is_valid] = nodes.UserTaskNode.validate(spec);
         expect(is_valid).toEqual(true);
       });
 
       test("valid with number", () => {
         const spec = _.cloneDeep(nodes_.user_task);
         spec.parameters.timeout = 10;
-        const [is_valid, error] = nodes.UserTaskNode.validate(spec);
+        const [is_valid] = nodes.UserTaskNode.validate(spec);
         expect(is_valid).toEqual(true);
       });
     });
@@ -263,7 +259,7 @@ describe("Constraints test", () => {
       test("fails with string", () => {
         const spec = _.cloneDeep(nodes_.user_task);
         spec.parameters.channels = "1";
-        
+
         const [is_valid, error] = nodes.UserTaskNode.validate(spec);
 
         expect(is_valid).toEqual(false);
@@ -273,7 +269,7 @@ describe("Constraints test", () => {
       test("fails with null", () => {
         const spec = _.cloneDeep(nodes_.user_task);
         spec.parameters.channels = null;
-        
+
         const [is_valid, error] = nodes.UserTaskNode.validate(spec);
 
         expect(is_valid).toEqual(false);
@@ -283,8 +279,8 @@ describe("Constraints test", () => {
       test("valid with undefined", () => {
         const spec = _.cloneDeep(nodes_.user_task);
         spec.parameters.channels = undefined;
-        
-        const [is_valid, error] = nodes.UserTaskNode.validate(spec);
+
+        const [is_valid] = nodes.UserTaskNode.validate(spec);
 
         expect(is_valid).toEqual(true);
       });
@@ -292,8 +288,8 @@ describe("Constraints test", () => {
       test("valid with array", () => {
         const spec = _.cloneDeep(nodes_.user_task);
         spec.parameters.channels = [];
-        
-        const [is_valid, error] = nodes.UserTaskNode.validate(spec);
+
+        const [is_valid] = nodes.UserTaskNode.validate(spec);
 
         expect(is_valid).toEqual(true);
       });
@@ -303,7 +299,7 @@ describe("Constraints test", () => {
       test("fails with string", () => {
         const spec = _.cloneDeep(nodes_.user_task);
         spec.parameters.encrypted_data = "1";
-        
+
         const [is_valid, error] = nodes.UserTaskNode.validate(spec);
 
         expect(is_valid).toEqual(false);
@@ -313,7 +309,7 @@ describe("Constraints test", () => {
       test("fails with null", () => {
         const spec = _.cloneDeep(nodes_.user_task);
         spec.parameters.encrypted_data = null;
-        
+
         const [is_valid, error] = nodes.UserTaskNode.validate(spec);
 
         expect(is_valid).toEqual(false);
@@ -323,8 +319,8 @@ describe("Constraints test", () => {
       test("valid with undefined", () => {
         const spec = _.cloneDeep(nodes_.user_task);
         spec.parameters.encrypted_data = undefined;
-        
-        const [is_valid, error] = nodes.UserTaskNode.validate(spec);
+
+        const [is_valid] = nodes.UserTaskNode.validate(spec);
 
         expect(is_valid).toEqual(true);
       });
@@ -332,8 +328,8 @@ describe("Constraints test", () => {
       test("valid with array", () => {
         const spec = _.cloneDeep(nodes_.user_task);
         spec.parameters.encrypted_data = [];
-        
-        const [is_valid, error] = nodes.UserTaskNode.validate(spec);
+
+        const [is_valid] = nodes.UserTaskNode.validate(spec);
 
         expect(is_valid).toEqual(true);
       });
@@ -473,7 +469,7 @@ describe("Constraints test", () => {
       delete spec.parameters.timeout;
       const [is_valid, error] = nodes.TimerSystemTaskNode.validate(spec);
       expect(is_valid).toEqual(false);
-      expect(error).toEqual("parameters_has_timeout")
+      expect(error).toEqual("parameters_has_timeout");
     });
 
     test("Constraint parameters_timeout_has_valid_type works", () => {
@@ -481,7 +477,7 @@ describe("Constraints test", () => {
       spec.parameters.timeout = "22";
       const [is_valid, error] = nodes.TimerSystemTaskNode.validate(spec);
       expect(is_valid).toEqual(false);
-      expect(error).toEqual("parameters_timeout_has_valid_type")
+      expect(error).toEqual("parameters_timeout_has_valid_type");
     });
   });
 
@@ -506,9 +502,9 @@ describe("Constraints test", () => {
         const node = new node_class(nodes_[node_spec_name]);
         const [is_valid] = node.validate();
         expect(is_valid).toEqual(true);
-      })
+      });
     }
-  })
+  });
 });
 
 describe("Nodes execution works", () => {
@@ -518,9 +514,7 @@ describe("Nodes execution works", () => {
     const bag = { data: "bag" };
     const input = { data: "result" };
     const external_input = { data: "external" };
-    expect(await node.run({ bag, input, external_input })).toMatchObject(
-      results_.success_start_result
-    );
+    expect(await node.run({ bag, input, external_input })).toMatchObject(results_.success_start_result);
   });
 
   test("Finish works", async () => {
@@ -529,8 +523,8 @@ describe("Nodes execution works", () => {
     const bag = { data: "bag" };
     const input = { data: "result" };
     const external_input = { data: "external" };
-    expect(await node.run({ bag, input, external_input })).toMatchObject(
-      results_.success_finish_result);
+    const parameters = { data: "params" };
+    expect(await node.run({ bag, input, external_input, parameters })).toMatchObject(results_.success_finish_result);
   });
 
   test("Flow works", async () => {
@@ -542,10 +536,27 @@ describe("Nodes execution works", () => {
     let result = await node.run({ bag, input, external_input });
     expect(result.next_node_id).toBe("3");
     expect(result.result).toEqual(input);
-    
+
     input = { next_node: "2", extra_data: "secondData" };
     result = await node.run({ bag, input, external_input });
     expect(result.next_node_id).toBe("4");
+    expect(result.result).toEqual(input);
+  });
+
+  test("Flow $ref recognizes parameters", async () => {
+    const node = new nodes.FlowNode(nodes_.flow_parameters);
+
+    const bag = { data: "bag" };
+    const external_input = { data: "external" };
+    let parameters = { next_node: "data" };
+    const input = { next_node: "1", extra_data: "data" };
+    let result = await node.run({ bag, input, external_input, parameters });
+    expect(result.next_node_id).toBe("3");
+    expect(result.result).toEqual(input);
+
+    parameters = { next_node: "whatever" };
+    result = await node.run({ bag, input, external_input, parameters });
+    expect(result.next_node_id).toBe("5");
     expect(result.result).toEqual(input);
   });
 
@@ -555,8 +566,7 @@ describe("Nodes execution works", () => {
     const bag = { identity_system_data: "bag" };
     const input = { identity_system_data: "result" };
     const external_input = { data: "external" };
-    expect(await node.run({ bag, input, external_input })).toMatchObject(
-      results_.success_system_task_result);
+    expect(await node.run({ bag, input, external_input })).toMatchObject(results_.success_system_task_result);
   });
 });
 
@@ -573,23 +583,22 @@ describe("Pre and Post Processing tests", () => {
 
   test("Execution Data should be fetched correctly with multiple namespaces", async () => {
     const node_spec = _.cloneDeep(nodes_.system_task);
-    node_spec.parameters.input.extra_key = { "$ref": "result" };
+    node_spec.parameters.input.extra_key = { $ref: "result" };
     const node = new nodes.SystemTaskNode(node_spec);
 
     const bag = { identity_system_data: { nested_key: "bag" }, test: { any: "any" } };
     const input = { identity_system_data_result: "result" };
     const external_input = { data: "external" };
     const result = await node.run({ bag, input, external_input });
-    expect(result.result)
-      .toStrictEqual({ identity_system_data: { nested_key: "bag" }, extra_key: { ...input } });
+    expect(result.result).toStrictEqual({ identity_system_data: { nested_key: "bag" }, extra_key: { ...input } });
   });
 
-  test("Execution Data should be fetched correctly with multiple namespaces\
-  and conflicting keys", async () => {
+  test("Execution Data should be fetched correctly with multiple namespaces and conflicting keys", async () => {
     const node_spec = _.cloneDeep(nodes_.system_task);
     node_spec.parameters.input = {
-      identity_system_data: { "$ref": "bag.identity_system_data" },
-      identity_system_data: { "$ref": "result.identity_system_data" }
+      identity_system_data: { $ref: "bag.identity_system_data" },
+      // eslint-disable-next-line no-dupe-keys
+      identity_system_data: { $ref: "result.identity_system_data" },
     };
     const node = new nodes.SystemTaskNode(node_spec);
 
@@ -600,8 +609,9 @@ describe("Pre and Post Processing tests", () => {
     expect(result.result).toStrictEqual({ ...input });
 
     node_spec.parameters.input = {
-      identity_system_data: { "$ref": "result.identity_system_data" },
-      identity_system_data: { "$ref": "bag.identity_system_data" }
+      identity_system_data: { $ref: "result.identity_system_data" },
+      // eslint-disable-next-line no-dupe-keys
+      identity_system_data: { $ref: "bag.identity_system_data" },
     };
     result = await node.run({ bag, input, external_input });
     expect(result.result).toStrictEqual({ ...bag });
@@ -621,7 +631,7 @@ describe("Pre and Post Processing tests", () => {
 
   test("Execution Data should be fetched correctly with multiple keys", async () => {
     const node_spec = _.cloneDeep(nodes_.system_task);
-    node_spec.parameters.input.test = { "$ref": "bag.test" };
+    node_spec.parameters.input.test = { $ref: "bag.test" };
     const node = new nodes.SystemTaskNode(node_spec);
 
     const bag = { identity_system_data: { nested_key: "bag" }, test: { any: "any" }, ignored: "string" };
@@ -634,7 +644,7 @@ describe("Pre and Post Processing tests", () => {
 
   test("Execution Data should be fetched correctly with a nested key", async () => {
     const node_spec = _.cloneDeep(nodes_.system_task);
-    node_spec.parameters.input = { destiny_key: { "$ref": "bag.identity_system_data.nested_key" } };
+    node_spec.parameters.input = { destiny_key: { $ref: "bag.identity_system_data.nested_key" } };
     const node = new nodes.SystemTaskNode(node_spec);
 
     const bag = { identity_system_data: { nested_key: "bag" }, test: { any: "any" } };
@@ -646,7 +656,7 @@ describe("Pre and Post Processing tests", () => {
 
   test("Execution Data should be fetched correctly with no path specified", async () => {
     const node_spec = _.cloneDeep(nodes_.system_task);
-    node_spec.parameters.input = { destiny_key: { "$ref": "bag" } };
+    node_spec.parameters.input = { destiny_key: { $ref: "bag" } };
     const node = new nodes.SystemTaskNode(node_spec);
 
     const bag = { identity_system_data: { nested_key: "bag" }, test: { any: "any" } };
@@ -678,8 +688,7 @@ describe("UserTaskNode", () => {
     const external_input = null;
     const actor_data = {};
     const result = await node.run({ bag, input, external_input, actor_data });
-    expect(result).toEqual(
-      expect.objectContaining(results_.success_waiting_user_task_result));
+    expect(result).toEqual(expect.objectContaining(results_.success_waiting_user_task_result));
   });
 
   test("UserTaskNode works", async () => {
@@ -691,12 +700,10 @@ describe("UserTaskNode", () => {
     const actor_data = {};
     await node.run({ bag, input, external_input, actor_data });
     const result = await node.run({ bag, input, external_input, actor_data });
-    expect(result).toMatchObject(
-      results_.success_user_task_result);
+    expect(result).toMatchObject(results_.success_user_task_result);
   });
 
   describe("UserTaskNode encrypted_data works", () => {
-
     function getNode(encrypted_data) {
       const node_spec = _.cloneDeep(nodes_.user_task);
       node_spec.parameters.encrypted_data = encrypted_data;
@@ -796,13 +803,13 @@ describe("UserTaskNode", () => {
 
         const bag = { bagData: "example bag data" };
         const input = { inputData: "example input data" };
-        const external_input = { user: { name: "username" }};
+        const external_input = { user: { name: "username" } };
         const actor_data = {};
         const result = await user_task_node.run({ bag, input, external_input, actor_data });
         expect(result).toBeDefined();
         expect(result.result).toStrictEqual(external_input);
-        expect(result.result.value).toBeUndefined()
-        expect(result.result.user.passwrod).toBeUndefined()
+        expect(result.result.value).toBeUndefined();
+        expect(result.result.user.passwrod).toBeUndefined();
 
         expect(mock_getCrypt).toHaveBeenNthCalledWith(1);
       } finally {
@@ -864,7 +871,7 @@ describe("UserTaskNode", () => {
     const bag = { identity_user_data: "bag" };
     const input = { data: "result" };
     const external_input = null;
-    const actor_data = { id: 22 }
+    const actor_data = { id: 22 };
     const result = await node.run({ bag, input, external_input, actor_data });
 
     const expected_result = _.cloneDeep(results_.success_waiting_user_task_result);
@@ -881,18 +888,38 @@ describe("UserTaskNode", () => {
 
     const bag = { identity_user_data: "bag" };
     const input = { data: "result" };
-    const actor_data = { id: 22 }
+    const actor_data = { id: 22 };
     const environment = {
-      node_env: "test"
+      node_env: "test",
     };
 
-    const result = await node.run({ bag, input, actor_data, environment});
+    const result = await node.run({ bag, input, actor_data, environment });
 
     const expected_result = _.cloneDeep(results_.success_waiting_user_task_result);
     expected_result.result.identity_user_data = "user of test";
 
     expect(result).toMatchObject(expected_result);
-  })
+  });
+
+  test("Can reference parameters on input", async () => {
+    const node_spec = _.cloneDeep(nodes_.user_task);
+    node_spec.parameters.input.identity_user_data = { $mustache: "user of {{parameters.data}}" };
+
+    const node = new nodes.UserTaskNode(node_spec);
+
+    const bag = { identity_user_data: "bag" };
+    const input = { data: "result" };
+    const actor_data = { id: 22 };
+    const environment = {};
+    const parameters = { data: "params" };
+
+    const result = await node.run({ bag, input, actor_data, environment, parameters });
+
+    const expected_result = _.cloneDeep(results_.success_waiting_user_task_result);
+    expected_result.result.identity_user_data = "user of params";
+
+    expect(result).toMatchObject(expected_result);
+  });
 });
 
 describe("ScriptTaskNode", () => {
@@ -905,8 +932,7 @@ describe("ScriptTaskNode", () => {
     const bag = { lisp_system_data: "bag" };
     const input = { data: "result" };
     const external_input = { data: "external" };
-    expect(await node.run({ bag, input, external_input }, lisp)).toMatchObject(
-      results_.success_script_task_result);
+    expect(await node.run({ bag, input, external_input }, lisp)).toMatchObject(results_.success_script_task_result);
   });
 
   test("Can reference actor_data", async () => {
@@ -953,11 +979,10 @@ describe("HttpSystemTaskNode", () => {
     node_spec.parameters.request.verb = "GET";
     const node = new nodes.HttpSystemTaskNode(node_spec);
 
-    const bag = { payload: { dummy: 'payload' } };
+    const bag = { payload: { dummy: "payload" } };
     const input = {};
     const external_input = {};
-    expect(await node.run({ bag, input, external_input })).toMatchObject(
-      results_.success_get_http_result);
+    expect(await node.run({ bag, input, external_input })).toMatchObject(results_.success_get_http_result);
   });
 
   test("HttpSystemTaskNode works with POST", async () => {
@@ -965,11 +990,10 @@ describe("HttpSystemTaskNode", () => {
     node_spec.parameters.request.verb = "POST";
     const node = new nodes.HttpSystemTaskNode(node_spec);
 
-    const bag = { payload: { dummy: 'payload' } };
+    const bag = { payload: { dummy: "payload" } };
     const input = {};
     const external_input = {};
-    expect(await node.run({ bag, input, external_input })).toMatchObject(
-      results_.success_post_http_result);
+    expect(await node.run({ bag, input, external_input })).toMatchObject(results_.success_post_http_result);
   });
 
   test("HttpSystemTaskNode works with DELETE", async () => {
@@ -977,39 +1001,37 @@ describe("HttpSystemTaskNode", () => {
     node_spec.parameters.request.verb = "DELETE";
     const node = new nodes.HttpSystemTaskNode(node_spec);
 
-    const bag = { payload: { dummy: 'payload' } };
+    const bag = { payload: { dummy: "payload" } };
     const input = {};
     const external_input = {};
-    expect(await node.run({ bag, input, external_input })).toMatchObject(
-      results_.success_delete_http_result);
+    expect(await node.run({ bag, input, external_input })).toMatchObject(results_.success_delete_http_result);
   });
 
   test("HttpSystemTaskNode works with $mustache", async () => {
     const node_spec = nodes_.http_system_task;
-    node_spec.parameters.request.verb = {$mustache: "DELETE"};
+    node_spec.parameters.request.verb = { $mustache: "DELETE" };
     const node = new nodes.HttpSystemTaskNode(node_spec);
     expect(node.validate()[0]).toBeTruthy();
     expect(node.id).toBe(node_spec.id);
 
-    const bag = {payload: {dummy: 'payload'}};
+    const bag = { payload: { dummy: "payload" } };
     const input = {};
     const external_input = {};
-    expect(await node.run({bag, input, external_input})).toMatchObject(
-      results_.success_delete_http_result);
+    expect(await node.run({ bag, input, external_input })).toMatchObject(results_.success_delete_http_result);
   });
 
   test("HttpSystemTaskNode works with $ref bag", async () => {
     const node_spec = nodes_.http_system_task;
-    node_spec.parameters.request.verb = {$ref: "bag.verb"};
+    node_spec.parameters.request.verb = { $ref: "bag.verb" };
     const node = new nodes.HttpSystemTaskNode(node_spec);
     expect(node.validate()[0]).toBeTruthy();
     expect(node.id).toBe(node_spec.id);
 
-    const bag = {payload: {dummy: 'payload'}, verb: "DELETE"};
+    const bag = { payload: { dummy: "payload" }, verb: "DELETE" };
     const input = {};
     const external_input = {};
 
-    const result = await node.run({bag, input, external_input});
+    const result = await node.run({ bag, input, external_input });
 
     const expected_result = _.cloneDeep(results_.success_delete_http_result);
     expected_result.bag = bag;
@@ -1018,17 +1040,18 @@ describe("HttpSystemTaskNode", () => {
 
   test("HttpSystemTaskNode works with $ref actor_data", async () => {
     const node_spec = nodes_.http_system_task;
-    node_spec.parameters.request.verb = {$ref: "actor_data.verb"};
+    node_spec.parameters.request.verb = { $ref: "actor_data.verb" };
     const node = new nodes.HttpSystemTaskNode(node_spec);
     expect(node.validate()[0]).toBeTruthy();
     expect(node.id).toBe(node_spec.id);
 
-    const bag = {payload: {dummy: 'payload'}};
+    const bag = { payload: { dummy: "payload" } };
     const input = {};
     const external_input = {};
-    const actor_data = {verb: "DELETE"}
-    expect(await node.run({bag, input, external_input, actor_data})).toMatchObject(
-      results_.success_delete_http_result);
+    const actor_data = { verb: "DELETE" };
+    expect(await node.run({ bag, input, external_input, actor_data })).toMatchObject(
+      results_.success_delete_http_result
+    );
   });
 
   test("Can reference actor_data", async () => {
@@ -1048,7 +1071,7 @@ describe("HttpSystemTaskNode", () => {
 
       const bag = { bagData: "exampleBagData" };
       const input = {};
-      const actor_data = { claims: ["user"] }
+      const actor_data = { claims: ["user"] };
       const response = await node.run({ bag, input, actor_data });
       expect(response.result).toBeDefined();
       expect(response.result.status).toEqual(200);
@@ -1072,8 +1095,8 @@ describe("HttpSystemTaskNode", () => {
 
       const node_spec = _.cloneDeep(nodes_.http_system_task);
       node_spec.parameters.request.verb = "POST";
-      node_spec.parameters.input.payload = { $mustache: "{{environment.threshold}}"}
-      node_spec.parameters.request.url = { $ref: "environment.api_url"};
+      node_spec.parameters.input.payload = { $mustache: "{{environment.threshold}}" };
+      node_spec.parameters.request.url = { $ref: "environment.api_url" };
       const node = new nodes.HttpSystemTaskNode(node_spec);
 
       const bag = { payload: "data" };
@@ -1084,7 +1107,7 @@ describe("HttpSystemTaskNode", () => {
       expect(response.result.status).toEqual(200);
       expect(response.result.data).toEqual({ response: "ok" });
       expect(calledEndpoint).toEqual("127.0.1.1");
-      expect(calledPayload).toEqual({ payload: "999"});
+      expect(calledPayload).toEqual({ payload: "999" });
     } finally {
       axios.__clearCustomResponse("post");
     }
@@ -1097,29 +1120,22 @@ describe("HttpSystemTaskNode", () => {
 
     const node = new nodes.HttpSystemTaskNode(node_spec);
 
-    const bag = { payload: { dummy: 'payload' } };
+    const bag = { payload: { dummy: "payload" } };
     const input = {};
     const external_input = {};
-    const node_result = await node.run({ bag, input, external_input});
+    const node_result = await node.run({ bag, input, external_input });
 
     expect(node_result.status).toEqual(ProcessStatus.ERROR);
     expect(node_result.result).toBeNull();
   });
 
-  describe('httpTimeout', () => {
-    const axios_methods = [
-      'post',
-      'get',
-      'delete',
-      'patch',
-      'put',
-      'head'
-    ];
+  describe("httpTimeout", () => {
+    const axios_methods = ["post", "get", "delete", "patch", "put", "head"];
 
     for (const axios_method of axios_methods) {
       test(`${axios_method.toUpperCase()} Timeout uses ENV HTTP_TIMEOUT`, async () => {
         try {
-          process.env.HTTP_TIMEOUT = '10000';
+          process.env.HTTP_TIMEOUT = "10000";
           let calledEndpoint;
           let axiosConfig;
           axios.__customResponse(axios_method, (endpoint, payload, config) => {
@@ -1134,7 +1150,7 @@ describe("HttpSystemTaskNode", () => {
 
           const bag = { bagData: "exampleBagData" };
           const input = {};
-          const actor_data = { claims: ["user"] }
+          const actor_data = { claims: ["user"] };
           const response = await node.run({ bag, input, actor_data });
           expect(response.result).toBeDefined();
           expect(response.result.status).toEqual(200);
@@ -1149,7 +1165,7 @@ describe("HttpSystemTaskNode", () => {
 
       test(`${axios_method.toUpperCase()} If ENV HTTP_TIMEOUT invalid uses 0`, async () => {
         try {
-          process.env.HTTP_TIMEOUT = 'abc';
+          process.env.HTTP_TIMEOUT = "abc";
           let calledEndpoint;
           let axiosConfig;
           axios.__customResponse(axios_method, (endpoint, payload, config) => {
@@ -1164,7 +1180,7 @@ describe("HttpSystemTaskNode", () => {
 
           const bag = { bagData: "exampleBagData" };
           const input = {};
-          const actor_data = { claims: ["user"] }
+          const actor_data = { claims: ["user"] };
           const response = await node.run({ bag, input, actor_data });
           expect(response.result).toBeDefined();
           expect(response.result.status).toEqual(200);
@@ -1194,7 +1210,7 @@ describe("HttpSystemTaskNode", () => {
 
           const bag = { bagData: "exampleBagData" };
           const input = {};
-          const actor_data = { claims: ["user"] }
+          const actor_data = { claims: ["user"] };
           const response = await node.run({ bag, input, actor_data });
           expect(response.result).toBeDefined();
           expect(response.result.status).toEqual(200);
@@ -1223,7 +1239,7 @@ describe("HttpSystemTaskNode", () => {
 
           const bag = { bagData: "exampleBagData" };
           const input = {};
-          const actor_data = { claims: ["user"] }
+          const actor_data = { claims: ["user"] };
           const response = await node.run({ bag, input, actor_data });
           expect(response.result).toBeDefined();
           expect(response.result.status).toEqual(200);
@@ -1252,7 +1268,7 @@ describe("HttpSystemTaskNode", () => {
 
           const bag = { bagData: "exampleBagData" };
           const input = {};
-          const actor_data = { claims: ["user"] }
+          const actor_data = { claims: ["user"] };
           const response = await node.run({ bag, input, actor_data });
           expect(response.result).toBeDefined();
           expect(response.result.status).toEqual(200);
@@ -1266,20 +1282,13 @@ describe("HttpSystemTaskNode", () => {
     }
   });
 
-  describe('maxContentLength', () => {
-    const axios_methods = [
-      'post',
-      'get',
-      'delete',
-      'patch',
-      'put',
-      'head'
-    ];
+  describe("maxContentLength", () => {
+    const axios_methods = ["post", "get", "delete", "patch", "put", "head"];
 
     for (const axios_method of axios_methods) {
       test(`${axios_method.toUpperCase()} maxContentLength uses ENV MAX_CONTENT_LENGTH`, async () => {
         try {
-          process.env.MAX_CONTENT_LENGTH = '10';
+          process.env.MAX_CONTENT_LENGTH = "10";
           let calledEndpoint;
           let axiosConfig;
           axios.__customResponse(axios_method, (endpoint, payload, config) => {
@@ -1294,7 +1303,7 @@ describe("HttpSystemTaskNode", () => {
 
           const bag = { bagData: "exampleBagData" };
           const input = {};
-          const actor_data = { claims: ["user"] }
+          const actor_data = { claims: ["user"] };
           const response = await node.run({ bag, input, actor_data });
           expect(response.result).toBeDefined();
           expect(response.result.status).toEqual(200);
@@ -1309,7 +1318,7 @@ describe("HttpSystemTaskNode", () => {
 
       test(`${axios_method.toUpperCase()} If ENV HTTP_TIMEOUT invalid uses default`, async () => {
         try {
-          process.env.MAX_CONTENT_LENGTH = 'abc';
+          process.env.MAX_CONTENT_LENGTH = "abc";
           let calledEndpoint;
           let axiosConfig;
           axios.__customResponse(axios_method, (endpoint, payload, config) => {
@@ -1324,7 +1333,7 @@ describe("HttpSystemTaskNode", () => {
 
           const bag = { bagData: "exampleBagData" };
           const input = {};
-          const actor_data = { claims: ["user"] }
+          const actor_data = { claims: ["user"] };
           const response = await node.run({ bag, input, actor_data });
           expect(response.result).toBeDefined();
           expect(response.result.status).toEqual(200);
@@ -1336,7 +1345,6 @@ describe("HttpSystemTaskNode", () => {
           delete process.env.MAX_CONTENT_LENGTH;
         }
       });
-
 
       test(`${axios_method.toUpperCase()} Uses max_content_length configured on blueprint`, async () => {
         try {
@@ -1355,7 +1363,7 @@ describe("HttpSystemTaskNode", () => {
 
           const bag = { bagData: "exampleBagData" };
           const input = {};
-          const actor_data = { claims: ["user"] }
+          const actor_data = { claims: ["user"] };
           const response = await node.run({ bag, input, actor_data });
           expect(response.result).toBeDefined();
           expect(response.result.status).toEqual(200);
@@ -1384,7 +1392,7 @@ describe("HttpSystemTaskNode", () => {
 
           const bag = { bagData: "exampleBagData" };
           const input = {};
-          const actor_data = { claims: ["user"] }
+          const actor_data = { claims: ["user"] };
           const response = await node.run({ bag, input, actor_data });
           expect(response.result).toBeDefined();
           expect(response.result.status).toEqual(200);
@@ -1437,14 +1445,14 @@ describe("SetToBagSystemTaskNode", () => {
     const result = await node.run({ bag, input, actor_data });
     expect(result.result).toStrictEqual(input);
     expect(result.bag).toStrictEqual({ bagData: "exampleBagData", destination_key: "actorId" });
-  })
+  });
 });
 
 describe("StartNode", () => {
   test("Node validate input_schema is a valid ajv schema", () => {
     const node_spec = _.cloneDeep(nodes_.start);
     node_spec.parameters.input_schema = {
-      type: "unknowType"
+      type: "unknowType",
     };
     const node = new nodes.StartNode(node_spec);
 
@@ -1456,14 +1464,14 @@ describe("StartNode", () => {
   test("Run status error if input don't match input_schema", async () => {
     const node_spec = _.cloneDeep(nodes_.start);
     node_spec.parameters.input_schema = {
-      type: "string"
+      type: "string",
     };
     const node = new nodes.StartNode(node_spec);
 
     const bag = { data: "bag" };
     const input = { data: "result" };
     const external_input = { data: "external" };
-    const node_result = await node.run({bag, input, external_input})
+    const node_result = await node.run({ bag, input, external_input });
     expect(node_result.status).toEqual(ProcessStatus.ERROR);
     expect(node_result.error).toMatch("Error: data must be string");
   });
@@ -1471,15 +1479,15 @@ describe("StartNode", () => {
   test("Run status running with result error if on_error 'resumeNext", async () => {
     const node_spec = _.cloneDeep(nodes_.start);
     node_spec.parameters.input_schema = {
-      type: "string"
+      type: "string",
     };
-    node_spec.on_error = 'resumeNext'
+    node_spec.on_error = "resumeNext";
     const node = new nodes.StartNode(node_spec);
 
     const bag = { data: "bag" };
     const input = { data: "result" };
     const external_input = { data: "external" };
-    const node_result = await node.run({bag, input, external_input})
+    const node_result = await node.run({ bag, input, external_input });
     expect(node_result.status).toEqual(ProcessStatus.RUNNING);
     expect(node_result.bag).toEqual(bag);
     expect(node_result.external_input).toEqual(external_input);
@@ -1502,7 +1510,7 @@ describe("StartNode", () => {
     const bag = { data: "bag" };
     const input = { data: "result" };
     const external_input = { data: "external" };
-    const node_result = await node.run({bag, input, external_input})
+    const node_result = await node.run({ bag, input, external_input });
     expect(node_result).toMatchObject(results_.success_start_result);
   });
 
@@ -1515,11 +1523,10 @@ describe("StartNode", () => {
     const input = { data: "input" };
     const external_input = { data: "external" };
 
-    const node_result = await node.run({bag, input, external_input})
+    const node_result = await node.run({ bag, input, external_input });
 
     expect(node_result).toMatchObject(results_.success_start_result_w_timeout);
   });
-
 });
 
 describe("TimerSystemTaskNode", () => {
@@ -1544,7 +1551,7 @@ describe("TimerSystemTaskNode", () => {
     };
     const input = {
       input: "value",
-    }
+    };
     const result = await node.run({ bag, input });
 
     expect(result).toMatchObject({
@@ -1552,12 +1559,11 @@ describe("TimerSystemTaskNode", () => {
       next_node_id: node_spec.next,
       bag: bag,
       status: ProcessStatus.PENDING,
-      result: {timeout: node_spec.parameters.timeout},
+      result: { timeout: node_spec.parameters.timeout },
       external_input: {},
       error: null,
     });
-
-  })
+  });
 });
 
 describe("StartProcessSystemTaskNode", () => {
@@ -1590,8 +1596,8 @@ describe("StartProcessSystemTaskNode", () => {
     });
 
     test("parameters_workflow_name_has_valid_type accepts object", () => {
-      node_spec.parameters.workflow_name = { 
-        $ref: "result.value"
+      node_spec.parameters.workflow_name = {
+        $ref: "result.value",
       };
 
       const node = new nodes.StartProcessSystemTaskNode(node_spec);
@@ -1640,15 +1646,15 @@ describe("StartProcessSystemTaskNode", () => {
     let original_createProcessByWorkflowName = process_manager.createProcessByWorkflowName;
     let original_runProcess = process_manager.runProcess;
     try {
-      const process_id = "9090"
+      const process_id = "9090";
       const mock_createProcessByWorkflowName = jest.fn().mockResolvedValue({
-        id: process_id
+        id: process_id,
       });
       const mock_runProcess = jest.fn();
-  
+
       process_manager.createProcessByWorkflowName = mock_createProcessByWorkflowName;
       process_manager.runProcess = mock_runProcess;
-  
+
       const node_spec = nodes_.start_process_system_task;
       const node = new nodes.StartProcessSystemTaskNode(node_spec);
 
@@ -1656,7 +1662,7 @@ describe("StartProcessSystemTaskNode", () => {
 
       expect(result).toBeDefined();
       expect(result.status).toEqual(ProcessStatus.RUNNING);
-      expect(result.result).toEqual({process_id: process_id});
+      expect(result.result).toEqual({ process_id: process_id });
 
       const expected_workflow_name = node_spec.parameters.workflow_name;
       const expected_workflow_actor_data = {};
@@ -1670,10 +1676,7 @@ describe("StartProcessSystemTaskNode", () => {
       );
 
       expect(mock_runProcess).toBeCalledTimes(1);
-      expect(mock_runProcess).toBeCalledWith(
-        process_id,
-        expected_workflow_actor_data
-      );
+      expect(mock_runProcess).toBeCalledWith(process_id, expected_workflow_actor_data);
     } finally {
       process_manager.createProcessByWorkflowName = original_createProcessByWorkflowName;
       process_manager.runProcess = original_runProcess;
@@ -1683,11 +1686,9 @@ describe("StartProcessSystemTaskNode", () => {
   describe("preProcess workflow data", () => {
     let original_createProcessByWorkflowName = process_manager.createProcessByWorkflowName;
     let original_runProcess = process_manager.runProcess;
-    let mock_createProcessByWorkflowName = jest.fn().mockResolvedValue(
-      {
-        id: '1239',
-      }
-    );
+    let mock_createProcessByWorkflowName = jest.fn().mockResolvedValue({
+      id: "1239",
+    });
     let mock_runProcess = jest.fn();
     let node_spec = nodes_.start_process_system_task;
 
@@ -1714,13 +1715,13 @@ describe("StartProcessSystemTaskNode", () => {
         const result = await node.run({
           bag: {
             workflow_name: "bag_workflow_name",
-          }
+          },
         });
 
         expect(result).toBeDefined();
         expect(result.status).toEqual(ProcessStatus.RUNNING);
 
-        expect(mock_createProcessByWorkflowName).toHaveBeenCalledWith("bag_workflow_name", {}, {})
+        expect(mock_createProcessByWorkflowName).toHaveBeenCalledWith("bag_workflow_name", {}, {});
       });
 
       test("$ref result", async () => {
@@ -1730,13 +1731,13 @@ describe("StartProcessSystemTaskNode", () => {
         const result = await node.run({
           input: {
             workflow_name: "result_workflow_name",
-          }
+          },
         });
 
         expect(result).toBeDefined();
         expect(result.status).toEqual(ProcessStatus.RUNNING);
 
-        expect(mock_createProcessByWorkflowName).toHaveBeenCalledWith("result_workflow_name", {}, {})
+        expect(mock_createProcessByWorkflowName).toHaveBeenCalledWith("result_workflow_name", {}, {});
       });
 
       test("$mustache result", async () => {
@@ -1746,13 +1747,13 @@ describe("StartProcessSystemTaskNode", () => {
         const result = await node.run({
           input: {
             workflow_name: "result_workflow_name",
-          }
+          },
         });
 
         expect(result).toBeDefined();
         expect(result.status).toEqual(ProcessStatus.RUNNING);
 
-        expect(mock_createProcessByWorkflowName).toHaveBeenCalledWith("ATV_result_workflow_name", {}, {})
+        expect(mock_createProcessByWorkflowName).toHaveBeenCalledWith("ATV_result_workflow_name", {}, {});
       });
     });
 
@@ -1764,7 +1765,7 @@ describe("StartProcessSystemTaskNode", () => {
         const result = await node.run({
           actor_data: {
             id: "id_node_runner",
-          }
+          },
         });
 
         expect(result).toBeDefined();
@@ -1787,8 +1788,8 @@ describe("StartProcessSystemTaskNode", () => {
           environment: {
             actor: {
               id: "id_environment",
-            }
-          }
+            },
+          },
         });
 
         expect(result).toBeDefined();
@@ -1822,10 +1823,10 @@ describe("StartProcessSystemTaskNode", () => {
           id: "id_node_runner",
         },
         input: {
-          data: "example_result_data"
+          data: "example_result_data",
         },
         environment: {
-          active: "true"
+          active: "true",
         },
       });
 
@@ -1840,11 +1841,10 @@ describe("StartProcessSystemTaskNode", () => {
           data: "example_result_data",
           key: "user-example_bag_value",
           flag: "true",
-          total: 5
+          total: 5,
         }
       );
     });
-
   });
 });
 
@@ -1856,9 +1856,7 @@ describe("AbortProcessSystemTaskNode", () => {
     });
 
     test("accepts input as array process_ids", () => {
-      node_spec.parameters.input = [
-        uuid(),
-      ];
+      node_spec.parameters.input = [uuid()];
 
       const node = new nodes.AbortProcessSystemTaskNode(node_spec);
 
@@ -1870,7 +1868,7 @@ describe("AbortProcessSystemTaskNode", () => {
 
     test("accepts input as $ref", () => {
       node_spec.parameters.input = {
-        $ref: "result.process"
+        $ref: "result.process",
       };
 
       const node = new nodes.AbortProcessSystemTaskNode(node_spec);
@@ -1902,12 +1900,12 @@ describe("AbortProcessSystemTaskNode", () => {
       const abort_result = [
         {
           status: "fulfilled",
-        }
+        },
       ];
       mock_abortProcess.mockResolvedValue(abort_result);
 
       const node_spec = _.cloneDeep(nodes_.abort_process_system_task);
-      node_spec.parameters.input = [process_id]
+      node_spec.parameters.input = [process_id];
 
       const node = new nodes.AbortProcessSystemTaskNode(node_spec);
 
@@ -1917,14 +1915,11 @@ describe("AbortProcessSystemTaskNode", () => {
         [process_id]: "fulfilled",
       });
 
-      expect(mock_abortProcess).toHaveBeenNthCalledWith(1, [process_id])
+      expect(mock_abortProcess).toHaveBeenNthCalledWith(1, [process_id]);
     });
 
     test("calls process_manager abortProcess with $ref", async () => {
-      const process_list = [
-        uuid(),
-        uuid(),
-      ];
+      const process_list = [uuid(), uuid()];
 
       const abort_result = [
         {
@@ -1938,8 +1933,8 @@ describe("AbortProcessSystemTaskNode", () => {
 
       const node_spec = _.cloneDeep(nodes_.abort_process_system_task);
       node_spec.parameters.input = {
-        $ref: "result.process_list"
-      }
+        $ref: "result.process_list",
+      };
 
       const node = new nodes.AbortProcessSystemTaskNode(node_spec);
 
@@ -1950,7 +1945,7 @@ describe("AbortProcessSystemTaskNode", () => {
         [process_list[1]]: "rejected",
       });
 
-      expect(mock_abortProcess).toHaveBeenNthCalledWith(1, process_list)
+      expect(mock_abortProcess).toHaveBeenNthCalledWith(1, process_list);
     });
   });
 });

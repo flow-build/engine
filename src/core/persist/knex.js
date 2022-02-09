@@ -5,7 +5,6 @@ const { ProcessState } = require("../workflow/process_state");
 const { ActivityManager } = require("../workflow/activity_manager");
 const { Activity } = require("../workflow/activity");
 const { Timer } = require("../workflow/timer");
-const knex = require("knex");
 
 class KnexPersist {
   constructor(db, class_, table) {
@@ -146,10 +145,28 @@ class ProcessKnexPersist extends KnexPersist {
       .select(`${this._table}.*`, "workflow.name as workflow_name")
       .from(this._table)
       .join("workflow", "workflow.id", "workflow_id")
+      .orderBy("process.created_at", "desc")
       .modify((builder) => {
         if (filters) {
           if (filters.workflow_id) {
             builder.where({ workflow_id: filters.workflow_id });
+          }
+          const available_filters = ["workflow_id", "process.id", "name", "current_status"];
+          const _filters_keys = Object.keys(filters).filter((key) => available_filters.includes(key));
+          for (const key of _filters_keys) {
+            if (typeof filters[key] === "string") {
+              builder.where({ [key]: filters[key] });
+            } else {
+              if (Array.isArray(filters[key])) {
+                builder.whereIn([key], filters[key]);
+              }
+            }
+          }
+          if (filters.limit) {
+            builder.limit(filters.limit);
+            if (filters.offset) {
+              builder.offset(filters.offset);
+            }
           }
         }
       });

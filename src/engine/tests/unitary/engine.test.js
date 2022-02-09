@@ -4,7 +4,7 @@ const lisp = require("../../../core/lisp");
 const settings = require("../../../../settings/tests/settings");
 const { Engine } = require("../../engine");
 const { PersistorProvider } = require("../../../core/persist/provider");
-const { ProcessState, ProcessStatus } = require("../../../core/workflow/process_state");
+const { ProcessStatus } = require("../../../core/workflow/process_state");
 const { Process } = require("../../../core/workflow/process");
 const { Workflow } = require("../../../core/workflow/workflow");
 const { Packages } = require("../../../core/workflow/packages");
@@ -350,6 +350,7 @@ test("fetchPackage works", async () => {
   expect(package_).toBeInstanceOf(Packages);
   const fetched_package = await engine.fetchPackage(package_.id);
   expect(fetched_package).toBeInstanceOf(Packages);
+  expect(fetched_package.id).toBe(package_.id);
 });
 
 test("deletePackage works", async () => {

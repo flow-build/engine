@@ -1,32 +1,33 @@
+/* eslint-disable indent */
 const _ = require("lodash");
 const mustache = require("mustache");
 const handlebars = require("handlebars");
 const crypto_manager = require("../crypto_manager");
 
-handlebars.registerHelper('centesimal', function (number) {
-  const retval = '' + (Number(number) / 100).toFixed(2);
-  return retval.replace('.', ',');
+handlebars.registerHelper("centesimal", function (number) {
+  const retval = "" + (Number(number) / 100).toFixed(2);
+  return retval.replace(".", ",");
 });
 
-handlebars.registerHelper('mul', function (a, b) {
+handlebars.registerHelper("mul", function (a, b) {
   return a * b;
 });
 
-handlebars.registerHelper('sum', function (a, b) {
+handlebars.registerHelper("sum", function (a, b) {
   return a + b;
 });
 
-handlebars.registerHelper('sub', function (a, b) {
+handlebars.registerHelper("sub", function (a, b) {
   return a - b;
 });
 
-handlebars.registerHelper('div', function (a, b) {
+handlebars.registerHelper("div", function (a, b) {
   return a / b;
 });
 
 function prepare(source, context = {}, interpreters = {}) {
   let last_result;
-  if (source && typeof source === 'object') {
+  if (source && typeof source === "object") {
     if (source instanceof Array) {
       last_result = source.map((item) => prepare(item, context));
     } else {
@@ -44,7 +45,7 @@ function prepare(source, context = {}, interpreters = {}) {
         case "$ref": {
           last_result = _.get(context, source[op]);
           break;
-        };
+        }
         case "$mustache": {
           last_result = mustache.render(source[op], context);
           break;
@@ -62,7 +63,7 @@ function prepare(source, context = {}, interpreters = {}) {
         case "$minimal": {
           const contextCopy = _.cloneDeep(context);
           const listKeyValues = _.flatten(Object.entries(contextCopy));
-          last_result = interpreters[op].eval(["let", listKeyValues, source[op]])
+          last_result = interpreters[op].eval(["let", listKeyValues, source[op]]);
           break;
         }
         case "$decrypt": {
@@ -90,7 +91,6 @@ function prepare(source, context = {}, interpreters = {}) {
         }
       }
     }
-
   } else {
     last_result = source;
   }
@@ -98,5 +98,5 @@ function prepare(source, context = {}, interpreters = {}) {
 }
 
 module.exports = {
-  prepare: prepare
-}
+  prepare: prepare,
+};

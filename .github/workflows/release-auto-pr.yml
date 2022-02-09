@@ -18,7 +18,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v1
         with:
-          node-version: 13
+          node-version: 14.18
       - name: Install dependencies
         run: npm ci
       - name: Get version from package.json before release step
@@ -33,13 +33,14 @@ jobs:
           GIT_AUTHOR_EMAIL: bot.flowbuild@gmail.com
           GIT_COMMITTER_NAME: bot-flowbuilld
           GIT_COMMITTER_EMAIL: bot.flowbuild@gmail.com
+          ACTIONS_ALLOW_UNSECURE_COMMANDS: true
         run: npm run release
       - name: Get version from package.json after release step
         id: extractver
         run: echo "::set-output name=version::$(npm run get-version --silent)"
       - name: Create Pull Request with updated package files
         if: steps.initversion.outputs.version != steps.extractver.outputs.version
-        uses: peter-evans/create-pull-request@v2.4.4
+        uses: peter-evans/create-pull-request@v3
         with:
           token: ${{ secrets.GH_TOKEN }}
           commit-message: 'chore(release): ${{ steps.extractver.outputs.version }}'
