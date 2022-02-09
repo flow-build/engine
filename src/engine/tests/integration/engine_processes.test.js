@@ -780,6 +780,27 @@ test("Push activity only on type 'commit' activity manager", async () => {
   expect(commit_activity_manager.activity_status).toEqual("completed");
 });
 
+test("Push activity should return error to an non-existant activity manager", async () => {
+  await engine.saveWorkflow("sample", "sample", blueprints_.notify_and_user_task);
+
+  let process = await engine.createProcessByWorkflowName("sample", actors_.simpleton);
+
+  const activity_managers = [];
+  const notifier = (data) => {
+    activity_managers.push(data);
+  };
+  engine.setActivityManagerNotifier(notifier);
+
+  process = await engine.runProcess(process.id, actors_.simpleton);
+  expect(process.state.node_id).toEqual("3");
+
+  const firstCall = await engine.pushActivity(process.id, actors_.simpleton);
+  expect(firstCall.error).toBeUndefined();
+
+  const secondCall = await engine.pushActivity(process.id, actors_.simpleton);
+  expect(secondCall.error).toBeDefined();
+});
+
 const _clean = async () => {
   const persistor = PersistorProvider.getPersistor(...settings.persist_options);
   const activity_persist = persistor.getPersistInstance("Activity");
