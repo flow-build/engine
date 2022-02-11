@@ -638,8 +638,8 @@ class StartProcessSystemTaskNode extends SystemTaskNode {
 
     return {
       workflow_name: prepared_workflow_name,
-      input: { ...prepared_input, ...{ parent_process_data: { id: process_id } } },
-      actor_data: prepared_actor_data,
+      input: prepared_input,
+      actor_data: { ...prepared_actor_data, ...{ parentProcessData: { id: process_id } } },
     };
   }
 

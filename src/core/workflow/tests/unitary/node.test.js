@@ -1665,12 +1665,12 @@ describe("StartProcessSystemTaskNode", () => {
       expect(result.result).toEqual({ process_id: process_id });
 
       const expected_workflow_name = node_spec.parameters.workflow_name;
-      const expected_workflow_actor_data = {};
-      const expected_workfow_input = {
-        parent_process_data: {
+      const expected_workflow_actor_data = {
+        parentProcessData: {
           id: null,
         },
       };
+      const expected_workfow_input = {};
 
       expect(mock_createProcessByWorkflowName).toBeCalledTimes(1);
       expect(mock_createProcessByWorkflowName).toBeCalledWith(
@@ -1727,12 +1727,12 @@ describe("StartProcessSystemTaskNode", () => {
 
         expect(mock_createProcessByWorkflowName).toHaveBeenCalledWith(
           "bag_workflow_name",
-          {},
           {
-            parent_process_data: {
+            parentProcessData: {
               id: null,
             },
-          }
+          },
+          {}
         );
       });
 
@@ -1751,12 +1751,12 @@ describe("StartProcessSystemTaskNode", () => {
 
         expect(mock_createProcessByWorkflowName).toHaveBeenCalledWith(
           "result_workflow_name",
-          {},
           {
-            parent_process_data: {
+            parentProcessData: {
               id: null,
             },
-          }
+          },
+          {}
         );
       });
 
@@ -1775,12 +1775,12 @@ describe("StartProcessSystemTaskNode", () => {
 
         expect(mock_createProcessByWorkflowName).toHaveBeenCalledWith(
           "ATV_result_workflow_name",
-          {},
           {
-            parent_process_data: {
+            parentProcessData: {
               id: null,
             },
-          }
+          },
+          {}
         );
       });
     });
@@ -1803,12 +1803,11 @@ describe("StartProcessSystemTaskNode", () => {
           "example_workflow",
           {
             id: "id_node_runner",
-          },
-          {
-            parent_process_data: {
+            parentProcessData: {
               id: null,
             },
-          }
+          },
+          {}
         );
       });
 
@@ -1832,12 +1831,11 @@ describe("StartProcessSystemTaskNode", () => {
           "example_workflow",
           {
             id: "id_environment",
-          },
-          {
-            parent_process_data: {
+            parentProcessData: {
               id: "1234",
             },
-          }
+          },
+          {}
         );
       });
     });
@@ -1873,16 +1871,17 @@ describe("StartProcessSystemTaskNode", () => {
 
       expect(mock_createProcessByWorkflowName).toHaveBeenCalledWith(
         "example_workflow",
-        {},
+        {
+          parentProcessData: {
+            id: "1234",
+          },
+        },
         {
           creator: "id_node_runner",
           data: "example_result_data",
           key: "user-example_bag_value",
           flag: "true",
           total: 5,
-          parent_process_data: {
-            id: "1234",
-          },
         }
       );
     });
