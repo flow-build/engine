@@ -281,6 +281,44 @@ blueprints_.identity_user_task = {
   environment: {},
 };
 
+blueprints_.withRestrictedInputSchema = {
+  requirements: ["core"],
+  prepare: [],
+  nodes: [
+    {
+      id: "1",
+      type: "Start",
+      name: "Start node",
+      parameters: {
+        input_schema: {
+          type: "object",
+          additionalProperties: false,
+          properties: {
+            id: { type: "string" },
+          },
+        },
+      },
+      next: "2",
+      lane_id: "1",
+    },
+    {
+      id: "2",
+      type: "Finish",
+      name: "Finish node",
+      next: null,
+      lane_id: "1",
+    },
+  ],
+  lanes: [
+    {
+      id: "1",
+      name: "the_only_lane",
+      rule: lisp.return_true(),
+    },
+  ],
+  environment: {},
+};
+
 blueprints_.user_task_user_task = {
   requirements: ["core"],
   prepare: [],
@@ -1322,6 +1360,51 @@ blueprints_.create_process_minimal = {
       name: "Start process node",
       parameters: {
         workflow_name: "minimal",
+        input: {},
+        actor_data: { $ref: "actor_data" },
+      },
+      next: "3",
+      lane_id: "1",
+    },
+    {
+      id: "3",
+      type: "Finish",
+      name: "Finish node",
+      next: null,
+      lane_id: "1",
+    },
+  ],
+  lanes: [
+    {
+      id: "1",
+      name: "the_only_lane",
+      rule: lisp.return_true(),
+    },
+  ],
+  environment: {},
+};
+
+blueprints_.createProcessWithRestrictedInputSchema = {
+  requirements: ["core"],
+  prepare: [],
+  nodes: [
+    {
+      id: "1",
+      type: "Start",
+      name: "Start node",
+      parameters: {
+        input_schema: {},
+      },
+      next: "2",
+      lane_id: "1",
+    },
+    {
+      id: "2",
+      type: "SystemTask",
+      category: "startProcess",
+      name: "Start process node",
+      parameters: {
+        workflow_name: "restricted_schema",
         input: {},
         actor_data: { $ref: "actor_data" },
       },
