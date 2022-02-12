@@ -1,13 +1,12 @@
 const _ = require("lodash");
-const { nodefyClass,
-        nodefyFunction } = require("../../nodefy");
-const { SystemTaskNode } = require("../../../workflow/nodes");
+const { nodefyClass, nodefyFunction } = require("../../nodefy");
+const { SystemTaskNode } = require("../../../workflow/nodes/index.js");
 const { nodes_ } = require("../../../workflow/tests/unitary/node_samples");
 
 function testFunction(firstTestArg, secondTestArg) {
   return {
     first: firstTestArg,
-    second: secondTestArg
+    second: secondTestArg,
   };
 }
 
@@ -15,19 +14,18 @@ class testClass {
   firstTestMethod(firstTestArg, secondTestArg) {
     return {
       first: firstTestArg,
-      second: secondTestArg
+      second: secondTestArg,
     };
   }
 
   secondTestMethod(firstTestArg, secondTestArg) {
     return {
-      second: secondTestArg
+      second: secondTestArg,
     };
   }
 }
 
 describe("Nodefy Function should work", () => {
-
   test("nodefyFunction returns valid SystemTaskNode", () => {
     const custom_node_class = nodefyFunction(testFunction);
     const custom_node = new custom_node_class();
@@ -37,7 +35,7 @@ describe("Nodefy Function should work", () => {
   test("CustomSystemTaskNode _run works correctly", async () => {
     const custom_node_class = nodefyFunction(testFunction);
     const custom_node = new custom_node_class();
-    const execution_data = {firstTestArg: "first", secondTestArg: "second"};
+    const execution_data = { firstTestArg: "first", secondTestArg: "second" };
     const result = await custom_node._run(execution_data, null);
     expect(result[0]).toEqual({
       first: "first",
@@ -49,13 +47,10 @@ describe("Nodefy Function should work", () => {
   test("CustomSystemTaskNode _run formats array response as object with data", async () => {
     const custom_node_class = nodefyFunction((firstTestArg, secondTestArg) => [firstTestArg, secondTestArg]);
     const custom_node = new custom_node_class();
-    const execution_data = {firstTestArg: "first", secondTestArg: "second"};
+    const execution_data = { firstTestArg: "first", secondTestArg: "second" };
     const result = await custom_node._run(execution_data, null);
     expect(result[0]).toEqual({
-      data: [
-        "first",
-        "second",
-      ],
+      data: ["first", "second"],
     });
     expect(result[1]).toBe("running");
   });
@@ -63,7 +58,7 @@ describe("Nodefy Function should work", () => {
   test("CustomSystemTaskNode _run formats string response as object with data", async () => {
     const custom_node_class = nodefyFunction((firstTestArg) => firstTestArg);
     const custom_node = new custom_node_class();
-    const execution_data = {firstTestArg: "first", secondTestArg: "second"};
+    const execution_data = { firstTestArg: "first", secondTestArg: "second" };
     const result = await custom_node._run(execution_data, null);
     expect(result[0]).toEqual({
       data: "first",
@@ -84,11 +79,11 @@ describe("Nodefy Function should work", () => {
     const custom_node_class = nodefyFunction(testFunction);
 
     const custom_node = new custom_node_class(node_spec);
-    const bag = {firstTestArg: "first", secondTestArg: "second"};
+    const bag = { firstTestArg: "first", secondTestArg: "second" };
     const input = {};
     const external_input = {};
 
-    const result = await custom_node.run({bag, input, external_input});
+    const result = await custom_node.run({ bag, input, external_input });
     expect(result.result).toStrictEqual({
       first: "first",
       second: "second",
@@ -100,7 +95,7 @@ describe("Nodefy Function should work", () => {
   test("CustomSysteemTaskNode returns error if function throw error", async () => {
     const node_spec = _.cloneDeep(nodes_.custom_system_task);
     const custom_node_class = nodefyFunction(() => {
-      throw new Error("Error at custom function")
+      throw new Error("Error at custom function");
     });
 
     const custom_node = new custom_node_class(node_spec);
@@ -108,7 +103,7 @@ describe("Nodefy Function should work", () => {
     const input = {};
     const external_input = {};
 
-    const result = await custom_node.run({bag, input, external_input});
+    const result = await custom_node.run({ bag, input, external_input });
     expect(result.status).toEqual("error");
     expect(result.error).toMatch("Error at custom function");
     expect(result.result).toBeNull();
@@ -116,7 +111,6 @@ describe("Nodefy Function should work", () => {
 });
 
 describe("Nodefy Class should work", () => {
-
   test("nodefyClass returns valid Node map", () => {
     const custom_node_map = nodefyClass(testClass);
     expect(custom_node_map).toHaveProperty("firstTestMethod");
@@ -134,7 +128,7 @@ describe("Nodefy Class should work", () => {
     const custom_node_map = nodefyClass(testClass);
     const custom_node_class = custom_node_map["firstTestMethod"];
     const custom_node = new custom_node_class();
-    const execution_data = {firstTestArg: "first", secondTestArg: "second"};
+    const execution_data = { firstTestArg: "first", secondTestArg: "second" };
     const result = await custom_node._run(execution_data, null);
     expect(result[0]).toStrictEqual({
       first: "first",
@@ -159,11 +153,11 @@ describe("Nodefy Class should work", () => {
     const custom_node_map = nodefyClass(testClass);
     const custom_node_class = custom_node_map["secondTestMethod"];
     const custom_node = new custom_node_class(node_spec);
-    const bag = {firstTestArg: "first", secondTestArg: "second"};
+    const bag = { firstTestArg: "first", secondTestArg: "second" };
     const input = {};
     const external_input = {};
 
-    const result = await custom_node.run({bag, input, external_input});
+    const result = await custom_node.run({ bag, input, external_input });
     expect(result.result).toStrictEqual({
       second: "second",
     });
