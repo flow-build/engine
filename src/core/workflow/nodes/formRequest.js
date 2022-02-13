@@ -3,7 +3,8 @@ const { ProcessStatus } = require("../process_state");
 const { prepare } = require("../../utils/input");
 const Ajv = require("ajv");
 const addFormats = require("ajv-formats");
-const { request } = require("../../utils/formRequest");
+const { request } = require("./utils/formRequest");
+const emitter = require("../../utils/emitter");
 
 class FormRequestNode extends SystemTaskNode {
   static validate(spec) {
@@ -31,11 +32,18 @@ class FormRequestNode extends SystemTaskNode {
             input: { type: "object" },
             request: {
               type: "object",
+              required: ["url", "verb"],
               properties: {
                 url: { oneOf: [{ type: "string" }, { type: "object" }] },
                 verb: { type: "string", enum: ["POST", "PUT"] },
                 headers: { type: "object" },
+                maxContentLength: { type: "integer" },
+                timeout: { type: "integer" },
               },
+            },
+            valid_response_codes: {
+              type: "array",
+              items: { type: "integer" },
             },
           },
           required: ["input", "request"],
@@ -55,38 +63,52 @@ class FormRequestNode extends SystemTaskNode {
 
   async _run(executionData) {
     const { verb, url, headers } = this.request;
+    const config = {
+      timeout: this.request.timeout,
+      maxContentLength: this.request.maxContentLength,
+    };
     let result = {};
-
     try {
-      const res = await request[verb](url, executionData, headers, {});
-
-      if (typeof res.body === "object") {
-        result = res.body;
-      } else {
-        result = JSON.parse(res.body);
-      }
-      result.status = res.statusCode;
-
+      result = await request[verb](url, executionData, headers, config);
       if (this._spec.parameters.valid_response_codes) {
         if (!this._spec.parameters.valid_response_codes.includes(result.status)) {
-          console.log(`Invalid response status: ${result.status}`);
-          throw new Error(`Invalid response status: ${result.status}, message: ${result.message}`);
+          emitter.emit(
+            "NODE.ERROR",
+            `ERROR AT NID [${this.id}] | FORMREQUEST | Invalid response status: ${result.status}`,
+            {
+              node_id: this.id,
+              status: result.status,
+              data: result.data,
+              error: "invalid response code",
+            }
+          );
+          return [{ ...result, ...{ error: "invalid response code" } }, ProcessStatus.ERROR];
         }
       }
-      console.log(result);
-      return [result, ProcessStatus.RUNNING];
     } catch (err) {
-      if (err.response) {
+      if (err.code === "ECONNREFUSED") {
+        emitter.emit(
+          "NODE.ERROR",
+          `ERROR AT NID [${this.id}] | FORMREQUEST | Got no response from request to ${verb} ${url}, ${err.message}`,
+          {
+            node_id: this.id,
+            error: err,
+          }
+        );
         result = {
-          status: err.response.status,
-          data: err.response.data,
+          status: err.code,
+          data: `address: ${err.address}, port: ${err.port}`,
         };
-        throw err;
       } else {
-        console.log(`Got no response from request to ${verb} ${url}, ${err.message}`, err);
-        throw err;
+        emitter.emit("NODE.ERROR", `ERROR AT NID [${this.id}] | FORMREQUEST | unexpected error`, {
+          node_id: this.id,
+          error: err,
+        });
+        throw new Error(err);
       }
     }
+
+    return [result, ProcessStatus.RUNNING];
   }
 }
 
