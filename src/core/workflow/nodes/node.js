@@ -1,3 +1,5 @@
+/* eslint-disable indent */
+/* eslint-disable no-unused-vars */
 const _ = require("lodash");
 const obju = require("../../utils/object");
 const { ProcessStatus } = require("../process_state");
@@ -79,7 +81,6 @@ class Node {
   }
 
   _processError(error, { bag, external_input, time_elapsed }) {
-    console.log(error);
     if (error instanceof Error) {
       emitter.emit("NODE.ERROR", `ERROR AT NID [${this.id}]`, {
         node_id: this.id,

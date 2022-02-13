@@ -1,4 +1,3 @@
-const _ = require("lodash");
 const obju = require("../../utils/object");
 const { prepare } = require("../../utils/input");
 const { ProcessStatus } = require("../process_state");
@@ -60,7 +59,7 @@ class HttpSystemTaskNode extends SystemTaskNode {
     return max_content_length;
   }
 
-  async _run(execution_data, lisp) {
+  async _run(execution_data) {
     const { verb, url: endpoint, headers } = this.request;
     const http_timeout = this._formatHttpTimeout(this.request.timeout);
     const max_content_length = this._formatMaxContentLength(this.request.max_content_length);
