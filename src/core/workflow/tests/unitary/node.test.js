@@ -1665,7 +1665,11 @@ describe("StartProcessSystemTaskNode", () => {
       expect(result.result).toEqual({ process_id: process_id });
 
       const expected_workflow_name = node_spec.parameters.workflow_name;
-      const expected_workflow_actor_data = {};
+      const expected_workflow_actor_data = {
+        parentProcessData: {
+          id: null,
+        },
+      };
       const expected_workfow_input = {};
 
       expect(mock_createProcessByWorkflowName).toBeCalledTimes(1);
@@ -1721,7 +1725,15 @@ describe("StartProcessSystemTaskNode", () => {
         expect(result).toBeDefined();
         expect(result.status).toEqual(ProcessStatus.RUNNING);
 
-        expect(mock_createProcessByWorkflowName).toHaveBeenCalledWith("bag_workflow_name", {}, {});
+        expect(mock_createProcessByWorkflowName).toHaveBeenCalledWith(
+          "bag_workflow_name",
+          {
+            parentProcessData: {
+              id: null,
+            },
+          },
+          {}
+        );
       });
 
       test("$ref result", async () => {
@@ -1737,7 +1749,15 @@ describe("StartProcessSystemTaskNode", () => {
         expect(result).toBeDefined();
         expect(result.status).toEqual(ProcessStatus.RUNNING);
 
-        expect(mock_createProcessByWorkflowName).toHaveBeenCalledWith("result_workflow_name", {}, {});
+        expect(mock_createProcessByWorkflowName).toHaveBeenCalledWith(
+          "result_workflow_name",
+          {
+            parentProcessData: {
+              id: null,
+            },
+          },
+          {}
+        );
       });
 
       test("$mustache result", async () => {
@@ -1753,7 +1773,15 @@ describe("StartProcessSystemTaskNode", () => {
         expect(result).toBeDefined();
         expect(result.status).toEqual(ProcessStatus.RUNNING);
 
-        expect(mock_createProcessByWorkflowName).toHaveBeenCalledWith("ATV_result_workflow_name", {}, {});
+        expect(mock_createProcessByWorkflowName).toHaveBeenCalledWith(
+          "ATV_result_workflow_name",
+          {
+            parentProcessData: {
+              id: null,
+            },
+          },
+          {}
+        );
       });
     });
 
@@ -1775,6 +1803,9 @@ describe("StartProcessSystemTaskNode", () => {
           "example_workflow",
           {
             id: "id_node_runner",
+            parentProcessData: {
+              id: null,
+            },
           },
           {}
         );
@@ -1790,6 +1821,7 @@ describe("StartProcessSystemTaskNode", () => {
               id: "id_environment",
             },
           },
+          process_id: "1234",
         });
 
         expect(result).toBeDefined();
@@ -1799,6 +1831,9 @@ describe("StartProcessSystemTaskNode", () => {
           "example_workflow",
           {
             id: "id_environment",
+            parentProcessData: {
+              id: "1234",
+            },
           },
           {}
         );
@@ -1828,6 +1863,7 @@ describe("StartProcessSystemTaskNode", () => {
         environment: {
           active: "true",
         },
+        process_id: "1234",
       });
 
       expect(result).toBeDefined();
@@ -1835,7 +1871,11 @@ describe("StartProcessSystemTaskNode", () => {
 
       expect(mock_createProcessByWorkflowName).toHaveBeenCalledWith(
         "example_workflow",
-        {},
+        {
+          parentProcessData: {
+            id: "1234",
+          },
+        },
         {
           creator: "id_node_runner",
           data: "example_result_data",
