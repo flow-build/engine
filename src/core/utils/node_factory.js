@@ -37,6 +37,10 @@ function getServiceTask(node_spec) {
         resultNode = new nodes.AbortProcessSystemTaskNode(node_spec);
         break;
       }
+      case "formrequest": {
+        resultNode = new nodes.FormRequestNode(node_spec);
+        break;
+      }
       default: {
         throw new Error(`Invalid service task, unknow category ${node_category}`);
       }

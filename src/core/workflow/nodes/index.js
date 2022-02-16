@@ -11,12 +11,14 @@ const { SubProcessNode } = require("./subProcess");
 const { SystemTaskNode } = require("./systemTask");
 const { TimerSystemTaskNode } = require("./timer");
 const { UserTaskNode } = require("./userTask");
+const { FormRequestNode } = require("./formRequest");
 
 module.exports = {
   AbortProcessSystemTaskNode: AbortProcessSystemTaskNode,
   Node: Node,
   StartNode: StartNode,
   FinishNode: FinishNode,
+  FormRequestNode: FormRequestNode,
   FlowNode: FlowNode,
   ScriptTaskNode: ScriptTaskNode,
   SystemTaskNode: SystemTaskNode,

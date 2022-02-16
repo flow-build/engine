@@ -1,10 +1,10 @@
-const { SystemTaskNode } = require("../nodes");
 const { ProcessStatus } = require("../process_state");
 const { prepare } = require("../../utils/input");
 const Ajv = require("ajv");
 const addFormats = require("ajv-formats");
 const { request } = require("./utils/formRequest");
 const emitter = require("../../utils/emitter");
+const { SystemTaskNode } = require("./systemTask");
 
 class FormRequestNode extends SystemTaskNode {
   static validate(spec) {
@@ -112,4 +112,6 @@ class FormRequestNode extends SystemTaskNode {
   }
 }
 
-module.exports = { FormRequestNode };
+module.exports = {
+  FormRequestNode,
+};
