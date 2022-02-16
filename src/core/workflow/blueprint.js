@@ -75,7 +75,7 @@ class Blueprint {
           validate_info.ambient.push(error_message);
         }
       }
-      if (!nodesString.includes(`{{${variable}}}`)) {
+      if (!nodesString.includes(`environment.${variable}`)) {
         const error_message = `Environment variable ${variable} not found in nodes`;
         validate_info.nodes.push(error_message);
       }
