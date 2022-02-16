@@ -3,6 +3,7 @@ const node_factory = require("../../node_factory");
 const { nodes_: node_samples } = require("../../../workflow/tests/unitary/node_samples");
 const nodes = require("../../../workflow/nodes/index.js");
 const extra_nodes = require("../../../../engine/tests/utils/extra_nodes");
+const { minimal } = require("../../../workflow/nodes/examples/formRequest");
 
 describe("node factory", () => {
   describe("getNode", () => {
@@ -114,6 +115,13 @@ describe("node factory", () => {
 
         expect(node).toBeDefined();
         expect(node).toBeInstanceOf(nodes.StartProcessSystemTaskNode);
+      });
+
+      test("form request category", () => {
+        const node = node_factory.getNode(minimal);
+
+        expect(node).toBeDefined();
+        expect(node).toBeInstanceOf(nodes.FormRequestNode);
       });
 
       test("unknow category", () => {

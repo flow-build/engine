@@ -2,7 +2,7 @@ const minimal = {
   id: "FORM",
   name: "minimal form request",
   next: "NEXT",
-  type: "systemtask",
+  type: "SystemTask",
   lane_id: "anyone",
   category: "formrequest",
   parameters: {
