@@ -1996,6 +1996,50 @@ blueprints_.user_action_with_system_task = {
   environment: {},
 };
 
+blueprints_.user_timeout_one_hour = {
+  requirements: [],
+  prepare: [],
+  nodes: [
+    {
+      id: "1",
+      type: "Start",
+      name: "Start node",
+      parameters: {
+        input_schema: {},
+      },
+      next: "2",
+      lane_id: "1",
+    },
+    {
+      id: "2",
+      type: "UserTask",
+      name: "User task node",
+      next: "3",
+      lane_id: "1",
+      parameters: {
+        action: "userAction",
+        input: {},
+        timeout: 3600
+      },
+    },
+    {
+      id: "3",
+      type: "Finish",
+      name: "Finish node",
+      next: null,
+      lane_id: "1",
+    },
+  ],
+  lanes: [
+    {
+      id: "1",
+      name: "default",
+      rule: lisp.return_true(),
+    },
+  ],
+  environment: {},
+};
+
 blueprints_.parameters = {
   requirements: ["core"],
   prepare: [],
