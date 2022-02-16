@@ -208,7 +208,7 @@ nodes_.custom_system_task = {
 nodes_.subprocess_task = {
   id: "sbtask",
   type: "SubProcess",
-  name: "abortProcess system task node",
+  name: "sub process system task node",
   next: "99",
   lane_id: "1",
   parameters: {

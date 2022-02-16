@@ -372,36 +372,65 @@ test("run process using environment", async () => {
   }
 });
 
-test("run process that creaters another process", async () => {
-  const engine = new Engine(...settings.persist_options);
-  try {
-    const minimal_workflow = await engine.saveWorkflow("minimal", "minimal", blueprints_.minimal);
-    const create_process_workflow = await engine.saveWorkflow(
-      "create_process_minimal",
-      "create process minimal",
-      blueprints_.create_process_minimal
+describe("process starting another process", () => {
+  test("run process that creaters another process", async () => {
+    const engine = new Engine(...settings.persist_options);
+    try {
+      const minimal_workflow = await engine.saveWorkflow("minimal", "minimal", blueprints_.minimal);
+      const create_process_workflow = await engine.saveWorkflow(
+        "create_process_minimal",
+        "create process minimal",
+        blueprints_.create_process_minimal
+      );
+
+      let process_state_history = [];
+      engine.setProcessStateNotifier((process_state) => process_state_history.push(process_state));
+
+      let workflow_process = await engine.createProcess(create_process_workflow.id, actors_.simpleton);
+      expect(workflow_process.state.status).toEqual("unstarted");
+
+      workflow_process = await engine.runProcess(workflow_process.id, actors_.simpleton);
+      expect(workflow_process.state.status).toEqual("finished");
+
+      const minimal_process_list = await engine.fetchProcessList({ workflow_id: minimal_workflow.id });
+      expect(minimal_process_list).toHaveLength(1);
+
+      const create_process_process_list = await engine.fetchProcessList({ workflow_id: create_process_workflow.id });
+      expect(create_process_process_list).toHaveLength(1);
+
+      const result = await engine.fetchProcess(create_process_process_list[0].id);
+      expect(result.state.status).toEqual(ProcessStatus.FINISHED);
+    } finally {
+      engine.setProcessStateNotifier();
+    }
+  });
+
+  test("child process has restricted input schema", async () => {
+    const engine = new Engine(...settings.persist_options);
+
+    const childWorkflow = await engine.saveWorkflow(
+      "restricted_schema",
+      "child process with restricted input schema",
+      blueprints_.withRestrictedInputSchema
+    );
+    const parentWorkflow = await engine.saveWorkflow(
+      "create_another_process",
+      "parent process that creates a child process",
+      blueprints_.createProcessWithRestrictedInputSchema
     );
 
-    let process_state_history = [];
-    engine.setProcessStateNotifier((process_state) => process_state_history.push(process_state));
+    const parentProcess = await engine.createProcess(parentWorkflow.id, actors_.simpleton);
+    expect(parentProcess.state.status).toEqual(ProcessStatus.UNSTARTED);
 
-    let workflow_process = await engine.createProcess(create_process_workflow.id, actors_.simpleton);
-    expect(workflow_process.state.status).toEqual("unstarted");
+    const parentProcessState = await engine.runProcess(parentProcess.id, actors_.simpleton);
+    expect(parentProcessState.state.status).toEqual(ProcessStatus.FINISHED);
 
-    workflow_process = await engine.runProcess(workflow_process.id, actors_.simpleton);
-    expect(workflow_process.state.status).toEqual("finished");
+    const childProcessList = await engine.fetchProcessList({ workflow_id: childWorkflow.id });
+    expect(childProcessList).toHaveLength(1);
 
-    const minimal_process_list = await engine.fetchProcessList({ workflow_id: minimal_workflow.id });
-    expect(minimal_process_list).toHaveLength(1);
-
-    const create_process_process_list = await engine.fetchProcessList({ workflow_id: create_process_workflow.id });
-    expect(create_process_process_list).toHaveLength(1);
-
-    const result = await engine.fetchProcess(create_process_process_list[0].id);
-    expect(result.state.status).toEqual(ProcessStatus.FINISHED);
-  } finally {
-    engine.setProcessStateNotifier();
-  }
+    const childState = await engine.fetchProcess(childProcessList[0].id);
+    expect(childState.state.status).toEqual(ProcessStatus.RUNNING);
+  });
 });
 
 // test("run process that abort another process", async () => {
