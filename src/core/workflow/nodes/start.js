@@ -1,4 +1,3 @@
-const _ = require("lodash");
 const obju = require("../../utils/object");
 const { ProcessStatus } = require("../process_state");
 const { Validator } = require("../../validators");
@@ -26,7 +25,23 @@ class StartNode extends Node {
     let [is_valid, error] = StartNode.validate(this._spec);
     if (is_valid) {
       try {
-        ajvValidator.validateSchema(this._spec.parameters.input_schema);
+        let inputSchema = this._spec.parameters.input_schema;
+        if (
+          inputSchema.properties &&
+          // eslint-disable-next-line no-prototype-builtins
+          inputSchema.hasOwnProperty("additionalProperties") &&
+          !inputSchema.additionalProperties
+        ) {
+          inputSchema.properties["parent_process_data"] = {
+            type: "object",
+            additionalProperties: false,
+            properties: {
+              id: { type: "string", format: "uuid" },
+              expected_step_number: { type: "integer" },
+            },
+          };
+        }
+        ajvValidator.validateSchema(inputSchema);
       } catch (err) {
         is_valid = false;
         error = err.message;
@@ -36,7 +51,7 @@ class StartNode extends Node {
     return [is_valid, error];
   }
 
-  _run(execution_data, lisp) {
+  _run(execution_data) {
     ajvValidator.validateData(this._spec.parameters.input_schema, execution_data.bag);
     let result = {
       timeout: timeoutParse(this._spec.parameters, execution_data),
