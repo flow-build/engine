@@ -333,15 +333,15 @@ test("run process using environment", async () => {
 
   //const engine = new Engine(...settings.persist_options);
   try {
-    const workflow = await engine.saveWorkflow("sample", "sample", blueprints_.reference_environment);
-
-    let process_state_history = [];
-    engine.setProcessStateNotifier((process_state) => process_state_history.push(process_state));
-
     process.env.ENVIRONMENT = "test";
     process.env.API_HOST = "https://koa-app:3000/test_api";
     process.env.PAYLOAD = "payload";
     process.env.LIMIT = "999";
+
+    const workflow = await engine.saveWorkflow("sample", "sample", blueprints_.reference_environment);
+
+    let process_state_history = [];
+    engine.setProcessStateNotifier((process_state) => process_state_history.push(process_state));
 
     let workflow_process = await engine.createProcess(workflow.id, actors_.simpleton);
     expect(workflow_process.state.status).toEqual("unstarted");

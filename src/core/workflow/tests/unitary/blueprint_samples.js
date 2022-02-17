@@ -62,7 +62,7 @@ blueprints_.existent_environment_variable = {
         input: {},
         request: {
           verb: "POST",
-          url: "{{path}}",
+          url: "{{environment.path}}",
           headers: {
             ContentType: "application/json",
           },
@@ -114,7 +114,7 @@ blueprints_.inexistent_environment_variable = {
         input: {},
         request: {
           verb: "POST",
-          url: "{{inexistent}}",
+          url: "{{environment.inexistent}}",
           headers: {
             ContentType: "application/json",
           },
