@@ -148,6 +148,9 @@ class ProcessKnexPersist extends KnexPersist {
       .orderBy("process.created_at", "desc")
       .modify((builder) => {
         if (filters) {
+          if (filters.workflow_id) {
+            builder.where({ workflow_id: filters.workflow_id });
+          }
           const available_filters = ["workflow_id", "process.id", "name", "current_status"];
           const _filters_keys = Object.keys(filters).filter((key) => available_filters.includes(key));
           for (const key of _filters_keys) {
