@@ -75,7 +75,7 @@ class Blueprint {
           validate_info.ambient.push(error_message);
         }
       }
-      if (!nodesString.includes(`{{${variable}}}`)) {
+      if (!nodesString.includes(`environment.${variable}`)) {
         const error_message = `Environment variable ${variable} not found in nodes`;
         validate_info.nodes.push(error_message);
       }
@@ -107,7 +107,6 @@ class Blueprint {
       emitter.emit("BLUEPRINT.UNUSED_VARIABLES", "UNUSED ENVIRONMENT VARIABLES", { nodes: blueprint_env_status.nodes });
       return [true, blueprint_env_status.nodes];
     } else if (!lodash.isEmpty(blueprint_env_status.ambient)) {
-      console.log("hey!");
       emitter.emit("BLUEPRINT.NON_EXISTENT_VARIABLES", "NON EXISTENT ENVIRONMENT VARIABLES", {
         ambient: blueprint_env_status.ambient,
       });

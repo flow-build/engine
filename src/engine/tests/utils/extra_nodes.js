@@ -1,7 +1,7 @@
-const nodes = require("../../../core/workflow/nodes");
+const nodes = require("../../../core/workflow/nodes/index.js");
 const { ProcessStatus } = require("../../../core/workflow/process_state");
 const rules = require("../../../core/utils/object");
-const { Validator } = require("../../../core/validators")
+const { Validator } = require("../../../core/validators");
 
 class CustomSystemTaskNode extends nodes.SystemTaskNode {
   static get rules() {
@@ -15,18 +15,18 @@ class CustomSystemTaskNode extends nodes.SystemTaskNode {
   }
 
   async _run(execution_data, lisp) {
-    return[execution_data, ProcessStatus.RUNNING];
+    return [execution_data, ProcessStatus.RUNNING];
   }
 }
 
 class ExampleSystemTaskNode extends nodes.SystemTaskNode {
   static get rules() {
     const parameter_rules = {
-      "parameters_has_example": [rules.hasField, "example"]
-    }
+      parameters_has_example: [rules.hasField, "example"],
+    };
     return {
       ...super.rules,
-      "parameters_extra_validations": [new Validator(parameter_rules), "parameters"]
+      parameters_extra_validations: [new Validator(parameter_rules), "parameters"],
     };
   }
 
@@ -35,7 +35,7 @@ class ExampleSystemTaskNode extends nodes.SystemTaskNode {
   }
 
   async _run(execution_data, lisp) {
-    return[execution_data, ProcessStatus.RUNNING];
+    return [execution_data, ProcessStatus.RUNNING];
   }
 }
 

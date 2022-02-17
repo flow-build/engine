@@ -1,3 +1,18 @@
+## [2.6.0](https://github.com/flow-build/engine/compare/v2.5.0...v2.6.0) (2022-02-17)
+
+
+### Features
+
+* change startProcessNode to include parent process_id ([88e67b8](https://github.com/flow-build/engine/commit/88e67b810a1a585cec2994964fa14e41324df1ae))
+* move parentProcessData to actor_data ([254ec6d](https://github.com/flow-build/engine/commit/254ec6d6bffe0c26d849d09db9ff9985328aa2f1))
+* **nodes:** add formRequestNode ([4e66032](https://github.com/flow-build/engine/commit/4e660328d1f412bc5b2904e218c96ada3789af94))
+
+
+### Bug Fixes
+
+* add formrequest to node factory ([b919da1](https://github.com/flow-build/engine/commit/b919da19c738f4e00a57780e8709922dca60e4a0))
+* false positive on inexistant env ([46fa2f1](https://github.com/flow-build/engine/commit/46fa2f105018c5938b422cc1aa57ba72fd691c92))
+
 ## [2.5.0](https://github.com/flow-build/engine/compare/v2.4.0...v2.5.0) (2021-12-08)
 
 

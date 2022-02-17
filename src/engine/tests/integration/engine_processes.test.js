@@ -431,7 +431,8 @@ describe("process starting another process", () => {
     expect(childProcessList).toHaveLength(1);
 
     const childState = await engine.fetchProcess(childProcessList[0].id);
-    expect(childState.state.status).toEqual(ProcessStatus.RUNNING);
+    expect(childState.state.status).not.toBe(ProcessStatus.UNSTARTED);
+    expect(childState.state.status).not.toBe(ProcessStatus.ERROR);
   });
 });
 

@@ -1,5 +1,5 @@
 /* eslint-disable indent */
-const nodes = require("../workflow/nodes");
+const nodes = require("../workflow/nodes/index.js");
 
 const extra_system_category_map = {};
 function getServiceTask(node_spec) {
@@ -35,6 +35,10 @@ function getServiceTask(node_spec) {
       }
       case "abortprocess": {
         resultNode = new nodes.AbortProcessSystemTaskNode(node_spec);
+        break;
+      }
+      case "formrequest": {
+        resultNode = new nodes.FormRequestNode(node_spec);
         break;
       }
       default: {
