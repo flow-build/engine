@@ -1,4 +1,3 @@
-const _ = require("lodash");
 const delegate = require("delegates");
 const bpu = require("../core/utils/blueprint");
 const { Workflow } = require("../core/workflow/workflow");
@@ -32,7 +31,7 @@ class Cockpit {
       .method("createProcessByWorkflowName")
       .method("runProcess")
       .method("fetchProcess")
-      .method('fetchProcessList')
+      .method("fetchProcessList")
       .method("fetchProcessStateHistory")
       .method("abortProcess")
       .method("saveWorkflow")
@@ -55,7 +54,7 @@ class Cockpit {
           workflow_name: workflow.name,
           workflow_description: workflow.description,
           workflow_version: workflow.version,
-        }
+        };
       }
 
       if (workflow.state) {
@@ -106,10 +105,7 @@ class Cockpit {
     const allowed_workflows = [];
     for (let workflow_data of workflows_data) {
       const blueprint_spec = workflow_data.blueprint_spec;
-      const custom_lisp = await Packages._fetchPackages(
-        blueprint_spec.requirements,
-        blueprint_spec.prepare
-      );
+      const custom_lisp = await Packages._fetchPackages(blueprint_spec.requirements, blueprint_spec.prepare);
       const allowed_start_nodes = bpu.getAllowedStartNodes(blueprint_spec, actor_data, {}, custom_lisp);
       if (allowed_start_nodes.length === 1) {
         allowed_workflows.push(workflow_data);
@@ -120,5 +116,5 @@ class Cockpit {
 }
 
 module.exports = {
-  Cockpit: Cockpit
+  Cockpit: Cockpit,
 };

@@ -123,7 +123,6 @@ describe("test validate_environment_variable", () => {
 
   test("throw error when using an inexistent environment variable", () => {
     const spec = _.cloneDeep(blueprints_.inexistent_environment_variable);
-    console.log(spec);
     const error = Blueprint.validate(spec);
     expect(error[0]).toBeFalsy();
     expect(error[1][0]).toBe("Environment variable inexistent not found in ambient");
