@@ -390,14 +390,14 @@ test("run process that creaters another process", async () => {
       blueprints_.create_process_minimal
     );
 
-      let process_state_history = [];
-      engine.setProcessStateNotifier((process_state) => process_state_history.push(process_state));
+    let process_state_history = [];
+    engine.setProcessStateNotifier((process_state) => process_state_history.push(process_state));
 
-      let workflow_process = await engine.createProcess(create_process_workflow.id, actors_.simpleton);
-      expect(workflow_process.state.status).toEqual("unstarted");
+    let workflow_process = await engine.createProcess(create_process_workflow.id, actors_.simpleton);
+    expect(workflow_process.state.status).toEqual("unstarted");
 
-      workflow_process = await engine.runProcess(workflow_process.id, actors_.simpleton);
-      expect(workflow_process.state.status).toEqual("finished");
+    workflow_process = await engine.runProcess(workflow_process.id, actors_.simpleton);
+    expect(workflow_process.state.status).toEqual("finished");
 
     const minimal_process_list = await engine.fetchProcessList({ workflow_id: minimal_workflow.id });
     expect(minimal_process_list).toHaveLength(1);
@@ -405,40 +405,39 @@ test("run process that creaters another process", async () => {
     const create_process_process_list = await engine.fetchProcessList({ workflow_id: create_process_workflow.id });
     expect(create_process_process_list).toHaveLength(1);
 
-      const result = await engine.fetchProcess(create_process_process_list[0].id);
-      expect(result.state.status).toEqual(ProcessStatus.FINISHED);
-    } finally {
-      engine.setProcessStateNotifier();
-    }
-  });
+    const result = await engine.fetchProcess(create_process_process_list[0].id);
+    expect(result.state.status).toEqual(ProcessStatus.FINISHED);
+  } finally {
+    engine.setProcessStateNotifier();
+  }
+});
 
-  test("child process has restricted input schema", async () => {
-    const engine = new Engine(...settings.persist_options);
+test("child process has restricted input schema", async () => {
+  const engine = new Engine(...settings.persist_options);
 
-    const childWorkflow = await engine.saveWorkflow(
-      "restricted_schema",
-      "child process with restricted input schema",
-      blueprints_.withRestrictedInputSchema
-    );
-    const parentWorkflow = await engine.saveWorkflow(
-      "create_another_process",
-      "parent process that creates a child process",
-      blueprints_.createProcessWithRestrictedInputSchema
-    );
+  const childWorkflow = await engine.saveWorkflow(
+    "restricted_schema",
+    "child process with restricted input schema",
+    blueprints_.withRestrictedInputSchema
+  );
+  const parentWorkflow = await engine.saveWorkflow(
+    "create_another_process",
+    "parent process that creates a child process",
+    blueprints_.createProcessWithRestrictedInputSchema
+  );
 
-    const parentProcess = await engine.createProcess(parentWorkflow.id, actors_.simpleton);
-    expect(parentProcess.state.status).toEqual(ProcessStatus.UNSTARTED);
+  const parentProcess = await engine.createProcess(parentWorkflow.id, actors_.simpleton);
+  expect(parentProcess.state.status).toEqual(ProcessStatus.UNSTARTED);
 
-    const parentProcessState = await engine.runProcess(parentProcess.id, actors_.simpleton);
-    expect(parentProcessState.state.status).toEqual(ProcessStatus.FINISHED);
+  const parentProcessState = await engine.runProcess(parentProcess.id, actors_.simpleton);
+  expect(parentProcessState.state.status).toEqual(ProcessStatus.FINISHED);
 
-    const childProcessList = await engine.fetchProcessList({ workflow_id: childWorkflow.id });
-    expect(childProcessList).toHaveLength(1);
+  const childProcessList = await engine.fetchProcessList({ workflow_id: childWorkflow.id });
+  expect(childProcessList).toHaveLength(1);
 
-    const childState = await engine.fetchProcess(childProcessList[0].id);
-    expect(childState.state.status).not.toBe(ProcessStatus.UNSTARTED);
-    expect(childState.state.status).not.toBe(ProcessStatus.ERROR);
-  });
+  const childState = await engine.fetchProcess(childProcessList[0].id);
+  expect(childState.state.status).not.toBe(ProcessStatus.UNSTARTED);
+  expect(childState.state.status).not.toBe(ProcessStatus.ERROR);
 });
 
 // test("run process that abort another process", async () => {
