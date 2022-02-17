@@ -1,6 +1,7 @@
 const _ = require("lodash");
 const { Blueprint } = require("../../../workflow/blueprint");
 const { blueprints_ } = require("./blueprint_samples");
+const allNodeTypes = require("../examples/allNodeTypes");
 
 test("constructor works for valid spec", () => {
   expect(() => {
@@ -227,6 +228,13 @@ describe("Blueprint.validate", () => {
     const response = Blueprint.validate(blueprint_spec);
     expect(response[0]).toEqual(false);
     expect(response[1]).toMatch("found existing lane_id");
+  });
+
+  test("works for all default node types & categories", () => {
+    const blueprint_spec = allNodeTypes.blueprint_spec;
+    const response = Blueprint.validate(blueprint_spec);
+    console.log(response);
+    expect(response[0]).toEqual(true);
   });
 });
 
