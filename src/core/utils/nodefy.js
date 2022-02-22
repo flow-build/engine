@@ -1,4 +1,4 @@
-const { SystemTaskNode } = require("../workflow/nodes");
+const { SystemTaskNode } = require("../workflow/nodes/index.js");
 
 const _getParamNames = (func) => {
   const fnStr = func.toString();

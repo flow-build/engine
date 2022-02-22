@@ -90,7 +90,7 @@ test("create and run process for restricted multilane system tasks", async () =>
 });
 
 test("create and run process accordingly when node run throws error", async () => {
-  const StartNode = require("../../../core/workflow/nodes").StartNode;
+  const StartNode = require("../../../core/workflow/nodes/index.js").StartNode;
   const spy = jest.spyOn(StartNode.prototype, "_run");
   spy.mockImplementation(() => {
     throw new Error("mock");
