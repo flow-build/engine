@@ -39,10 +39,6 @@ class KnexPersist {
     return await this._db.select("*").from(this._table).where("id", obj_id).first();
   }
 
-  async getAll() {
-    return await this._db.select("*").from(this._table).orderBy("created_at", "desc");
-  }
-
   async _create(obj, trx = false) {
     if (trx) {
       await this._db(this._table).transacting(trx).insert(obj);
@@ -95,6 +91,17 @@ class WorkflowKnexPersist extends KnexPersist {
     return await this._db.select("*").from(this._table).where("name", "=", obj_name).orderBy("version", "desc").first();
   }
 
+  async getByNameAndVersion(name, version) {
+    return await this._db
+      .select("*")
+      .from(this._table)
+      .where({
+        name,
+        version,
+      })
+      .first();
+  }
+
   async getByHash(hash) {
     return await this._db.select("*").from(this._table).where("blueprint_hash", "=", hash);
   }
@@ -141,6 +148,9 @@ class ProcessKnexPersist extends KnexPersist {
       .orderBy("process.created_at", "desc")
       .modify((builder) => {
         if (filters) {
+          if (filters.workflow_id) {
+            builder.where({ workflow_id: filters.workflow_id });
+          }
           const available_filters = ["workflow_id", "process.id", "name", "current_status"];
           const _filters_keys = Object.keys(filters).filter((key) => available_filters.includes(key));
           for (const key of _filters_keys) {
@@ -319,14 +329,6 @@ class ActivityManagerKnexPersist extends KnexPersist {
     this._activity_table = "activity";
   }
 
-  async getActiveActivityManagers() {
-    return await this._db(this._table).where("status", "started");
-  }
-
-  async getCompletedActivityManagers() {
-    return await this._db(this._table).where("status", "completed");
-  }
-
   async getActivityDataFromStatus(status, filters) {
     return await this._db
       .select(
@@ -411,14 +413,6 @@ class ActivityManagerKnexPersist extends KnexPersist {
       .rightJoin("workflow AS wf", "p.workflow_id", "wf.id")
       .where("am.id", "=", obj_id)
       .first();
-  }
-
-  async getProcessId(process_state_id) {
-    return await this._db.select("process_id").from("process_state").where("id", "=", process_state_id).first();
-  }
-
-  async getActivityManagerByProcessStateId(process_state_id) {
-    return await this._db.select("*").from("activity_manager").where("process_state_id", "=", process_state_id);
   }
 
   async getActivities(activity_manager_id) {

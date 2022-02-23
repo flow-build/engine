@@ -1,13 +1,11 @@
 const _ = require("lodash");
-const lisp = require("../../../lisp");
-const obju = require("../../../utils/object");
 const settings = require("../../../../../settings/tests/settings");
 const { AssertionError } = require("assert");
 const { Workflow } = require("../../../workflow/workflow");
 const { ProcessStatus } = require("../../../workflow/process_state");
 const { PersistorProvider } = require("../../../persist/provider");
 const { blueprints_, actors_ } = require("./blueprint_samples");
-const JSum = require('jsum');
+const JSum = require("jsum");
 
 beforeEach(async () => {
   await _clean();
@@ -29,7 +27,9 @@ test("constructor works", () => {
 test("constructor fails for invalid blueprint spec", () => {
   const blueprint = _.cloneDeep(blueprints_.minimal);
   delete blueprint.nodes[0];
-  const constructor_partial = () => { new Workflow("sample", "sample", blueprint); };
+  const constructor_partial = () => {
+    new Workflow("sample", "sample", blueprint);
+  };
   expect(constructor_partial).toThrow(AssertionError);
 });
 
@@ -53,9 +53,38 @@ test("fetch by name works", async () => {
   expect(fetched_workflow.id).toBe(workflow.id);
 });
 
+test("fetch by name with version = null works", async () => {
+  let wfVersion1 = new Workflow("sample", "sample", blueprints_.minimal);
+  await wfVersion1.save();
+  let wfVersion2 = new Workflow("sample", "sample", blueprints_.minimal);
+  wfVersion2 = await wfVersion2.save();
+  const fetchedWorkflow = await Workflow.fetchWorkflowByName("sample", null);
+  expect(fetchedWorkflow.id).toBe(wfVersion2.id);
+});
+
+test("fetch by name with version = latest works", async () => {
+  let wfVersion1 = new Workflow("sample", "sample", blueprints_.minimal);
+  await wfVersion1.save();
+  let wfVersion2 = new Workflow("sample", "sample", blueprints_.minimal);
+  wfVersion2 = await wfVersion2.save();
+  const fetchedWorkflow = await Workflow.fetchWorkflowByName("sample", "latest");
+  expect(fetchedWorkflow.id).toBe(wfVersion2.id);
+});
+
+test("fetch by name with version = 1 works", async () => {
+  let wfVersion1 = new Workflow("sample", "sample", blueprints_.minimal);
+  wfVersion1 = await wfVersion1.save();
+  let wfVersion2 = new Workflow("sample", "sample", blueprints_.minimal);
+  wfVersion2 = await wfVersion2.save();
+  let fetchedWorkflow = await Workflow.fetchWorkflowByName("sample", 1);
+  expect(fetchedWorkflow.id).toBe(wfVersion1.id);
+  fetchedWorkflow = await Workflow.fetchWorkflowByName("sample");
+  expect(fetchedWorkflow.id).toBe(wfVersion2.id);
+});
+
 test("fetch by hash works", async () => {
   let workflow = new Workflow("sample", "sample", blueprints_.minimal);
-  let blueprint_hash = JSum.digest(blueprints_.minimal, 'SHA256', 'hex');
+  let blueprint_hash = JSum.digest(blueprints_.minimal, "SHA256", "hex");
   workflow = await workflow.save();
   const workflows = await Workflow.findWorkflowByBlueprintHash(blueprint_hash);
   expect(workflows[0].id).toBe(workflow.id);
@@ -145,8 +174,8 @@ describe("createProcess", () => {
       process.env.NODE_ENV = original_node_env;
       process.env.API_HOST = original_api_host;
     }
-  })
-})
+  });
+});
 
 const _clean = async () => {
   const persistor = PersistorProvider.getPersistor(...settings.persist_options);

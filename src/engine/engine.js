@@ -506,8 +506,8 @@ class Engine {
     return await Workflow.fetch(workflow_id);
   }
 
-  async fetchWorkflowByName(workflow_name) {
-    return await Workflow.fetchWorkflowByName(workflow_name);
+  async fetchWorkflowByName(workflow_name, version = null) {
+    return await Workflow.fetchWorkflowByName(workflow_name, version);
   }
 
   async findWorkflowByBlueprintHash(blueprint_hash) {
