@@ -1,3 +1,11 @@
+## [2.7.0](https://github.com/flow-build/engine/compare/v2.6.0...v2.7.0) (2022-02-23)
+
+
+### Features
+
+* **engine:** add version to fetchWorkflowByName ([f696997](https://github.com/flow-build/engine/commit/f696997ada32b7df0522f0c60a14961448658945))
+* **engine:** add version to fetchWorkflowByName ([a20021b](https://github.com/flow-build/engine/commit/a20021b0ca806d9cf144c817edc5f49c57906e39))
+
 ## [2.6.0](https://github.com/flow-build/engine/compare/v2.5.0...v2.6.0) (2022-02-17)
 
 
