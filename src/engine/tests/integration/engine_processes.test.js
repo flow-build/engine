@@ -5,6 +5,13 @@ const { ProcessStatus } = require("../../../core/workflow/process_state");
 const { Process } = require("../../../core/workflow/process");
 const { blueprints_, actors_ } = require("../../../core/workflow/tests/unitary/blueprint_samples");
 
+let engine;
+
+beforeAll(() => {
+  engine = new Engine(...settings.persist_options);
+  jest.setTimeout(60000);
+});
+
 beforeEach(async () => {
   await _clean();
 });
@@ -14,10 +21,10 @@ afterAll(async () => {
   if (settings.persist_options[0] === "knex") {
     await Process.getPersist()._db.destroy();
   }
+  Engine.kill();
 });
 
 test("Workflow should not work with missing requirements", async () => {
-  const engine = new Engine(...settings.persist_options);
   const workflow = await engine.saveWorkflow("sample", "sample", blueprints_.missing_requirements);
   let process = await engine.createProcess(workflow.id, actors_.simpleton);
   process = await engine.runProcess(process.id, actors_.simpleton);
@@ -26,7 +33,7 @@ test("Workflow should not work with missing requirements", async () => {
 });
 
 test("Engine create process", async () => {
-  const engine = new Engine(...settings.persist_options);
+  //const engine = new Engine(...settings.persist_options);
   const workflow = await engine.saveWorkflow("sample", "sample", blueprints_.minimal);
   const process = await engine.createProcess(workflow.id, actors_.simpleton);
   expect(process.id).toBeDefined();
@@ -34,7 +41,7 @@ test("Engine create process", async () => {
 });
 
 test("Engine create process without permission", async () => {
-  const engine = new Engine(...settings.persist_options);
+  //const engine = new Engine(...settings.persist_options);
   const workflow = await engine.saveWorkflow("sample", "sample", blueprints_.admin_identity_user_task);
   const process = await engine.createProcess(workflow.id, actors_.simpleton);
   expect(process.id).toBeUndefined();
@@ -42,7 +49,7 @@ test("Engine create process without permission", async () => {
 });
 
 test("Engine create process by workflow name", async () => {
-  const engine = new Engine(...settings.persist_options);
+  //const engine = new Engine(...settings.persist_options);
   await engine.saveWorkflow("sample", "sample", blueprints_.minimal);
   const process = await engine.createProcessByWorkflowName("sample", actors_.simpleton);
   expect(process.id).toBeDefined();
@@ -50,7 +57,7 @@ test("Engine create process by workflow name", async () => {
 });
 
 test("Engine create process without permission by workflow name", async () => {
-  const engine = new Engine(...settings.persist_options);
+  //const engine = new Engine(...settings.persist_options);
   await engine.saveWorkflow("sample", "sample", blueprints_.admin_identity_user_task);
   const process = await engine.createProcessByWorkflowName("sample", actors_.simpleton);
   expect(process.id).toBeUndefined();
@@ -58,7 +65,7 @@ test("Engine create process without permission by workflow name", async () => {
 });
 
 test("Engine create process with data", async () => {
-  const engine = new Engine(...settings.persist_options);
+  //const engine = new Engine(...settings.persist_options);
   await engine.saveWorkflow("sample", "sample", blueprints_.start_with_data);
   const create_data = { number: 9999, name: "createName" };
   let process = await engine.createProcessByWorkflowName("sample", actors_.simpleton, create_data);
@@ -70,7 +77,7 @@ test("Engine create process with data", async () => {
 });
 
 test("Engine create process with missing data but run fails", async () => {
-  const engine = new Engine(...settings.persist_options);
+  //const engine = new Engine(...settings.persist_options);
   await engine.saveWorkflow("sample", "sample", blueprints_.start_with_data);
   const create_data = {};
   let process = await engine.createProcessByWorkflowName("sample", actors_.simpleton, create_data);
@@ -85,7 +92,7 @@ test("Engine create process with missing data but run fails", async () => {
 });
 
 describe("Run existing process", () => {
-  const engine = new Engine(...settings.persist_options);
+  //const engine = new Engine(...settings.persist_options);
 
   async function createProcess(blueprint, actor_data) {
     const workflow = await engine.saveWorkflow("sample", "sample", blueprint);
@@ -155,6 +162,7 @@ describe("Run existing process", () => {
   test("Engine run process with timeout", async () => {
     jest.setTimeout(60000);
     const process = await createProcess(blueprints_.start_with_timeout, actors_.simpleton);
+    //console.log("Engine run process with timeout:", process._id);
     await engine.runProcess(process.id, actors_.simpleton);
 
     const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
@@ -251,7 +259,7 @@ describe("Run existing process", () => {
 });
 
 test("process state notifier", async () => {
-  const engine = new Engine(...settings.persist_options);
+  //const engine = new Engine(...settings.persist_options);
   try {
     const workflow = await engine.saveWorkflow("sample", "sample", blueprints_.minimal);
 
@@ -272,7 +280,7 @@ test("process state notifier", async () => {
 });
 
 test("activity manager notifier on run process", async () => {
-  const engine = new Engine(...settings.persist_options);
+  //const engine = new Engine(...settings.persist_options);
   try {
     const workflow = await engine.saveWorkflow("sample", "sample", blueprints_.identity_user_task);
 
@@ -292,7 +300,7 @@ test("activity manager notifier on run process", async () => {
 });
 
 test("activity manager notifier on activity commit", async () => {
-  const engine = new Engine(...settings.persist_options);
+  //const engine = new Engine(...settings.persist_options);
   try {
     const workflow = await engine.saveWorkflow("sample", "sample", blueprints_.identity_user_task);
 
@@ -323,17 +331,17 @@ test("run process using environment", async () => {
   const original_env_payload = process.env.PAYLOAD;
   const original_env_limit = process.env.LIMIT;
 
-  const engine = new Engine(...settings.persist_options);
+  //const engine = new Engine(...settings.persist_options);
   try {
-    const workflow = await engine.saveWorkflow("sample", "sample", blueprints_.reference_environment);
-
-    let process_state_history = [];
-    engine.setProcessStateNotifier((process_state) => process_state_history.push(process_state));
-
     process.env.ENVIRONMENT = "test";
     process.env.API_HOST = "https://koa-app:3000/test_api";
     process.env.PAYLOAD = "payload";
     process.env.LIMIT = "999";
+
+    const workflow = await engine.saveWorkflow("sample", "sample", blueprints_.reference_environment);
+
+    let process_state_history = [];
+    engine.setProcessStateNotifier((process_state) => process_state_history.push(process_state));
 
     let workflow_process = await engine.createProcess(workflow.id, actors_.simpleton);
     expect(workflow_process.state.status).toEqual("unstarted");
@@ -372,66 +380,64 @@ test("run process using environment", async () => {
   }
 });
 
-describe("process starting another process", () => {
-  test("run process that creaters another process", async () => {
-    const engine = new Engine(...settings.persist_options);
-    try {
-      const minimal_workflow = await engine.saveWorkflow("minimal", "minimal", blueprints_.minimal);
-      const create_process_workflow = await engine.saveWorkflow(
-        "create_process_minimal",
-        "create process minimal",
-        blueprints_.create_process_minimal
-      );
-
-      let process_state_history = [];
-      engine.setProcessStateNotifier((process_state) => process_state_history.push(process_state));
-
-      let workflow_process = await engine.createProcess(create_process_workflow.id, actors_.simpleton);
-      expect(workflow_process.state.status).toEqual("unstarted");
-
-      workflow_process = await engine.runProcess(workflow_process.id, actors_.simpleton);
-      expect(workflow_process.state.status).toEqual("finished");
-
-      const minimal_process_list = await engine.fetchProcessList({ workflow_id: minimal_workflow.id });
-      expect(minimal_process_list).toHaveLength(1);
-
-      const create_process_process_list = await engine.fetchProcessList({ workflow_id: create_process_workflow.id });
-      expect(create_process_process_list).toHaveLength(1);
-
-      const result = await engine.fetchProcess(create_process_process_list[0].id);
-      expect(result.state.status).toEqual(ProcessStatus.FINISHED);
-    } finally {
-      engine.setProcessStateNotifier();
-    }
-  });
-
-  test("child process has restricted input schema", async () => {
-    const engine = new Engine(...settings.persist_options);
-
-    const childWorkflow = await engine.saveWorkflow(
-      "restricted_schema",
-      "child process with restricted input schema",
-      blueprints_.withRestrictedInputSchema
-    );
-    const parentWorkflow = await engine.saveWorkflow(
-      "create_another_process",
-      "parent process that creates a child process",
-      blueprints_.createProcessWithRestrictedInputSchema
+test("run process that creaters another process", async () => {
+  //const engine = new Engine(...settings.persist_options);
+  try {
+    const minimal_workflow = await engine.saveWorkflow("minimal", "minimal", blueprints_.minimal);
+    const create_process_workflow = await engine.saveWorkflow(
+      "create_process_minimal",
+      "create process minimal",
+      blueprints_.create_process_minimal
     );
 
-    const parentProcess = await engine.createProcess(parentWorkflow.id, actors_.simpleton);
-    expect(parentProcess.state.status).toEqual(ProcessStatus.UNSTARTED);
+    let process_state_history = [];
+    engine.setProcessStateNotifier((process_state) => process_state_history.push(process_state));
 
-    const parentProcessState = await engine.runProcess(parentProcess.id, actors_.simpleton);
-    expect(parentProcessState.state.status).toEqual(ProcessStatus.FINISHED);
+    let workflow_process = await engine.createProcess(create_process_workflow.id, actors_.simpleton);
+    expect(workflow_process.state.status).toEqual("unstarted");
 
-    const childProcessList = await engine.fetchProcessList({ workflow_id: childWorkflow.id });
-    expect(childProcessList).toHaveLength(1);
+    workflow_process = await engine.runProcess(workflow_process.id, actors_.simpleton);
+    expect(workflow_process.state.status).toEqual("finished");
 
-    const childState = await engine.fetchProcess(childProcessList[0].id);
-    expect(childState.state.status).not.toBe(ProcessStatus.UNSTARTED);
-    expect(childState.state.status).not.toBe(ProcessStatus.ERROR);
-  });
+    const minimal_process_list = await engine.fetchProcessList({ workflow_id: minimal_workflow.id });
+    expect(minimal_process_list).toHaveLength(1);
+
+    const create_process_process_list = await engine.fetchProcessList({ workflow_id: create_process_workflow.id });
+    expect(create_process_process_list).toHaveLength(1);
+
+    const result = await engine.fetchProcess(create_process_process_list[0].id);
+    expect(result.state.status).toEqual(ProcessStatus.FINISHED);
+  } finally {
+    engine.setProcessStateNotifier();
+  }
+});
+
+test("child process has restricted input schema", async () => {
+  const engine = new Engine(...settings.persist_options);
+
+  const childWorkflow = await engine.saveWorkflow(
+    "restricted_schema",
+    "child process with restricted input schema",
+    blueprints_.withRestrictedInputSchema
+  );
+  const parentWorkflow = await engine.saveWorkflow(
+    "create_another_process",
+    "parent process that creates a child process",
+    blueprints_.createProcessWithRestrictedInputSchema
+  );
+
+  const parentProcess = await engine.createProcess(parentWorkflow.id, actors_.simpleton);
+  expect(parentProcess.state.status).toEqual(ProcessStatus.UNSTARTED);
+
+  const parentProcessState = await engine.runProcess(parentProcess.id, actors_.simpleton);
+  expect(parentProcessState.state.status).toEqual(ProcessStatus.FINISHED);
+
+  const childProcessList = await engine.fetchProcessList({ workflow_id: childWorkflow.id });
+  expect(childProcessList).toHaveLength(1);
+
+  const childState = await engine.fetchProcess(childProcessList[0].id);
+  expect(childState.state.status).not.toBe(ProcessStatus.UNSTARTED);
+  expect(childState.state.status).not.toBe(ProcessStatus.ERROR);
 });
 
 // test("run process that abort another process", async () => {
@@ -458,7 +464,7 @@ describe("process starting another process", () => {
 // });
 
 describe("User task timeout", () => {
-  const engine = new Engine(...settings.persist_options);
+  //const engine = new Engine(...settings.persist_options);
   let actualTimeout;
   function wait(ms = 2000) {
     return new Promise((resolve) => {
@@ -744,7 +750,7 @@ test("Commit activity only on type 'commit' activity manager", async () => {
 });
 
 test("Push activity only on type 'commit' activity manager", async () => {
-  const engine = new Engine(...settings.persist_options);
+  //const engine = new Engine(...settings.persist_options);
   await engine.saveWorkflow("sample", "sample", blueprints_.notify_and_user_task);
 
   let process = await engine.createProcessByWorkflowName("sample", actors_.simpleton);
@@ -771,6 +777,27 @@ test("Push activity only on type 'commit' activity manager", async () => {
   const commit_activity_manager = await engine.fetchActivityManager(activity_managers[1]._id, actors_.simpleton);
   expect(commit_activity_manager.type).toEqual("commit");
   expect(commit_activity_manager.activity_status).toEqual("completed");
+});
+
+test("Push activity should return error to an non-existant activity manager", async () => {
+  await engine.saveWorkflow("sample", "sample", blueprints_.notify_and_user_task);
+
+  let process = await engine.createProcessByWorkflowName("sample", actors_.simpleton);
+
+  const activity_managers = [];
+  const notifier = (data) => {
+    activity_managers.push(data);
+  };
+  engine.setActivityManagerNotifier(notifier);
+
+  process = await engine.runProcess(process.id, actors_.simpleton);
+  expect(process.state.node_id).toEqual("3");
+
+  const firstCall = await engine.pushActivity(process.id, actors_.simpleton);
+  expect(firstCall.error).toBeUndefined();
+
+  const secondCall = await engine.pushActivity(process.id, actors_.simpleton);
+  expect(secondCall.error).toBeDefined();
 });
 
 const _clean = async () => {
