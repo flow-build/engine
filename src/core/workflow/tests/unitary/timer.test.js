@@ -89,7 +89,33 @@ test("run works on mock", async () => {
   // expect(fetched_timer.active).toBeFalsy();
 });
 
+test("fetch resource don't work on other resource types", async () => {
+  const mock_id = uuid();
+  let timer = new Timer("Mocker", mock_id, Timer.timeoutFromNow(10), {});
+  
+  await timer.save();
+  timer._resource_id = uuid();
 
+  await timer.fetchResource().then((timer) => {
+    expect(timer).toBeFalsy();
+  }).catch((error) => {
+    expect(error).toBeTruthy();
+  });
+});
+
+test("run timer don't work on other resource types", async () => {
+  const mock_id = uuid();
+  let timer = new Timer("ActivityManager", mock_id, Timer.timeoutFromNow(10), {});
+  
+  await timer.save();
+  timer._resource_id = uuid();
+  
+  await timer.run().then((timer) => {
+    expect(timer).toBeFalsy();
+  }).catch((error) => {
+    expect(error).toBeTruthy();
+  });
+});
 
 const _clean = async () => {
   const persistor = PersistorProvider.getPersistor(...settings.persist_options);
