@@ -324,6 +324,20 @@ test("saveWorkflow works", async () => {
   expect(workflow).toBeInstanceOf(Workflow);
 });
 
+test("saveWorkflow breaks if workflow_id is not an uuid", async () => {
+  const engine = new Engine(...settings.persist_options);
+  const response = await engine.saveWorkflow("sample", "sample", blueprints_.minimal, "not_a_uuid");
+  expect(response.error).toBeDefined();
+});
+
+test("saveWorkflow breaks if workflow_id already exists", async () => {
+  const engine = new Engine(...settings.persist_options);
+  const workflow = await engine.saveWorkflow("sample", "sample", blueprints_.minimal);
+  const response = await engine.saveWorkflow("sample", "sample", blueprints_.minimal, workflow.id);
+
+  expect(response.error).toBeDefined();
+});
+
 test("savePackage works", async () => {
   const engine = new Engine(...settings.persist_options);
   const package_ = await engine.savePackage("sample", "sample", packages_.test_package);
