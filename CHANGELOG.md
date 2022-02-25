@@ -1,3 +1,12 @@
+## [2.8.0](https://github.com/flow-build/engine/compare/v2.7.0...v2.8.0) (2022-02-25)
+
+
+### Features
+
+* add fech process state methods ([5da137b](https://github.com/flow-build/engine/commit/5da137b67b56dd448a915e39997ab31f95c99961))
+* add processStatus to index ([0853817](https://github.com/flow-build/engine/commit/0853817d653ff7dcf442afd83f555a13933503e2))
+* include state fetch to cockpit ([3ea6592](https://github.com/flow-build/engine/commit/3ea6592c233f4c12d9d3ff790f72ae022e9ab9ea))
+
 ## [2.7.0](https://github.com/flow-build/engine/compare/v2.6.0...v2.7.0) (2022-02-23)
 
 
