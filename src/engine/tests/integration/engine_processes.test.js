@@ -4,6 +4,8 @@ const { PersistorProvider } = require("../../../core/persist/provider");
 const { ProcessStatus } = require("../../../core/workflow/process_state");
 const { Process } = require("../../../core/workflow/process");
 const { blueprints_, actors_ } = require("../../../core/workflow/tests/unitary/blueprint_samples");
+const { Timer } = require("../../../core/workflow/timer");
+const { v1: uuid } = require("uuid");
 
 let engine;
 
@@ -797,6 +799,38 @@ test("Push activity should return error to an non-existant activity manager", as
 
   const secondCall = await engine.pushActivity(process.id, actors_.simpleton);
   expect(secondCall.error).toBeDefined();
+});
+
+test("Beat won't break despite orphan timer", async () => {
+  const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+  
+  const engine = new Engine(...settings.persist_options);
+  const workflow = await engine.saveWorkflow("user_timeout_one_hour", "user_timeout_one_hour", blueprints_.user_timeout_one_hour);
+  
+  let process = await engine.createProcess(workflow.id, actors_.simpleton);
+  process = await engine.runProcess(process.id, actors_.simpleton);
+  
+  expect(process.status).toEqual(ProcessStatus.WAITING);
+
+  let activity_manager = await engine.fetchAvailableActivityForProcess(process.id, actors_.simpleton);
+  expect(activity_manager.id).toBeDefined();
+
+  process = await engine.abortProcess(process.id);
+  expect(process.status).toBe(ProcessStatus.INTERRUPTED);
+  
+  let timer = new Timer("Process", process.id, Timer.timeoutFromNow(10), {});
+  await timer.save();
+
+  let timer2 = new Timer("ActivityManager", activity_manager.id, Timer.timeoutFromNow(10), {});
+  await timer2.save();
+
+  let timer3= new Timer("Mocker", uuid(), Timer.timeoutFromNow(10), {});
+  await timer3.save();
+
+  for (let i = 0; i < 5; i++) {
+    await delay(2000);
+    await Engine._beat()
+  }
 });
 
 const _clean = async () => {

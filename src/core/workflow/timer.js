@@ -71,20 +71,24 @@ class Timer extends PersistedEntity {
   }
 
   async fetchResource() {
-    switch (this._resource_type) {
-      case "ActivityManager": {
-        const { ActivityManager } = require("./activity_manager");
-        return ActivityManager.deserialize(await ActivityManager.fetch(this.resource_id));
+    try {
+      switch (this._resource_type) {
+        case "ActivityManager": {
+          const { ActivityManager } = require("./activity_manager");
+          return ActivityManager.deserialize(await ActivityManager.fetch(this.resource_id));
+        }
+  
+        case "Process": {
+          const { Process } = require("./process");
+          return Process.fetch(this.resource_id);
+        }
+  
+        case "Mock": {
+          return Mock.fetch(this.resource_id);
+        }
       }
-
-      case "Process": {
-        const { Process } = require("./process");
-        return Process.fetch(this.resource_id);
-      }
-
-      case "Mock": {
-        return Mock.fetch(this.resource_id);
-      }
+    } catch (e) {
+      throw new Error(e)
     }
   }
 
@@ -98,7 +102,9 @@ class Timer extends PersistedEntity {
     await this.delete(trx);
 
     const resource = await this.fetchResource();
-    resource.timeout(this);
+    if(resource) {
+      resource.timeout(this);
+    }
   }
 
   static timeoutFromNow(seconds) {
