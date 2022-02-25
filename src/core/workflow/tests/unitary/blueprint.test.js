@@ -232,7 +232,6 @@ describe("Blueprint.validate", () => {
   test("works for all default node types & categories", () => {
     const blueprint_spec = allNodeTypes.blueprint_spec;
     const response = Blueprint.validate(blueprint_spec);
-    console.log(response);
     expect(response[0]).toEqual(true);
   });
 });

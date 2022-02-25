@@ -107,7 +107,6 @@ class Cockpit {
       throw new Error("[getProcessState] Process Id not provided");
     }
 
-    console.log("<><><><><> HEY getProcessState:", stateId);
     return await ProcessState.fetch(stateId);
   }
 
@@ -120,9 +119,7 @@ class Cockpit {
       throw new Error("[findProcessStatesByStepNumber] stepNumber not provided");
     }
 
-    console.log("<><><><><> HEY findProcessStatesByStepNumber", processId, stepNumber);
     const result = await ProcessState.fetchByStepNumber(processId, stepNumber);
-    console.log(">>>>", result);
     return result;
   }
 
@@ -135,9 +132,7 @@ class Cockpit {
       throw new Error("[findProcessStatesByNodeId] NodeId not provided");
     }
 
-    console.log("<><><><><> HEY findProcessStatesByNodeId", processId, nodeId);
     const result = await ProcessState.fetchByNodeId(processId, nodeId);
-    console.log(">>>>", result);
     return result;
   }
 
