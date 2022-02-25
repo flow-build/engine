@@ -1,3 +1,4 @@
+/* eslint-disable no-unused-vars */
 const { abstractFactory } = require("../utils/factory");
 
 class PersistorSingleton {
@@ -31,10 +32,10 @@ class PersistorSingleton {
 
   async clear() {
     const persists = Object.values(this._persists);
-    await persists.forEach(async persist => await persist.deleteAll());
+    await persists.forEach(async (persist) => await persist.deleteAll());
   }
 }
 
 module.exports = {
-  PersistorSingleton: PersistorSingleton
+  PersistorSingleton: PersistorSingleton,
 };

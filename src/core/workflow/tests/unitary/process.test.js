@@ -282,7 +282,6 @@ describe("Process test", () => {
 
     test("it should return all processes if called without params", async () => {
       const fetchProcesses = await Process.fetchAll();
-      console.log("fetchProcesses:", fetchProcesses);
       expect(fetchProcesses).toHaveLength(processes.length);
     });
 

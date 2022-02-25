@@ -164,7 +164,6 @@ describe("Run existing process", () => {
   test("Engine run process with timeout", async () => {
     jest.setTimeout(60000);
     const process = await createProcess(blueprints_.start_with_timeout, actors_.simpleton);
-    //console.log("Engine run process with timeout:", process._id);
     await engine.runProcess(process.id, actors_.simpleton);
 
     const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
