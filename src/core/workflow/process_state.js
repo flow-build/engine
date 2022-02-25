@@ -1,4 +1,4 @@
-const { BaseEntity } = require("./base");
+const { PersistedEntity } = require("./base");
 const { v1: uuid } = require("uuid");
 
 const ENGINE_ID = process.env.engine_id || uuid();
@@ -36,7 +36,11 @@ class ProcessStatus {
   }
 }
 
-class ProcessState extends BaseEntity {
+class ProcessState extends PersistedEntity {
+  static getEntityClass() {
+    return ProcessState;
+  }
+
   static serialize(state) {
     return {
       id: state._id,
@@ -77,6 +81,16 @@ class ProcessState extends BaseEntity {
       return state;
     }
     return undefined;
+  }
+
+  static async fetchByNodeId(processId, nodeId) {
+    const states = await this.getPersist().getByNodeId(processId, nodeId);
+    return states.map((state) => ProcessState.deserialize(state));
+  }
+
+  static async fetchByStepNumber(processId, stepNumber) {
+    const state = await this.getPersist().getByStepNumber(processId, stepNumber);
+    return ProcessState.deserialize(state);
   }
 
   constructor(
