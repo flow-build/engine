@@ -3,6 +3,7 @@ const { Cockpit } = require("./src/cockpit/cockpit");
 
 const Nodes = require("./src/core/workflow/nodes/index.js");
 const { nodefyFunction, nodefyClass } = require("./src/core/utils/nodefy");
+const { ProcessStatus } = require("./src/core/workflow/process_state");
 
 module.exports = {
   Engine: Engine,
@@ -12,4 +13,5 @@ module.exports = {
     nodefyFunction: nodefyFunction,
     nodefyClass: nodefyClass,
   },
+  ProcessStatus,
 };
