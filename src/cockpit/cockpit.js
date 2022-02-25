@@ -4,6 +4,7 @@ const { Workflow } = require("../core/workflow/workflow");
 const { Process } = require("../core/workflow/process");
 const { Packages } = require("../core/workflow/packages");
 const { Engine } = require("../engine/engine");
+const { ProcessState } = require("../core/workflow/process_state");
 
 class Cockpit {
   static get instance() {
@@ -99,6 +100,45 @@ class Cockpit {
 
     process = await process.setState(state_data);
     return process.state;
+  }
+
+  async getProcessState(stateId) {
+    if (!stateId) {
+      throw new Error("[getProcessState] Process Id not provided");
+    }
+
+    console.log("<><><><><> HEY getProcessState:", stateId);
+    return await ProcessState.fetch(stateId);
+  }
+
+  async findProcessStatesByStepNumber(processId, stepNumber) {
+    if (!processId) {
+      throw new Error("[findProcessStatesByStepNumber] Process Id not provided");
+    }
+
+    if (!stepNumber) {
+      throw new Error("[findProcessStatesByStepNumber] stepNumber not provided");
+    }
+
+    console.log("<><><><><> HEY findProcessStatesByStepNumber", processId, stepNumber);
+    const result = await ProcessState.fetchByStepNumber(processId, stepNumber);
+    console.log(">>>>", result);
+    return result;
+  }
+
+  async findProcessStatesByNodeId(processId, nodeId) {
+    if (!processId) {
+      throw new Error("[findProcessStatesByNodeId] Process Id not provided");
+    }
+
+    if (!nodeId) {
+      throw new Error("[findProcessStatesByNodeId] NodeId not provided");
+    }
+
+    console.log("<><><><><> HEY findProcessStatesByNodeId", processId, nodeId);
+    const result = await ProcessState.fetchByNodeId(processId, nodeId);
+    console.log(">>>>", result);
+    return result;
   }
 
   async _filterForAllowedWorkflows(workflows_data, actor_data) {

@@ -9,6 +9,8 @@ const { PersistorProvider } = require("../../../core/persist/provider");
 const { blueprints_, actors_ } = require("../../../core/workflow/tests/unitary/blueprint_samples");
 const extra_nodes = require("../../../engine/tests/utils/extra_nodes");
 
+const cockpit = new Cockpit(...settings.persist_options);
+
 beforeEach(async () => {
   await _clean();
 });
@@ -16,24 +18,22 @@ beforeEach(async () => {
 afterAll(async () => {
   Engine.kill();
   await _clean();
-  if (settings.persist_options[0] === "knex"){
-    await Workflow.getPersist()._db.destroy();;
+  if (settings.persist_options[0] === "knex") {
+    await Workflow.getPersist()._db.destroy();
   }
 });
 
 describe("getProcessStateHistory works", () => {
-
   test("getProcessStateHistory when there are states for the process", async () => {
     const engine = new Engine(...settings.persist_options);
     const workflow = await engine.saveWorkflow("sample", "sample", blueprints_.identity_system_task);
     let process = await engine.createProcess(workflow.id, actors_.simpleton);
     process = await engine.runProcess(process.id, actors_.simpleton);
     const process_state_history = await engine.fetchProcessStateHistory(process.id);
-    const cockpit = new Cockpit(...settings.persist_options);
     const process_state_data_history = await cockpit.getProcessStateHistory(process.id);
     expect(process_state_data_history).toHaveLength(process_state_history.length);
     for (const process_state of process_state_history) {
-      const process_state_data = _.find(process_state_data_history, {id: process_state.id});
+      const process_state_data = _.find(process_state_data_history, { id: process_state.id });
       _validate_process_state_data(process_state_data, process_state);
     }
   });
@@ -42,8 +42,7 @@ describe("getProcessStateHistory works", () => {
     const engine = new Engine(...settings.persist_options);
     const workflow = await engine.saveWorkflow("sample", "sample", blueprints_.identity_system_task);
     let process = await engine.createProcess(workflow.id, actors_.admin);
-    process = await engine.runProcess(process.id, actors_.admin);
-    const cockpit = new Cockpit(...settings.persist_options);
+    await engine.runProcess(process.id, actors_.admin);
     const process_state_data_history = await cockpit.getProcessStateHistory(uuid());
     expect(process_state_data_history).toHaveLength(0);
   });
@@ -57,35 +56,31 @@ describe("getProcessStateHistory works", () => {
     admin_process = await engine.runProcess(admin_process.id, actors_.admin);
     const simpleton_process_state_history = await engine.fetchProcessStateHistory(simpleton_process.id);
     const admin_process_state_history = await engine.fetchProcessStateHistory(admin_process.id);
-    const cockpit = new Cockpit(...settings.persist_options);
     const simpleton_process_state_data_history = await cockpit.getProcessStateHistory(simpleton_process.id);
     const admin_process_state_data_history = await cockpit.getProcessStateHistory(admin_process.id);
     expect(simpleton_process_state_data_history).toHaveLength(simpleton_process_state_history.length);
     expect(admin_process_state_data_history).toHaveLength(admin_process_state_history.length);
     for (const process_state of simpleton_process_state_history) {
-      const process_state_data = _.find(simpleton_process_state_data_history, {id: process_state.id});
+      const process_state_data = _.find(simpleton_process_state_data_history, { id: process_state.id });
       _validate_process_state_data(process_state_data, process_state);
     }
     for (const process_state of admin_process_state_history) {
-      const process_state_data = _.find(admin_process_state_data_history, {id: process_state.id});
+      const process_state_data = _.find(admin_process_state_data_history, { id: process_state.id });
       _validate_process_state_data(process_state_data, process_state);
     }
   });
 });
 
 describe("getWorkflowsForActor works", () => {
-
   test("getWorkflowsForActor when there are workflows available to actor", async () => {
     const engine = new Engine(...settings.persist_options);
     const workflow = await engine.saveWorkflow("sample", "sample", blueprints_.identity_system_task);
-    const cockpit = new Cockpit(...settings.persist_options);
     const actor_workflows_data = await cockpit.getWorkflowsForActor(actors_.simpleton);
     expect(actor_workflows_data).toHaveLength(1);
     _validate_workflow_data(actor_workflows_data[0], workflow);
   });
 
   test("getWorkflowsForActor when there are no workflows available", async () => {
-    const cockpit = new Cockpit(...settings.persist_options);
     const actor_workflows_data = await cockpit.getWorkflowsForActor(actors_.simpleton);
     expect(actor_workflows_data).toHaveLength(0);
   });
@@ -93,15 +88,18 @@ describe("getWorkflowsForActor works", () => {
   test("getWorkflowsForActor when there are workflows, but not all are available to actor", async () => {
     const engine = new Engine(...settings.persist_options);
     const open_workflow = await engine.saveWorkflow("open", "open", blueprints_.identity_system_task);
-    const restricted_workflow = await engine.saveWorkflow("restricted", "restricted", blueprints_.restricted_multilane_identity_user_task);
-    const cockpit = new Cockpit(...settings.persist_options);
+    const restricted_workflow = await engine.saveWorkflow(
+      "restricted",
+      "restricted",
+      blueprints_.restricted_multilane_identity_user_task
+    );
     const simpleton_workflows_data = await cockpit.getWorkflowsForActor(actors_.simpleton);
     expect(simpleton_workflows_data).toHaveLength(1);
     _validate_workflow_data(simpleton_workflows_data[0], open_workflow);
     const admin_workflows_data = await cockpit.getWorkflowsForActor(actors_.admin);
     expect(admin_workflows_data).toHaveLength(2);
-    const admin_open_workflow_data = _.find(admin_workflows_data, {name: "open"});
-    const admin_restricted_workflow_data = _.find(admin_workflows_data, {name: "restricted"});
+    const admin_open_workflow_data = _.find(admin_workflows_data, { name: "open" });
+    const admin_restricted_workflow_data = _.find(admin_workflows_data, { name: "restricted" });
     _validate_workflow_data(admin_open_workflow_data, open_workflow);
     _validate_workflow_data(admin_restricted_workflow_data, restricted_workflow);
   });
@@ -109,7 +107,6 @@ describe("getWorkflowsForActor works", () => {
   test("getWorkflowsForActor list workflows with multiple starts and only one start node is allowed", async () => {
     const engine = new Engine(...settings.persist_options);
     const open_workflow = await engine.saveWorkflow("multiple", "multiple", blueprints_.multiple_starts);
-    const cockpit = new Cockpit(...settings.persist_options);
     const simpleton_workflows_data = await cockpit.getWorkflowsForActor(actors_.simpleton);
     expect(simpleton_workflows_data).toHaveLength(1);
     _validate_workflow_data(simpleton_workflows_data[0], open_workflow);
@@ -117,26 +114,24 @@ describe("getWorkflowsForActor works", () => {
 
   test("getWorkflowsForActor filters workflows with multiple starts and many start nodes are allowed", async () => {
     const engine = new Engine(...settings.persist_options);
-    const open_workflow = await engine.saveWorkflow("multiple", "multiple", blueprints_.multiple_starts);
-    const cockpit = new Cockpit(...settings.persist_options);
+    await engine.saveWorkflow("multiple", "multiple", blueprints_.multiple_starts);
     const simpleton_workflows_data = await cockpit.getWorkflowsForActor(actors_.admin);
     expect(simpleton_workflows_data).toHaveLength(0);
   });
 });
 
 describe("Adding extra nodes works", () => {
-
   test("Validation of extra nodes works", async () => {
-    const cockpit = new Cockpit(...settings.persist_options);
     cockpit.addCustomSystemCategory(extra_nodes);
     const custom_bluprint = _.cloneDeep(blueprints_.extra_nodes);
-  const exampleNode = custom_bluprint.nodes.find((node) => node.category === 'example');
-  delete exampleNode.parameters.example;
-  await expect(cockpit.saveWorkflow("sample", "sample", custom_bluprint)).rejects.toThrowError("parameters_has_example");
+    const exampleNode = custom_bluprint.nodes.find((node) => node.category === "example");
+    delete exampleNode.parameters.example;
+    await expect(cockpit.saveWorkflow("sample", "sample", custom_bluprint)).rejects.toThrowError(
+      "parameters_has_example"
+    );
   });
 
   test("Execution of extra nodes works", async () => {
-    const cockpit = new Cockpit(...settings.persist_options);
     cockpit.addCustomSystemCategory(extra_nodes);
     const workflow = await cockpit.saveWorkflow("sample", "sample", blueprints_.extra_nodes);
     let process = await cockpit.createProcess(workflow.id, actors_.simpleton);
@@ -151,7 +146,6 @@ describe("fetchWorkflowsWithProcessStatusCount", () => {
   }
 
   test("base test", async () => {
-    const cockpit = new Cockpit(...settings.persist_options);
     const workflow = await cockpit.saveWorkflow("sample", "sample", blueprints_.minimal);
     await cockpit.createProcess(workflow.id, actors_.simpleton);
     const process = await cockpit.createProcess(workflow.id, actors_.simpleton);
@@ -166,7 +160,6 @@ describe("fetchWorkflowsWithProcessStatusCount", () => {
   });
 
   test("workflow_id filter works", async () => {
-    const cockpit = new Cockpit(...settings.persist_options);
     const workflow1 = await cockpit.saveWorkflow("sample1", "sample1", blueprints_.minimal);
     await cockpit.createProcess(workflow1.id, actors_.simpleton);
     const workflow2 = await cockpit.saveWorkflow("sample2", "sample2", blueprints_.minimal);
@@ -178,7 +171,6 @@ describe("fetchWorkflowsWithProcessStatusCount", () => {
   });
 
   test("start_date filter works", async () => {
-    const cockpit = new Cockpit(...settings.persist_options);
     const workflow = await cockpit.saveWorkflow("sample", "sample", blueprints_.minimal);
     await cockpit.createProcess(workflow.id, actors_.simpleton);
 
@@ -202,7 +194,6 @@ describe("fetchWorkflowsWithProcessStatusCount", () => {
   });
 
   test("end_date filter works", async () => {
-    const cockpit = new Cockpit(...settings.persist_options);
     const workflow = await cockpit.saveWorkflow("sample", "sample", blueprints_.minimal);
     await cockpit.createProcess(workflow.id, actors_.simpleton);
 
@@ -222,11 +213,10 @@ describe("fetchWorkflowsWithProcessStatusCount", () => {
     response = await cockpit.fetchWorkflowsWithProcessStatusCount({ end_date: end_date.toJSON() });
     expect(response[workflow.id]).toBeDefined();
     expect(response[workflow.id].unstarted).toEqual(1);
-    expect(response[workflow.id].finished).toBeUndefined
+    expect(response[workflow.id].finished).toBeUndefined;
   });
 
   test("workflow without process", async () => {
-    const cockpit = new Cockpit(...settings.persist_options);
     const workflow = await cockpit.saveWorkflow("sample", "sample description", blueprints_.minimal);
 
     let response = await cockpit.fetchWorkflowsWithProcessStatusCount();
@@ -239,8 +229,6 @@ describe("fetchWorkflowsWithProcessStatusCount", () => {
 });
 
 describe("runPendingProcess", () => {
-  const cockpit = new Cockpit(...settings.persist_options);
-
   test("works", async () => {
     const workflow = await cockpit.saveWorkflow("sample", "sample", blueprints_.minimal);
     const process = await cockpit.createProcess(workflow.id, actors_.simpleton);
@@ -250,7 +238,7 @@ describe("runPendingProcess", () => {
       next_node_id: process.state.next_node_id,
     });
 
-    const result = await cockpit.runPendingProcess(process.id);
+    await cockpit.runPendingProcess(process.id);
 
     const process_state_data_history = await cockpit.fetchProcessStateHistory(process.id);
     expect(process_state_data_history).toHaveLength(4);
@@ -266,11 +254,11 @@ describe("runPendingProcess", () => {
       next_node_id: "2",
     });
 
-    const result = await cockpit.runPendingProcess(process.id, actors_.admin);
+    await cockpit.runPendingProcess(process.id, actors_.admin);
 
     const process_state_data_history = await cockpit.fetchProcessStateHistory(process.id);
     expect(process_state_data_history).toHaveLength(7);
-    const states_node_2 = process_state_data_history.filter(state => state.node_id === "2");
+    const states_node_2 = process_state_data_history.filter((state) => state.node_id === "2");
     expect(states_node_2).toHaveLength(2);
     expect(states_node_2[0].step_number > states_node_2[1].step_number).toEqual(true);
     expect(states_node_2[0].bag).toEqual({ runUser: actors_.admin });
@@ -303,11 +291,42 @@ describe("runPendingProcess", () => {
   });
 });
 
-function sleep(ms) {
-  return new Promise(resolve => setTimeout(resolve, ms));
-};
+describe("fetch states", () => {
+  let process;
+  let history;
+  const engine = new Engine(...settings.persist_options);
 
-const _clean = async () => {  
+  beforeEach(async () => {
+    const workflow = await cockpit.saveWorkflow("sample", "sample", blueprints_.minimal);
+    process = await cockpit.createProcess(workflow.id, actors_.simpleton);
+    await engine.runProcess(process.id, actors_.simpleton);
+    history = await engine.fetchProcessStateHistory(process.id);
+  });
+
+  test("getProcessState", async () => {
+    const result = await cockpit.getProcessState(history[0]._id);
+    expect(result).toBeDefined();
+    expect(result).toEqual(history[0]);
+  });
+
+  test("findProcessStatesByStepNumber", async () => {
+    const result = await cockpit.findProcessStatesByStepNumber(process.id, 1);
+    expect(result).toBeDefined();
+    expect(result.id).toEqual(_.last(history)._id);
+  });
+
+  test("findProcessStatesByNodeId", async () => {
+    const result = await cockpit.findProcessStatesByNodeId(process.id, "minimal_1");
+    expect(result).toBeDefined();
+    expect(result).toHaveLength(2);
+  });
+});
+
+function sleep(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+const _clean = async () => {
   const persistor = PersistorProvider.getPersistor(...settings.persist_options);
   const activity_persist = persistor.getPersistInstance("Activity");
   const activity_manager_persist = persistor.getPersistInstance("ActivityManager");
