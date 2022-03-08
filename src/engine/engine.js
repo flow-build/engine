@@ -63,7 +63,7 @@ class Engine {
     PersistorProvider.getPersistor(persist_mode, persist_args);
     Engine.instance = this;
     this.emitter = emitter;
-    if (heartBeat === true) {
+    if (heartBeat === true || heartBeat === "true") {
       try {
         Engine.heart = Engine.setNextHeartBeat();
         emitter.emit("ENGINE.CONTRUCTOR", "HEARTBEAT INITIALIZED", {});
