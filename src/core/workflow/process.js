@@ -111,10 +111,16 @@ class Process extends PersistedEntity {
     this._workflow_id = workflow_data.id;
     this.workflow_name = workflow_data.name;
     this._blueprint_spec = blueprint_spec;
-    this._blueprint = new Blueprint(this._blueprint_spec);
     this.state = null;
     this._current_state_id = null;
     this._current_status = null;
+
+    try {
+      this._blueprint = new Blueprint(this._blueprint_spec);
+    } catch (err) {
+      this._forbiddenState()
+      this.state.error = err
+    }
   }
 
   get state() {
