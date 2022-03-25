@@ -142,7 +142,6 @@ class Blueprint {
   }
 
   constructor(spec) {
-    Blueprint.assert_is_valid(spec);
     this._spec = spec;
   }
 
