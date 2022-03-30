@@ -1,3 +1,10 @@
+### [2.9.1](https://github.com/flow-build/engine/compare/v2.9.0...v2.9.1) (2022-03-30)
+
+
+### Bug Fixes
+
+* fix blueprint assert on constructor ([9314c81](https://github.com/flow-build/engine/commit/9314c810e6d6a278039e5ad25d21fa6f0cc0a5aa))
+
 ## [2.9.0](https://github.com/flow-build/engine/compare/v2.8.0...v2.9.0) (2022-03-30)
 
 
