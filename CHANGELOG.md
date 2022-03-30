@@ -1,3 +1,18 @@
+## [2.9.0](https://github.com/flow-build/engine/compare/v2.8.0...v2.9.0) (2022-03-30)
+
+
+### Features
+
+* allow engine to be initialized without the heartbeat ([71820ad](https://github.com/flow-build/engine/commit/71820ad071965e56f146b31db3b3bb28e43673e3))
+* expose getNode factory ([cb7b29e](https://github.com/flow-build/engine/commit/cb7b29e28671b76877e309fb7da7c823d0124234))
+
+
+### Reverts
+
+* full revert pkg changes ([7f775e9](https://github.com/flow-build/engine/commit/7f775e909a440ed6ebe5d48dfbf6707fe5aa36d4))
+* **packages:** revert pkg version ([28d4893](https://github.com/flow-build/engine/commit/28d4893b7b01785d02f37c9b37b30345927f6a57))
+* rollback package-lock ([6e3f7a0](https://github.com/flow-build/engine/commit/6e3f7a061a992ccc71a4df226fc71a4bf6d49571))
+
 ## [2.8.0](https://github.com/flow-build/engine/compare/v2.7.0...v2.8.0) (2022-02-25)
 
 
