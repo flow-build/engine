@@ -1,3 +1,10 @@
+### [2.9.2](https://github.com/flow-build/engine/compare/v2.9.1...v2.9.2) (2022-03-30)
+
+
+### Bug Fixes
+
+* **nodes:** update schema to allow ref on timeout and contentLength ([e09a8c5](https://github.com/flow-build/engine/commit/e09a8c59d9ccd1e1e787594c562cdec1e0971a70))
+
 ### [2.9.1](https://github.com/flow-build/engine/compare/v2.9.0...v2.9.1) (2022-03-30)
 
 
