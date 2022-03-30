@@ -19,11 +19,11 @@ beforeEach(async () => {
 });
 
 afterAll(async () => {
+  Engine.kill();
   await _clean();
   if (settings.persist_options[0] === "knex") {
     await Process.getPersist()._db.destroy();
   }
-  Engine.kill();
 });
 
 test("Workflow should not work with missing requirements", async () => {
@@ -803,13 +803,17 @@ test("Push activity should return error to an non-existant activity manager", as
 
 test("Beat won't break despite orphan timer", async () => {
   const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
-  
+
   const engine = new Engine(...settings.persist_options);
-  const workflow = await engine.saveWorkflow("user_timeout_one_hour", "user_timeout_one_hour", blueprints_.user_timeout_one_hour);
-  
+  const workflow = await engine.saveWorkflow(
+    "user_timeout_one_hour",
+    "user_timeout_one_hour",
+    blueprints_.user_timeout_one_hour
+  );
+
   let process = await engine.createProcess(workflow.id, actors_.simpleton);
   process = await engine.runProcess(process.id, actors_.simpleton);
-  
+
   expect(process.status).toEqual(ProcessStatus.WAITING);
 
   let activity_manager = await engine.fetchAvailableActivityForProcess(process.id, actors_.simpleton);
@@ -817,19 +821,19 @@ test("Beat won't break despite orphan timer", async () => {
 
   process = await engine.abortProcess(process.id);
   expect(process.status).toBe(ProcessStatus.INTERRUPTED);
-  
+
   let timer = new Timer("Process", process.id, Timer.timeoutFromNow(10), {});
   await timer.save();
 
   let timer2 = new Timer("ActivityManager", activity_manager.id, Timer.timeoutFromNow(10), {});
   await timer2.save();
 
-  let timer3= new Timer("Mocker", uuid(), Timer.timeoutFromNow(10), {});
+  let timer3 = new Timer("Mocker", uuid(), Timer.timeoutFromNow(10), {});
   await timer3.save();
 
   for (let i = 0; i < 5; i++) {
     await delay(2000);
-    await Engine._beat()
+    await Engine._beat();
   }
 });
 

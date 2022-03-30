@@ -13,7 +13,7 @@ const { packages_ } = require("../../../core/workflow/tests/unitary/packages_sam
 const extra_nodes = require("../utils/extra_nodes");
 
 beforeEach(async () => {
-  await _clean();
+  //  await _clean();
 });
 
 afterAll(async () => {
@@ -346,7 +346,7 @@ test("savePackage works", async () => {
 
 test("fetchPackage works", async () => {
   const engine = new Engine(...settings.persist_options);
-  const package_ = await engine.savePackage("sample", "sample", packages_.test_package);
+  const package_ = await engine.savePackage("sample1", "sample1", packages_.test_package);
   expect(package_).toBeInstanceOf(Packages);
   const fetched_package = await engine.fetchPackage(package_.id);
   expect(fetched_package).toBeInstanceOf(Packages);
@@ -355,7 +355,7 @@ test("fetchPackage works", async () => {
 
 test("deletePackage works", async () => {
   const engine = new Engine(...settings.persist_options);
-  const package_ = await engine.savePackage("sample", "sample", packages_.test_package);
+  const package_ = await engine.savePackage("sample2", "sample2", packages_.test_package);
   expect(package_).toBeInstanceOf(Packages);
   await engine.deletePackage(package_.id);
   const fetched_package = await engine.fetchPackage(package_.id);

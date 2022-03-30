@@ -142,6 +142,8 @@ class Process extends PersistedEntity {
   }
 
   async create(actor_data, initial_bag) {
+    Blueprint.assert_is_valid(this._blueprint_spec);
+
     const custom_lisp = await Packages._fetchPackages(this._blueprint_spec.requirements, this._blueprint_spec.prepare);
 
     const valid_start_nodes = getAllowedStartNodes(this._blueprint_spec, actor_data, initial_bag, custom_lisp);
@@ -176,7 +178,14 @@ class Process extends PersistedEntity {
     emitter.emit("PROCESS.RUN", `RUN ON PID [${this.id}]`, { process_id: this.id });
 
     this.state = await this.getPersist().getLastStateByProcess(this._id);
-    let current_node = this._blueprint.fetchNode(this._state.node_id);
+    let currentNode;
+
+    try {
+      currentNode = this._blueprint.fetchNode(this._state.node_id);
+    } catch (err) {
+      return this._forbiddenState(err);
+    }
+
     let external_input;
     if (this.status === ProcessStatus.WAITING || this.status === ProcessStatus.DELEGATED) {
       external_input = execution_input;
@@ -189,18 +198,18 @@ class Process extends PersistedEntity {
     }
 
     const custom_lisp = await Packages._fetchPackages(this._blueprint_spec.requirements, this._blueprint_spec.prepare);
-    const is_lane_valid = await this._validateLaneRuleForNode(current_node, actor_data, this.bag, custom_lisp);
+    const is_lane_valid = await this._validateLaneRuleForNode(currentNode, actor_data, this.bag, custom_lisp);
     if (is_lane_valid) {
-      const node_result = await this._runNode(current_node, external_input, custom_lisp, actor_data);
+      const node_result = await this._runNode(currentNode, external_input, custom_lisp, actor_data);
       if (node_result.error) {
         emitter.emit(
           "PROCESS.EDGE.ERROR",
-          `ERROR ON PROCESS PID [${this.id}] DATA [${this.workflow_name}]:[${current_node._spec.name}]`,
+          `ERROR ON PROCESS PID [${this.id}] DATA [${this.workflow_name}]:[${currentNode._spec.name}]`,
           {
             process_id: this.id,
             workflow_name: this.workflow_name,
-            node_id: current_node._spec.id,
-            node_name: current_node._spec.name,
+            node_id: currentNode._spec.id,
+            node_name: currentNode._spec.name,
           }
         );
       }
@@ -226,8 +235,8 @@ class Process extends PersistedEntity {
       await this._executionLoop(custom_lisp, actor_data);
 
       if (this._current_status === ProcessStatus.DELEGATED) {
-        current_node = this._blueprint.fetchNode(this._state.node_id);
-        this.parameters = current_node._spec.parameters;
+        currentNode = this._blueprint.fetchNode(this._state.node_id);
+        this.parameters = currentNode._spec.parameters;
       }
       return this;
     } else {
@@ -240,15 +249,22 @@ class Process extends PersistedEntity {
     if (!this.state) {
       this.state = await this.getPersist().getLastStateByProcess(this._id);
     }
-    const current_node = this._blueprint.fetchNode(this._state.node_id);
-    if (current_node && this.status !== ProcessStatus.FINISHED) {
+    let currentNode;
+
+    try {
+      currentNode = this._blueprint.fetchNode(this._state.node_id);
+    } catch (err) {
+      return this._forbiddenState(err);
+    }
+
+    if (currentNode && this.status !== ProcessStatus.FINISHED) {
       if (this.status !== ProcessStatus.RUNNING) {
-        const next_node_id = current_node.next();
+        const next_node_id = currentNode.next();
         const step_number = await this.getNextStepNumber();
         this.state = new ProcessState(
           this.id,
           step_number,
-          current_node.id,
+          currentNode.id,
           this.bag,
           null,
           {
@@ -423,6 +439,29 @@ class Process extends PersistedEntity {
 
     let am = null;
     let timer = null;
+
+    try {
+      this.next_node;
+    } catch (error) {
+      this.state = new ProcessState(
+        this._state.process_id,
+        next_step_number,
+        this._state.node_id,
+        this._state.bag,
+        this._state.external_input,
+        this._state.result,
+        error.toString(),
+        ProcessStatus.FORBIDDEN,
+        this._state.next_node_id,
+        this._state.actor_data,
+        null
+      );
+
+      await this._notifyProcessState(actor_data);
+      await this.save(trx);
+
+      return [this, null, null];
+    }
 
     emitter.emit(
       "PROCESS.START_NODE_RUN",
@@ -817,9 +856,9 @@ class Process extends PersistedEntity {
     return Lane.runRule(lane_spec, actor_data, bag, custom_lisp);
   }
 
-  _forbiddenState() {
+  _forbiddenState(error = null) {
     const forbidden_status = ProcessStatus.FORBIDDEN;
-    const state = { status: forbidden_status, state: { ...this._state } };
+    const state = { status: forbidden_status, state: { ...this._state, error } };
     state.state.status = forbidden_status;
     return state;
   }

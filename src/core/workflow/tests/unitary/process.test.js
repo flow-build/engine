@@ -355,4 +355,63 @@ describe("Process test", () => {
       expect(fetchProcesses).toHaveLength(2);
     });
   });
+
+  describe("service deprecated", () => {
+    test("it should fail with forbidden status", async () => {
+      const persistor = PersistorProvider.getPersistor(...settings.persist_options);
+      const db = persistor.getPersistInstance("Workflow")._db;
+      const engine = new Engine(...settings.persist_options);
+      const process_payload = {
+        id: "cd4fe660-a931-11ec-8b85-85353dffff77",
+        created_at: "2022-03-21T16:13:10.470Z",
+        workflow_id: "9a5cd6f0-a931-11ec-b97a-c373d67a14f1",
+        blueprint_spec: blueprints_.custom_node,
+        current_state_id: "cd511ee0-a931-11ec-8b85-85353dffff77",
+        current_status: "unstarted",
+      };
+
+      const state_payload = {
+        id: "cd511ee0-a931-11ec-8b85-85353dffff77",
+        created_at: "2022-03-21T16:13:10.478Z",
+        process_id: "cd4fe660-a931-11ec-8b85-85353dffff77",
+        step_number: 1,
+        node_id: "1",
+        bag: {},
+        external_input: {},
+        result: {},
+        error: null,
+        status: "unstarted",
+        next_node_id: "1",
+        actor_data: {
+          actor_id: "4",
+          claims: ["simpleton"],
+        },
+        engine_id: "cd07b9d0-a931-11ec-8b85-85353dffff77",
+        time_elapsed: null,
+      };
+
+      const workflow = {
+        id: "9a5cd6f0-a931-11ec-b97a-c373d67a14f1",
+        created_at: "2022-03-21T16:11:44.963Z",
+        name: "custom_node_wf",
+        description: "custom_node_wf",
+        blueprint_spec: blueprints_.custom_node,
+        blueprint_hash: "23bcd8701abcb55a7fcdead1a95958de102a9b3cd65724019b3c987c9ebea6f0",
+        version: 1,
+      };
+
+      await db("workflow").insert(workflow);
+      await db("process").insert(process_payload);
+      await db("process_state").insert(state_payload);
+
+      let process = await engine.fetchProcess(process_payload.id);
+      expect(process.status).toEqual(ProcessStatus.UNSTARTED);
+
+      await engine.runProcess(process.id);
+      process = await engine.fetchProcess(process.id);
+      expect(process.status).toEqual(ProcessStatus.FORBIDDEN);
+
+      expect(process._state._error).toEqual("Error: Invalid service task, unknow category custom_fn");
+    });
+  });
 });

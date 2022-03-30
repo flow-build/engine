@@ -9,7 +9,7 @@
 ## Dependencies:
 
 ```
-node v14.18.0
+node v17.4
 npm v8.5.0
 ```
 
