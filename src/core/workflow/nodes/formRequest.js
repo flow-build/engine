@@ -37,8 +37,12 @@ class FormRequestNode extends SystemTaskNode {
                 url: { oneOf: [{ type: "string" }, { type: "object" }] },
                 verb: { type: "string", enum: ["POST", "PUT"] },
                 headers: { type: "object" },
-                maxContentLength: { type: "integer" },
-                timeout: { type: "integer" },
+                maxContentLength: {
+                  oneOf: [{ type: "number" }, { type: "object" }],
+                },
+                timeout: {
+                  oneOf: [{ type: "number" }, { type: "object" }],
+                },
               },
             },
             valid_response_codes: {
