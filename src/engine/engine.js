@@ -54,6 +54,7 @@ class Engine {
   }
 
   constructor(persist_mode, persist_args, logger_level) {
+    const heartBeat = process.env.ENGINE_HEARTBEAT || true;
     createLogger(logger_level);
     if (Engine.instance) {
       startEventListener(emitter);
@@ -62,10 +63,15 @@ class Engine {
     PersistorProvider.getPersistor(persist_mode, persist_args);
     Engine.instance = this;
     this.emitter = emitter;
-    try {
-      Engine.heart = Engine.setNextHeartBeat();
-    } catch (e) {
-      emitter.emit("ENGINE.ERROR", "ERROR AT ENGINE", { error: e });
+    if (heartBeat === true || heartBeat === "true") {
+      try {
+        Engine.heart = Engine.setNextHeartBeat();
+        emitter.emit("ENGINE.CONTRUCTOR", "HEARTBEAT INITIALIZED", {});
+      } catch (e) {
+        emitter.emit("ENGINE.ERROR", "ERROR AT ENGINE", { error: e });
+      }
+    } else {
+      emitter.emit("ENGINE.CONTRUCTOR", "HEARTBEAT NOT INITIALIZED", {});
     }
   }
 
