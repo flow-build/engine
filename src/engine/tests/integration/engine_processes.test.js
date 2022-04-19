@@ -89,7 +89,7 @@ test("Engine create process with missing data but run fails", async () => {
   expect(error).toBeDefined();
   expect(error).toMatch("number");
   expect(error).toMatch("name");
-  expect(process.state.result).toBeNull();
+  expect(process.state.result).toStrictEqual({ step_number: 2 });
   expect(process.state.bag).toStrictEqual(create_data);
 });
 
@@ -359,19 +359,25 @@ test("run process using environment", async () => {
     const state_set_to_bag = process_state_history[2];
     expect(state_set_to_bag.node_id).toEqual("2");
     expect(state_set_to_bag.bag).toEqual({ environment: "test" });
-    expect(state_set_to_bag.result).toEqual({ timeout: undefined });
+    expect(state_set_to_bag.result).toEqual({ timeout: undefined, step_number: 3 });
 
     const state_http = process_state_history[3];
     expect(state_http.node_id).toEqual("3");
-    expect(state_http.result).toEqual({ status: 201, data: { response: "post_success" } });
+    expect(state_http.result).toEqual({
+      step_number: 4,
+      status: 201,
+      data: {
+        response: "post_success"
+      }
+    });
 
     const state_script = process_state_history[4];
     expect(state_script.node_id).toEqual("4");
-    expect(state_script.result).toEqual({ threshold: "999" });
+    expect(state_script.result).toEqual({ step_number: 5, threshold: "999" });
 
     const state_user_start = process_state_history[5];
     expect(state_user_start.node_id).toEqual("5");
-    expect(state_user_start.result).toEqual({ limit: "O limite é 999" });
+    expect(state_user_start.result).toEqual({ step_number: 6, limit: "O limite é 999" });
   } finally {
     engine.setProcessStateNotifier();
     process.env.ENVIRONMENT = original_env_environment;
@@ -674,7 +680,7 @@ describe("User task timeout", () => {
       });
       const activities = process_state.result.activities;
       expect(activities).toBeUndefined();
-      expect(process_state.result).toEqual({ activity_data: "example_activity_data" });
+      expect(process_state.result).toEqual({ activity_data: "example_activity_data", step_number: 4 });
 
       process_state = process_state_history[2];
       expect(process_state).toMatchObject({
