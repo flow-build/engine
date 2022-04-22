@@ -37,6 +37,58 @@ blueprints_.minimal = {
   environment: {},
 };
 
+blueprints_.ref = {
+  requirements: ["core"],
+  prepare: [],
+  nodes: [
+    {
+      id: "1",
+      type: "Start",
+      name: "Start node",
+      parameters: {
+        input_schema: {},
+      },
+      next: "2",
+      lane_id: "1",
+    },
+    {
+      id: "2",
+      type: "SystemTask",
+      category: "SetToBag",
+      name: "System node name",
+      next: "3",
+      lane_id: "1",
+      parameters: {
+        input: {
+          process_id: {
+            $ref: "parameters.process_id"
+          },
+          step_number: {
+            $ref: "result.step_number"
+          }
+        },
+      },
+    },
+    {
+      id: "3",
+      type: "Finish",
+      name: "Finish node",
+      next: null,
+      lane_id: "1",
+    },
+  ],
+  lanes: [
+    {
+      id: "1",
+      name: "the_only_lane",
+      rule: {
+        lisp: ["fn", ["&", "args"], true],
+      },
+    },
+  ],
+  environment: {},
+};
+
 blueprints_.existent_environment_variable = {
   requirements: ["core"],
   prepare: [],

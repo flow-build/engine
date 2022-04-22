@@ -13,7 +13,7 @@ const { packages_ } = require("../../../core/workflow/tests/unitary/packages_sam
 const extra_nodes = require("../utils/extra_nodes");
 
 beforeEach(async () => {
-  //  await _clean();
+   await _clean();
 });
 
 afterAll(async () => {

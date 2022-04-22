@@ -195,6 +195,19 @@ describe("Process test", () => {
 
       await expect(result).rejects.toThrowError("invalid status");
     });
+
+    test("it should contain the $process_id and $step_number on node execution", async () => {
+      const engine = new Engine(...settings.persist_options);
+      const workflow = await engine.saveWorkflow("sample", "sample", blueprints_.ref);
+      const process = await engine.createProcess(workflow.id, actors_.simpleton);
+
+      await engine.runProcess(process.id, actors_.simpleton);
+
+      const history = await engine.fetchProcessStateHistory(process.id)
+
+      expect(history.length).toEqual(4)
+      expect(history[0]._bag).toEqual({ process_id: process.id, step_number: 2 })
+    });
   });
 
   describe("__inerLoop", () => {

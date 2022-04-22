@@ -824,7 +824,7 @@ class Process extends PersistedEntity {
       node_id,
       bag,
       external_input,
-      result,
+      { ...result, step_number },
       error,
       status,
       next_node_id,
@@ -843,7 +843,10 @@ class Process extends PersistedEntity {
         environment: this._blueprint_spec.environment,
         result_schema: node._spec.result_schema,
         process_id: this.id,
-        parameters: this._blueprint_spec.parameters,
+        parameters: {
+          ...this._blueprint_spec.parameters,
+          process_id: this._id,
+        },
       },
       custom_lisp
     );
