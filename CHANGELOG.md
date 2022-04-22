@@ -1,3 +1,10 @@
+## [2.10.0](https://github.com/flow-build/engine/compare/v2.9.2...v2.10.0) (2022-04-22)
+
+
+### Features
+
+* add ref to process_id and step_number on node execution ([678a569](https://github.com/flow-build/engine/commit/678a5698a3f89488572b90363c335b6fcab070fd))
+
 ### [2.9.2](https://github.com/flow-build/engine/compare/v2.9.1...v2.9.2) (2022-03-30)
 
 
