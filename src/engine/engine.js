@@ -556,7 +556,6 @@ class Engine {
       return error
     }
 
-
     const process = await Process.fetch(process_id)
 
     if(process.status !== ProcessStatus.PENDING) {
@@ -580,20 +579,8 @@ class Engine {
       await timer_db.update({ active: false }).where({ resource_id: process.id })
     }
 
-    try {
-      emitter.emit("ENGINE.CONTINUE_PROCESS.WORKS", { process_id })
-      return await process.continue(result, actor_data);
-    } catch (err) {
-      const error = {
-        error: {
-          errorType: "continueProcessException",
-          message: err.toString(),
-        }
-      }
-
-      emitter.emit("ENGINE.CONTINUE_PROCESS.ERROR", error)
-      return error
-    }
+    emitter.emit("ENGINE.CONTINUE_PROCESS.WORKS", { process_id })
+    return await process.continue(result, actor_data);
   }
 }
 

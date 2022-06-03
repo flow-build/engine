@@ -13,7 +13,7 @@ const { packages_ } = require("../../../core/workflow/tests/unitary/packages_sam
 const extra_nodes = require("../utils/extra_nodes");
 
 beforeEach(async () => {
-   await _clean();
+  await _clean();
 });
 
 afterAll(async () => {
@@ -290,14 +290,29 @@ describe('continueProcess', () => {
     let process = await createRunProcess(engine, workflow.id, actors_.simpleton);
     expect(process.status).toEqual(ProcessStatus.WAITING);
 
-    let msg;
-    try {
-      await engine.continueProcess(process.id, actors_.simpleton, { new_result: 1 })
-    } catch (err) {
-      msg = err.toString()
-    }
+    const process_continue = await engine.continueProcess(process.id, actors_.simpleton, { new_result: 1 })
 
-    expect(msg).toEqual(`Error: This process isn't PENDING status.`)
+    expect(process_continue).toEqual({
+      error: {
+        errorType: 'continueProcessInvalidStatus',
+        message: "This process isn't PENDING status."
+      }
+    })
+  });
+  test("continueProcess should return invalid process type", async () => {
+    const engine = new Engine(...settings.persist_options);
+    const workflow = await engine.saveWorkflow("sample", "sample", blueprints_.user_action);
+    let process = await createRunProcess(engine, workflow.id, actors_.simpleton);
+    expect(process.status).toEqual(ProcessStatus.WAITING);
+
+    const process_continue = await engine.continueProcess(123456, actors_.simpleton)
+
+    expect(process_continue).toEqual({
+      error: {
+        errorType: 'continueProcessInvalidType',
+        message: "Invalid process_id type"
+      }
+    })
   });
 })
 
