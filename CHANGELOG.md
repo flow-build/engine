@@ -1,3 +1,10 @@
+## [2.11.0](https://github.com/flow-build/engine/compare/v2.10.0...v2.11.0) (2022-06-03)
+
+
+### Features
+
+* expose continueProcess to Engine ([c81c198](https://github.com/flow-build/engine/commit/c81c1984106f52adcddb43bf227774e80c192884))
+
 ## [2.10.0](https://github.com/flow-build/engine/compare/v2.9.2...v2.10.0) (2022-04-22)
 
 
