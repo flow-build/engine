@@ -543,21 +543,57 @@ class Engine {
   }
 
   async continueProcess(process_id, actor_data, result = {}){
-    if(!uuidValidate(process_id))
-      throw new Error(`Invalid process_id type`)
+    if(!uuidValidate(process_id)){
+      const error = {
+        error: {
+          errorType: "continueProcessInvalidType",
+          message: "Invalid process_id type",
+        }
+      }
+
+      emitter.emit("ENGINE.CONTINUE_PROCESS.ERROR", error)
+
+      return error
+    }
+
 
     const process = await Process.fetch(process_id)
 
-    if(process.status !== ProcessStatus.PENDING)
-      throw new Error(`This process isn't PENDING status.`)
+    if(process.status !== ProcessStatus.PENDING) {
+      const error = {
+        error: {
+          errorType: "continueProcessInvalidStatus",
+          message: "This process isn't PENDING status.",
+        }
+      }
+
+      emitter.emit("ENGINE.CONTINUE_PROCESS.ERROR", error)
+
+      return error
+    }
 
     const timer_db = this._db('timer');
     const timer = await timer_db.where({ resource_id: process.id }).first()
 
-    if(!isEmpty(timer))
+    if(!isEmpty(timer)) {
+      emitter.emit("ENGINE.CONTINUE_PROCESS.TIMER", { active: false, resource_type: process_id })
       await timer_db.update({ active: false }).where({ resource_id: process.id })
+    }
 
-    return process.continue(result, actor_data)
+    try {
+      emitter.emit("ENGINE.CONTINUE_PROCESS.WORKS", { process_id })
+      return await process.continue(result, actor_data);
+    } catch (err) {
+      const error = {
+        error: {
+          errorType: "continueProcessException",
+          message: err.toString(),
+        }
+      }
+
+      emitter.emit("ENGINE.CONTINUE_PROCESS.ERROR", error)
+      return error
+    }
   }
 }
 
