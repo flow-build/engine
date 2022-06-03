@@ -17,6 +17,7 @@ const { createLogger } = require("../core/utils/logging");
 const { ProcessStatus } = require("./../core/workflow/process_state");
 const { validateTimeInterval } = require("../core/utils/ajvValidator");
 const { validate: uuidValidate } = require("uuid");
+const {isEmpty} = require("lodash");
 
 function getActivityManagerFromData(activity_manager_data) {
   const activity_manager = ActivityManager.deserialize(activity_manager_data);
@@ -61,6 +62,7 @@ class Engine {
       return Engine.instance;
     }
     PersistorProvider.getPersistor(persist_mode, persist_args);
+    this._db = persist_args
     Engine.instance = this;
     this.emitter = emitter;
     if (heartBeat === true || heartBeat === "true") {
@@ -538,6 +540,47 @@ class Engine {
 
   async deletePackage(package_id) {
     return await Packages.delete(package_id);
+  }
+
+  async continueProcess(process_id, actor_data, result = {}){
+    if(!uuidValidate(process_id)){
+      const error = {
+        error: {
+          errorType: "continueProcessInvalidType",
+          message: "Invalid process_id type",
+        }
+      }
+
+      emitter.emit("ENGINE.CONTINUE_PROCESS.ERROR", error)
+
+      return error
+    }
+
+    const process = await Process.fetch(process_id)
+
+    if(process.status !== ProcessStatus.PENDING) {
+      const error = {
+        error: {
+          errorType: "continueProcessInvalidStatus",
+          message: "This process isn't PENDING status.",
+        }
+      }
+
+      emitter.emit("ENGINE.CONTINUE_PROCESS.ERROR", error)
+
+      return error
+    }
+
+    const timer_db = this._db('timer');
+    const timer = await timer_db.where({ resource_id: process.id }).first()
+
+    if(!isEmpty(timer)) {
+      emitter.emit("ENGINE.CONTINUE_PROCESS.TIMER", { active: false, resource_type: process_id })
+      await timer_db.update({ active: false }).where({ resource_id: process.id })
+    }
+
+    emitter.emit("ENGINE.CONTINUE_PROCESS.WORKS", { process_id })
+    return await process.continue(result, actor_data);
   }
 }
 
