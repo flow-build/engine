@@ -13,7 +13,7 @@ const { packages_ } = require("../../../core/workflow/tests/unitary/packages_sam
 const extra_nodes = require("../utils/extra_nodes");
 
 beforeEach(async () => {
-   await _clean();
+  await _clean();
 });
 
 afterAll(async () => {
@@ -268,6 +268,53 @@ test("runProcess that uses actor_data", async () => {
 
   expect(process._state._bag).toStrictEqual({ runUser: actors_.manager, continueUser: actors_.admin });
 });
+
+describe('continueProcess', () => {
+  test("continueProcess works", async () => {
+    const engine = new Engine(...settings.persist_options);
+    const workflow = await engine.saveWorkflow("timer_long", "timer_long", blueprints_.timer_long);
+    let process = await createRunProcess(engine, workflow.id, actors_.simpleton);
+    expect(process.status).toEqual(ProcessStatus.PENDING);
+
+    await engine.continueProcess(process.id, actors_.simpleton, { new_result: 1 })
+    process = await Process.fetch(process.id)
+    expect(process.status).toEqual(ProcessStatus.FINISHED);
+
+    const [_, continueStep, ...args] = await Process.fetchStateHistory(process.id)
+
+    expect(continueStep._result).toEqual({ timeout: 10000, new_result: 1, step_number: 3 })
+  });
+  test("continueProcess should return invalid process status", async () => {
+    const engine = new Engine(...settings.persist_options);
+    const workflow = await engine.saveWorkflow("sample", "sample", blueprints_.user_action);
+    let process = await createRunProcess(engine, workflow.id, actors_.simpleton);
+    expect(process.status).toEqual(ProcessStatus.WAITING);
+
+    const process_continue = await engine.continueProcess(process.id, actors_.simpleton, { new_result: 1 })
+
+    expect(process_continue).toEqual({
+      error: {
+        errorType: 'continueProcessInvalidStatus',
+        message: "This process isn't PENDING status."
+      }
+    })
+  });
+  test("continueProcess should return invalid process type", async () => {
+    const engine = new Engine(...settings.persist_options);
+    const workflow = await engine.saveWorkflow("sample", "sample", blueprints_.user_action);
+    let process = await createRunProcess(engine, workflow.id, actors_.simpleton);
+    expect(process.status).toEqual(ProcessStatus.WAITING);
+
+    const process_continue = await engine.continueProcess(123456, actors_.simpleton)
+
+    expect(process_continue).toEqual({
+      error: {
+        errorType: 'continueProcessInvalidType',
+        message: "Invalid process_id type"
+      }
+    })
+  });
+})
 
 describe("abortProcess", () => {
   test("abortProcess works", async () => {
