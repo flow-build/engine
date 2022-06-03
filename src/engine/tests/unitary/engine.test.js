@@ -269,6 +269,23 @@ test("runProcess that uses actor_data", async () => {
   expect(process._state._bag).toStrictEqual({ runUser: actors_.manager, continueUser: actors_.admin });
 });
 
+describe('continueProcess', () => {
+  test("continueProcess works", async () => {
+    const engine = new Engine(...settings.persist_options);
+    const workflow = await engine.saveWorkflow("timer_long", "timer_long", blueprints_.timer_long);
+    let process = await createRunProcess(engine, workflow.id, actors_.simpleton);
+    expect(process.status).toEqual(ProcessStatus.PENDING);
+
+    await engine.continueProcess(process.id, actors_.simpleton, { new_result: 1 })
+    process = await Process.fetch(process.id)
+    expect(process.status).toEqual(ProcessStatus.FINISHED);
+
+    const [_, continueStep, ...args] = await Process.fetchStateHistory(process.id)
+
+    expect(continueStep._result).toEqual({ timeout: 10000, new_result: 1, step_number: 3 })
+  });
+})
+
 describe("abortProcess", () => {
   test("abortProcess works", async () => {
     const engine = new Engine(...settings.persist_options);

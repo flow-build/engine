@@ -17,6 +17,7 @@ const { createLogger } = require("../core/utils/logging");
 const { ProcessStatus } = require("./../core/workflow/process_state");
 const { validateTimeInterval } = require("../core/utils/ajvValidator");
 const { validate: uuidValidate } = require("uuid");
+const {isEmpty} = require("lodash");
 
 function getActivityManagerFromData(activity_manager_data) {
   const activity_manager = ActivityManager.deserialize(activity_manager_data);
@@ -61,6 +62,7 @@ class Engine {
       return Engine.instance;
     }
     PersistorProvider.getPersistor(persist_mode, persist_args);
+    this._db = persist_args
     Engine.instance = this;
     this.emitter = emitter;
     if (heartBeat === true || heartBeat === "true") {
@@ -538,6 +540,24 @@ class Engine {
 
   async deletePackage(package_id) {
     return await Packages.delete(package_id);
+  }
+
+  async continueProcess(process_id, actor_data, result = {}){
+    if(!uuidValidate(process_id))
+      throw new Error(`Invalid process_id type`)
+
+    const process = await Process.fetch(process_id)
+
+    if(process.status !== ProcessStatus.PENDING)
+      throw new Error(`This process isn't PENDING status.`)
+
+    const timer_db = this._db('timer');
+    const timer = await timer_db.where({ resource_id: process.id }).first()
+
+    if(!isEmpty(timer))
+      await timer_db.update({ active: false }).where({ resource_id: process.id })
+
+    return process.continue(result, actor_data)
   }
 }
 

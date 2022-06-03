@@ -1669,6 +1669,50 @@ blueprints_.timer = {
   environment: {},
 };
 
+blueprints_.timer_long = {
+  requirements: [],
+  prepare: [],
+  nodes: [
+    {
+      id: "1",
+      type: "Start",
+      name: "start  node",
+      parameters: {
+        input_schema: {},
+      },
+      next: "2",
+      lane_id: "1",
+    },
+    {
+      id: "2",
+      type: "SystemTask",
+      category: "timer",
+      name: "timer node",
+      parameters: {
+        input: {},
+        timeout: 10000,
+      },
+      next: "99",
+      lane_id: "1",
+    },
+    {
+      id: "99",
+      type: "Finish",
+      name: "finish node",
+      next: null,
+      lane_id: "1",
+    },
+  ],
+  lanes: [
+    {
+      id: "1",
+      name: "only_lane",
+      rule: lisp.return_true(),
+    },
+  ],
+  environment: {},
+};
+
 blueprints_.user_encrypt = {
   requirements: [],
   prepare: [],
