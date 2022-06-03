@@ -284,6 +284,21 @@ describe('continueProcess', () => {
 
     expect(continueStep._result).toEqual({ timeout: 10000, new_result: 1, step_number: 3 })
   });
+  test("continueProcess should return invalid process status", async () => {
+    const engine = new Engine(...settings.persist_options);
+    const workflow = await engine.saveWorkflow("sample", "sample", blueprints_.user_action);
+    let process = await createRunProcess(engine, workflow.id, actors_.simpleton);
+    expect(process.status).toEqual(ProcessStatus.WAITING);
+
+    let msg;
+    try {
+      await engine.continueProcess(process.id, actors_.simpleton, { new_result: 1 })
+    } catch (err) {
+      msg = err.toString()
+    }
+
+    expect(msg).toEqual(`Error: This process isn't PENDING status.`)
+  });
 })
 
 describe("abortProcess", () => {
