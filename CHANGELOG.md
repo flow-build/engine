@@ -1,3 +1,10 @@
+### [2.11.1](https://github.com/flow-build/engine/compare/v2.11.0...v2.11.1) (2022-06-07)
+
+
+### Bug Fixes
+
+* **engine:** :bug: uncouple continue return from process execution ([0744c17](https://github.com/flow-build/engine/commit/0744c17717b991f808e428e90e392c5bb1613b0a))
+
 ## [2.11.0](https://github.com/flow-build/engine/compare/v2.10.0...v2.11.0) (2022-06-03)
 
 
