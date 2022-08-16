@@ -61,11 +61,11 @@ blueprints_.ref = {
       parameters: {
         input: {
           process_id: {
-            $ref: "parameters.process_id"
+            $ref: "parameters.process_id",
           },
           step_number: {
-            $ref: "result.step_number"
-          }
+            $ref: "result.step_number",
+          },
         },
       },
     },
@@ -522,6 +522,87 @@ blueprints_.notify_and_user_task = {
             },
           },
           required: ["textParamTwo"],
+        },
+      },
+    },
+    {
+      id: "99",
+      type: "Finish",
+      name: "Finish node",
+      next: null,
+      lane_id: "1",
+    },
+  ],
+  lanes: [
+    {
+      id: "1",
+      name: "the_only_lane",
+      rule: lisp.return_true(),
+    },
+  ],
+  environment: {},
+};
+
+blueprints_.notify_and_2_user_task = {
+  requirements: ["core"],
+  prepare: [],
+  nodes: [
+    {
+      id: "1",
+      type: "Start",
+      name: "Start node",
+      next: "2",
+      lane_id: "1",
+      parameters: {
+        input_schema: {},
+      },
+    },
+    {
+      id: "2",
+      type: "UserTask",
+      name: "Identity user task notify",
+      next: "3",
+      lane_id: "1",
+      parameters: {
+        action: "do something",
+        activity_manager: "notify",
+        input: {
+          question: "Insert some input.",
+        },
+      },
+    },
+    {
+      id: "3",
+      type: "UserTask",
+      name: "Identity user task",
+      next: "4",
+      lane_id: "1",
+      parameters: {
+        action: "do something",
+        input: {
+          question: "Insert some input.",
+        },
+        activity_schema: {
+          type: "object",
+          properties: {
+            textParamTwo: {
+              type: "string",
+            },
+          },
+          required: ["textParamTwo"],
+        },
+      },
+    },
+    {
+      id: "4",
+      type: "UserTask",
+      name: "Identity user task 2",
+      next: "99",
+      lane_id: "1",
+      parameters: {
+        action: "do one more thing",
+        input: {
+          question: "Insert some input",
         },
       },
     },
