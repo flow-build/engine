@@ -13,7 +13,6 @@ const { ActivityManager } = require("./activity_manager");
 const { validateResult } = require("./../utils/ajvValidator.js");
 const process_manager = require("../../core/workflow/process_manager.js");
 const emitter = require("../utils/emitter");
-const { ActivityStatus } = require("./activity");
 
 class Process extends PersistedEntity {
   static getEntityClass() {
@@ -698,27 +697,14 @@ class Process extends PersistedEntity {
       await this._notifyActivityManager(activity_manager);
     }
 
-    let active_activity_manager;
     switch (this.status) {
       case ProcessStatus.ERROR:
-        active_activity_manager = await ActivityManager.fetchActivityManagerFromProcessId(
-          this.id,
-          actor_data,
-          ActivityStatus.STARTED
-        );
-        if (active_activity_manager) {
-          await ActivityManager.interruptActivityManagerForProcess(this._id);
-        }
+      case ProcessStatus.INTERRUPTED:
+        await ActivityManager.interruptActivityManagerForProcess(this._id);
         break;
-      case ProcessStatus.FINISHED || ProcessStatus.INTERRUPTED || ProcessStatus.FORBIDDEN:
-        active_activity_manager = await ActivityManager.fetchActivityManagerFromProcessId(
-          this.id,
-          actor_data,
-          ActivityStatus.STARTED
-        );
-        if (active_activity_manager) {
-          await ActivityManager.finishActivityManagerForProcess(this._id);
-        }
+      case ProcessStatus.FINISHED:
+      case ProcessStatus.FORBIDDEN:
+        await ActivityManager.finishActivityManagerForProcess(this._id);
         break;
     }
 

@@ -1,54 +1,54 @@
-const path = require('path');
-const BASE_PATH = path.join(__dirname, 'db');
+const path = require("path");
+const BASE_PATH = path.join(__dirname, "db");
 
 module.exports = {
   test: {
-    client: 'pg',
+    client: "pg",
     connection: {
       host: "127.0.0.1",
       user: "postgres",
       password: "postgres",
-      database: "workflow"
+      database: "workflow",
     },
     migrations: {
-      directory: path.join(BASE_PATH, 'migrations')
+      directory: path.join(BASE_PATH, "migrations"),
     },
     seeds: {
-      directory: path.join(BASE_PATH, 'seeds')
-    }
+      directory: path.join(BASE_PATH, "seeds"),
+    },
   },
   docker: {
-    client: 'pg',
+    client: "pg",
     connection: {
-      host: "workflow_postgres",
+      host: "flowbuild_db",
       user: "postgres",
       password: "postgres",
       database: "workflow",
-      port: 5432
+      port: 5432,
     },
-    pool: {min: 10, max: 40},
+    pool: { min: 10, max: 40 },
     migrations: {
-      directory: path.join(BASE_PATH, 'migrations')
+      directory: path.join(BASE_PATH, "migrations"),
     },
     seeds: {
-      directory: path.join(BASE_PATH, 'seeds')
-    }
+      directory: path.join(BASE_PATH, "seeds"),
+    },
   },
   local_docker_db: {
-    client: 'pg',
+    client: "pg",
     connection: {
       host: "localhost",
       user: "postgres",
       password: "postgres",
       database: "workflow",
-      port: 5432
+      port: 5432,
     },
-    pool: {min: 10, max: 40},
+    pool: { min: 10, max: 40 },
     migrations: {
-      directory: path.join(BASE_PATH, 'migrations')
+      directory: path.join(BASE_PATH, "migrations"),
     },
     seeds: {
-      directory: path.join(BASE_PATH, 'seeds')
-    }
-  }
-}
+      directory: path.join(BASE_PATH, "seeds"),
+    },
+  },
+};

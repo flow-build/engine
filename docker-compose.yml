@@ -2,8 +2,8 @@ version: "3"
 
 services:
   postgres:
-    image: postgres:11.4
-    container_name: workflow_postgres
+    image: postgres:14.5
+    container_name: flowbuild_db
     restart: always
     env_file:
       - ./.env.docker
@@ -11,8 +11,8 @@ services:
       - 5432:5432
 
   app:
-    container_name: workflow_app
-    image: node:17.4
+    image: node:16.15.0
+    container_name: flowbuild_app
     restart: on-failure:10 # necessary due to possibility of postgres not being ready when service runs
     env_file:
       - ./.env.docker

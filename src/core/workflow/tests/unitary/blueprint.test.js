@@ -255,11 +255,11 @@ describe("Blueprint lane rule validate", () => {
 });
 
 test("fetchNode works for existing nodes", () => {
-  const node_id = "minimal_2";
+  const nodeId = "minimal_2";
   const spec = blueprints_.minimal;
-  const id_two_node = spec.nodes[1];
+  const idSecondNode = spec.nodes[1];
   const blueprint = new Blueprint(spec);
-  expect(blueprint.fetchNode(node_id)._spec).toMatchObject(id_two_node);
+  expect(blueprint.fetchNode(nodeId)._spec).toMatchObject(idSecondNode);
 });
 
 test("fetchNode works for non existing nodes", () => {

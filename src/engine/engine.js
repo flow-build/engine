@@ -547,7 +547,7 @@ class Engine {
       const error = {
         error: {
           errorType: "continueProcessInvalidType",
-          message: "Invalid process id type",
+          message: "Invalid process_id type",
         },
       };
 
