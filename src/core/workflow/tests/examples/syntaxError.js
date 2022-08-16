@@ -1,25 +1,15 @@
 const { lanes } = require("./lanes");
+const finishNode = require("./nodeSpecs/finishNode");
+const buildScriptTaskNode = require("./nodeSpecs/scriptTaskNode");
+const buildStartNode = require("./nodeSpecs/startNode");
 
 module.exports = {
   requirements: ["core"],
   prepare: [],
   nodes: [
-    {
-      id: "1",
-      type: "Start",
-      name: "Start node",
-      parameters: {
-        input_schema: {},
-      },
-      next: "2",
-      lane_id: "true",
-    },
-    {
+    buildStartNode({ next: "2" }),
+    buildScriptTaskNode({
       id: "2",
-      type: "ScriptTask",
-      name: "Script Task node",
-      next: "3",
-      lane_id: "true",
       parameters: {
         input: {
           internal_key: { $ref: "bag.inexistant" },
@@ -29,14 +19,8 @@ module.exports = {
           function: ["fn", ["&", "args"], ["nth", "args", 0]],
         },
       },
-    },
-    {
-      id: "3",
-      type: "Finish",
-      name: "Finish node",
-      next: null,
-      lane_id: "true",
-    },
+    }),
+    finishNode,
   ],
   lanes,
   environment: {},

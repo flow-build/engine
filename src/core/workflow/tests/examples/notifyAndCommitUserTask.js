@@ -1,45 +1,26 @@
 const { lanes } = require("./lanes");
+const finishNode = require("./nodeSpecs/finishNode");
+const buildStartNode = require("./nodeSpecs/startNode");
+const buildUserTaskNode = require("./nodeSpecs/userTaskNode");
 
 module.exports = {
   requirements: ["core"],
   environment: {},
   prepare: [],
   nodes: [
-    {
-      id: "1",
-      type: "Start",
-      name: "Start node",
+    buildStartNode({
       next: "2",
-      lane_id: "true",
-      parameters: {
-        input_schema: {},
-      },
-    },
-    {
+    }),
+    buildUserTaskNode({
       id: "2",
-      type: "UserTask",
-      name: "Identity user task notify",
       next: "3",
-      lane_id: "true",
       parameters: {
-        action: "do something",
         activity_manager: "notify",
-        input: {
-          question: "Insert some input.",
-        },
       },
-    },
-    {
+    }),
+    buildUserTaskNode({
       id: "3",
-      type: "UserTask",
-      name: "Identity user task",
-      next: "99",
-      lane_id: "true",
       parameters: {
-        action: "do something",
-        input: {
-          question: "Insert some input.",
-        },
         activity_schema: {
           type: "object",
           properties: {
@@ -50,14 +31,8 @@ module.exports = {
           required: ["textParamTwo"],
         },
       },
-    },
-    {
-      id: "99",
-      type: "Finish",
-      name: "Finish node",
-      next: null,
-      lane_id: "true",
-    },
+    }),
+    finishNode,
   ],
   lanes,
 };

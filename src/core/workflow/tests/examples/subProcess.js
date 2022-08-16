@@ -1,4 +1,9 @@
 const { lanes } = require("./lanes");
+const finishNode = require("./nodeSpecs/finishNode");
+const buildScriptTaskNode = require("./nodeSpecs/scriptTaskNode");
+const buildStartNode = require("./nodeSpecs/startNode");
+const buildSubprocessNode = require("./nodeSpecs/subProcessNode");
+const buildSystemTaskNode = require("./nodeSpecs/systemTaskNode");
 
 module.exports = {
   name: "pizzaTest",
@@ -7,139 +12,22 @@ module.exports = {
     requirements: ["core"],
     prepare: [],
     nodes: [
-      {
-        id: "1",
-        type: "Start",
-        name: "Start node",
-        parameters: {
-          input_schema: {},
-        },
-        next: "2",
-        lane_id: "true",
-      },
-      {
-        id: "2",
-        type: "ScriptTask",
-        name: "Create values for bag",
-        next: "3",
-        lane_id: "true",
-        parameters: {
-          input: {},
-          script: {
-            package: "",
-            function: [
-              "fn",
-              ["&", "args"],
-              {
-                example: "bag_example",
-                value: "bag_value",
-              },
-            ],
-          },
-        },
-      },
-      {
+      buildStartNode({ next: "2" }),
+      buildScriptTaskNode({ id: "2", next: "3" }),
+      buildSystemTaskNode({
         id: "3",
-        type: "SystemTask",
         category: "SetToBag",
-        name: "Set values on bag",
         next: "4",
-        lane_id: "true",
         parameters: {
           input: {
             example: { $ref: "result.example" },
             valueResult: { $ref: "result.value" },
           },
         },
-      },
-      {
-        id: "4",
-        type: "SubProcess",
-        name: "Sub Process base in User task node",
-        next: "5",
-        lane_id: "true",
-        parameters: {
-          actor_data: {
-            id: "2",
-            claims: [],
-          },
-          input: {},
-          workflow_name: "blueprint_spec_son",
-          workflow: {
-            requirements: ["core"],
-            prepare: [],
-            nodes: [
-              {
-                id: "1",
-                type: "Start",
-                name: "Start node",
-                parameters: {
-                  input_schema: {},
-                },
-                next: "2",
-                lane_id: "true",
-              },
-              {
-                id: "2",
-                type: "ScriptTask",
-                name: "Create values for bag",
-                next: "3",
-                lane_id: "true",
-                parameters: {
-                  input: {},
-                  script: {
-                    package: "",
-                    function: [
-                      "fn",
-                      ["&", "args"],
-                      {
-                        example: "bag_example",
-                        value: "bag_value",
-                      },
-                    ],
-                  },
-                },
-              },
-              {
-                id: "3",
-                type: "SystemTask",
-                category: "SetToBag",
-                name: "Set values on bag",
-                next: "4",
-                lane_id: "true",
-                parameters: {
-                  input: {
-                    example: { $ref: "result.example" },
-                    valueResult: { $ref: "result.value" },
-                  },
-                },
-              },
-              {
-                id: "4",
-                type: "Finish",
-                name: "Finish node",
-                next: null,
-                lane_id: "true",
-              },
-            ],
-            lanes: [
-              {
-                id: "1",
-                name: "default",
-                rule: ["fn", ["&", "args"], true],
-              },
-            ],
-            environment: {},
-          },
-          valid_response: "finished",
-        },
-      },
-      {
+      }),
+      buildSubprocessNode({ id: "4", next: "5" }),
+      buildScriptTaskNode({
         id: "5",
-        type: "ScriptTask",
-        name: "Print user input",
-        next: "7",
-        lane_id: "true",
         parameters: {
           input: {
             userInput: { $ref: "result.userInput" },
@@ -152,14 +40,8 @@ module.exports = {
             ],
           },
         },
-      },
-      {
-        id: "7",
-        type: "Finish",
-        name: "Finish node",
-        next: null,
-        lane_id: "true",
-      },
+      }),
+      finishNode,
     ],
     lanes,
     environment: {},
