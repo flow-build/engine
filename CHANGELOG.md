@@ -1,3 +1,16 @@
+## [2.12.0](https://github.com/flow-build/engine/compare/v2.11.1...v2.12.0) (2022-08-16)
+
+
+### Features
+
+* complete all activity managers when a process is finished ([3bc13c1](https://github.com/flow-build/engine/commit/3bc13c1095a18634946f580ef9af40e21be9eafd))
+
+
+### Bug Fixes
+
+* fix case with or condition ([e717e1e](https://github.com/flow-build/engine/commit/e717e1ed494c3510eb033357ffec85d8ea18bd7c))
+* fix typo on message ([2acb545](https://github.com/flow-build/engine/commit/2acb54501b3cf6844b7c39b01cd084ce89ff9db5))
+
 ### [2.11.1](https://github.com/flow-build/engine/compare/v2.11.0...v2.11.1) (2022-06-07)
 
 
