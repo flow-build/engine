@@ -367,8 +367,8 @@ test("run process using environment", async () => {
       step_number: 4,
       status: 201,
       data: {
-        response: "post_success"
-      }
+        response: "post_success",
+      },
     });
 
     const state_script = process_state_history[4];
@@ -758,7 +758,7 @@ test("Commit activity only on type 'commit' activity manager", async () => {
 
 test("Push activity only on type 'commit' activity manager", async () => {
   //const engine = new Engine(...settings.persist_options);
-  await engine.saveWorkflow("sample", "sample", blueprints_.notify_and_user_task);
+  await engine.saveWorkflow("sample", "sample", blueprints_.notify_and_2_user_task);
 
   let process = await engine.createProcessByWorkflowName("sample", actors_.simpleton);
 
@@ -787,7 +787,7 @@ test("Push activity only on type 'commit' activity manager", async () => {
 });
 
 test("Push activity should return error to an non-existant activity manager", async () => {
-  await engine.saveWorkflow("sample", "sample", blueprints_.notify_and_user_task);
+  await engine.saveWorkflow("sample", "sample", blueprints_.notify_and_2_user_task);
 
   let process = await engine.createProcessByWorkflowName("sample", actors_.simpleton);
 
