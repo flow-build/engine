@@ -94,7 +94,7 @@ module.exports = function startEventListener(em) {
   em.on("NODE.START_VALIDATED", (message, variables) => {
     const obj = {
       section: "NODE",
-      level: "info",
+      level: "debug",
       message: message,
       variables: variables,
     };
