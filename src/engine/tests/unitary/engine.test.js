@@ -78,7 +78,7 @@ test("create and run process for restricted multilane system tasks", async () =>
 
   process = await createRunProcess(engine, workflow.id, actors_.admin);
   expect(process.status).toBe(ProcessStatus.WAITING);
-  expect(process.state.node_id).toBe("4");
+  expect(process.state.node_id).toBe("rmiut_4");
 
   process = await engine.runProcess(process.id, actors_.admin, { data: 1 });
   expect(process.status).toBe(ProcessStatus.FORBIDDEN);
@@ -435,7 +435,7 @@ describe("submitActivity", () => {
 
     const process_state_hisotry = await engine.fetchProcessStateHistory(process.id);
     const user_task_result = process_state_hisotry[1];
-    expect(user_task_result.node_id).toEqual("2");
+    expect(user_task_result.node_id).toEqual("iut_2");
     const activities = user_task_result.external_input.activities;
     expect(activities).toHaveLength(1);
     const activity = activities[0];
@@ -463,7 +463,7 @@ describe("submitActivity", () => {
 
     const process_state_hisotry = await engine.fetchProcessStateHistory(process.id);
     const user_task_result = process_state_hisotry[1];
-    expect(user_task_result.node_id).toEqual("2");
+    expect(user_task_result.node_id).toEqual("iut_2");
     const activities = user_task_result.external_input.activities;
     expect(activities).toHaveLength(1);
     const activity = activities[0];
