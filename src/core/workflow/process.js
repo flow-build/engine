@@ -698,10 +698,12 @@ class Process extends PersistedEntity {
     }
 
     switch (this.status) {
-      case ProcessStatus.ERROR || ProcessStatus.INTERRUPTED:
+      case ProcessStatus.ERROR:
+      case ProcessStatus.INTERRUPTED:
         await ActivityManager.interruptActivityManagerForProcess(this._id);
         break;
-      case ProcessStatus.FINISHED || ProcessStatus.FORBIDDEN:
+      case ProcessStatus.FINISHED:
+      case ProcessStatus.FORBIDDEN:
         await ActivityManager.finishActivityManagerForProcess(this._id);
         break;
     }
