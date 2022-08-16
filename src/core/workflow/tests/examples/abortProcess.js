@@ -1,39 +1,22 @@
 const { lanes } = require("./lanes");
+const finishNode = require("./nodeSpecs/finishNode");
+const buildStartNode = require("./nodeSpecs/startNode");
+const buildSystemTaskNode = require("./nodeSpecs/systemTaskNode");
 
 module.exports = {
   requirements: ["core"],
   prepare: [],
   nodes: [
-    {
-      id: "1",
-      type: "Start",
-      name: "Start node",
-      parameters: {
-        input_schema: {},
-      },
-      next: "2",
-      lane_id: "true",
-    },
-    {
-      id: "2",
-      type: "SystemTask",
+    buildStartNode({ next: "2" }),
+    buildSystemTaskNode({
       category: "abortProcess",
-      name: "Abort process node",
       parameters: {
         input: {
           $ref: "bag.process_list",
         },
       },
-      next: "3",
-      lane_id: "true",
-    },
-    {
-      id: "3",
-      type: "Finish",
-      name: "Finish node",
-      next: null,
-      lane_id: "true",
-    },
+    }),
+    finishNode,
   ],
   lanes,
   environment: {},

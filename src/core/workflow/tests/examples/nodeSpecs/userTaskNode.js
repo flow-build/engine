@@ -1,0 +1,19 @@
+const _ = require("lodash");
+
+const baseSpec = {
+  id: "USER-TASL",
+  type: "UserTask",
+  name: "User task",
+  next: "END",
+  lane_id: "true",
+  parameters: {
+    action: "do something",
+    input: {},
+  },
+};
+
+const buildUserTaskNode = (spec) => {
+  return _.merge({}, baseSpec, spec);
+};
+
+module.exports = buildUserTaskNode;

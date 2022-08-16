@@ -203,10 +203,10 @@ describe("Process test", () => {
 
       await engine.runProcess(process.id, actors_.simpleton);
 
-      const history = await engine.fetchProcessStateHistory(process.id)
+      const history = await engine.fetchProcessStateHistory(process.id);
 
-      expect(history.length).toEqual(4)
-      expect(history[0]._bag).toEqual({ process_id: process.id, step_number: 2 })
+      expect(history.length).toEqual(4);
+      expect(history[0]._bag).toEqual({ process_id: process.id, step_number: 2 });
     });
   });
 
