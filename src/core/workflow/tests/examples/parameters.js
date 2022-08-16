@@ -1,4 +1,8 @@
 const { lanes } = require("./lanes");
+const finishNode = require("./nodeSpecs/finishNode");
+const buildScriptTaskNode = require("./nodeSpecs/scriptTaskNode");
+const buildStartNode = require("./nodeSpecs/startNode");
+const buildSystemTaskNode = require("./nodeSpecs/systemTaskNode");
 
 module.exports = {
   requirements: ["core"],
@@ -8,44 +12,11 @@ module.exports = {
     param2: "two value",
   },
   nodes: [
-    {
-      id: "1",
-      type: "Start",
-      name: "Start node",
-      parameters: {
-        input_schema: {},
-      },
-      next: "2",
-      lane_id: "true",
-    },
-    {
-      id: "2",
-      type: "ScriptTask",
-      name: "Create values for bag",
-      next: "3",
-      lane_id: "true",
-      parameters: {
-        input: {},
-        script: {
-          package: "",
-          function: [
-            "fn",
-            ["&", "args"],
-            {
-              example: "bag_example",
-              value: "bag_value",
-            },
-          ],
-        },
-      },
-    },
-    {
+    buildStartNode({ next: "2" }),
+    buildScriptTaskNode({ id: "2", next: "3" }),
+    buildSystemTaskNode({
       id: "3",
-      type: "SystemTask",
       category: "SetToBag",
-      name: "Set values on bag",
-      next: "4",
-      lane_id: "true",
       parameters: {
         input: {
           example: { $ref: "result.example" },
@@ -53,14 +24,8 @@ module.exports = {
           pvalues: { $ref: "parameters.param1" },
         },
       },
-    },
-    {
-      id: "4",
-      type: "Finish",
-      name: "Finish node",
-      next: null,
-      lane_id: "true",
-    },
+    }),
+    finishNode,
   ],
   lanes,
   environment: {},

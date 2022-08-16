@@ -1,4 +1,7 @@
 const { lanes } = require("./lanes");
+const finishNode = require("./nodeSpecs/finishNode");
+const buildHttpNode = require("./nodeSpecs/httpNode");
+const buildStartNode = require("./nodeSpecs/startNode");
 
 module.exports = {
   requirements: ["core"],
@@ -7,41 +10,16 @@ module.exports = {
   },
   prepare: [],
   nodes: [
-    {
-      id: "inex_1",
-      type: "Start",
-      name: "Start inexistant",
-      parameters: {
-        input_schema: {},
-      },
-      next: "inex_2",
-      lane_id: "true",
-    },
-    {
+    buildStartNode({ next: "inex_2" }),
+    buildHttpNode({
       id: "inex_2",
-      type: "SystemTask",
-      category: "HTTP",
-      name: "Call endpoint",
-      next: "end",
-      lane_id: "true",
       parameters: {
-        input: {},
         request: {
-          verb: "POST",
           url: "{{environment.inexistent}}",
-          headers: {
-            ContentType: "application/json",
-          },
         },
       },
-    },
-    {
-      id: "end",
-      type: "Finish",
-      name: "Finish Node",
-      next: null,
-      lane_id: "true",
-    },
+    }),
+    finishNode,
   ],
   lanes,
 };

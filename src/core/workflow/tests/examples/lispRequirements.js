@@ -1,26 +1,18 @@
 const { lanes } = require("./lanes");
+const finishNode = require("./nodeSpecs/finishNode");
+const buildScriptTaskNode = require("./nodeSpecs/scriptTaskNode");
+const buildStartNode = require("./nodeSpecs/startNode");
+const buildSystemTaskNode = require("./nodeSpecs/systemTaskNode");
 
 module.exports = {
   requirements: ["core", "test_package"],
   environment: {},
   prepare: [],
   nodes: [
-    {
-      id: "1",
-      type: "Start",
-      name: "Start node",
-      parameters: {
-        input_schema: {},
-      },
-      next: "2",
-      lane_id: "true",
-    },
-    {
+    buildStartNode({ next: "2" }),
+    buildScriptTaskNode({
       id: "2",
-      type: "ScriptTask",
-      name: "Script Task node",
       next: "3",
-      lane_id: "true",
       parameters: {
         input: {},
         script: {
@@ -28,27 +20,17 @@ module.exports = {
           function: "test_core_1",
         },
       },
-    },
-    {
+    }),
+    buildSystemTaskNode({
       id: "3",
-      type: "SystemTask",
       category: "SetToBag",
-      name: "SystemTask SetToBag node",
-      next: "4",
-      lane_id: "true",
       parameters: {
         input: {
           new_bag: { $ref: "result.result" },
         },
       },
-    },
-    {
-      id: "4",
-      type: "Finish",
-      name: "Finish node",
-      next: null,
-      lane_id: "true",
-    },
+    }),
+    finishNode,
   ],
   lanes,
 };
