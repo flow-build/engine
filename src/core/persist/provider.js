@@ -7,8 +7,6 @@ const {
   ActivityMemoryPersist,
 } = require("../persist/memory");
 const {
-  ProcessKnexPersist,
-  WorkflowKnexPersist,
   PackagesKnexPersist,
   ActivityManagerKnexPersist,
   ActivityKnexPersist,
@@ -16,6 +14,8 @@ const {
 } = require("../persist/knex");
 const { ProcessStateKnexPersist } = require("./knex/processState");
 const { PersistorSingleton } = require("../persist/persist");
+const { WorkflowKnexPersist } = require("./knex/workflow");
+const { ProcessKnexPersist } = require("./knex/process");
 
 class PersistorProvider {
   static getPersistor(persist_mode, ...args) {
