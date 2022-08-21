@@ -16,7 +16,7 @@ class WorkflowKnexPersist extends KnexPersist {
   }
 
   async getAll() {
-    return await this._db
+    return this._db
       .select("*")
       .from(`${this._table} as w1`)
       .whereRaw(`w1.version = (select max(version) from ${this._table} as w2 where w1.name = w2.name)`);
@@ -27,7 +27,7 @@ class WorkflowKnexPersist extends KnexPersist {
       const current_version = (
         await this._db(this._table).transacting(trx).max("version").where({ name: workflow.name }).first()
       ).max;
-      return await this._db(this._table)
+      return this._db(this._table)
         .transacting(trx)
         .insert({
           ...workflow,
@@ -59,7 +59,7 @@ class WorkflowKnexPersist extends KnexPersist {
   }
 
   async getByHash(hash) {
-    return await this._db.select("*").from(this._table).where({ blueprint_hash: hash });
+    return this._db.select("*").from(this._table).where({ blueprint_hash: hash });
   }
 
   async _checkWhetherIsLatest(workflow) {

@@ -11,12 +11,11 @@ class ProcessKnexPersist extends KnexPersist {
   }
 
   async get(id) {
-    return await this._db.transaction(async (trx) => {
+    return this._db.transaction(async (trx) => {
       const process = await this._db.select("*").from(this._table).where({ id }).first().transacting(trx);
       if (process) {
         const state = await this.getLastStateByProcess(id).transacting(trx);
-        let workflow = new Workflow("sample", "sample");
-        workflow = await Workflow.fetch(process.workflow_id);
+        const workflow = await Workflow.fetch(process.workflow_id);
         return {
           ...process,
           ...{ workflow_name: workflow._name, workflow_version: workflow._version, latest_version: workflow._latest },
@@ -66,9 +65,9 @@ class ProcessKnexPersist extends KnexPersist {
   async delete(id) {
     //todo trx
     try {
-      return await this._db.transaction(async (trx) => {
+      return this._db.transaction(async (trx) => {
         await this._db(this._state_table).transacting(trx).where("process_id", id).del();
-        return await this._db(this._table).transcting(trx).del();
+        return await this._db(this._table).transacting(trx).del();
       });
     } catch (e) {
       emitter.emit("KNEX.DELETE_PROCESS_ERROR", `Unable delete Process with PID [${this.id}]`, {
@@ -80,9 +79,9 @@ class ProcessKnexPersist extends KnexPersist {
 
   async deleteAll() {
     //todo trx
-    return await this._db.transaction(async (trx) => {
+    return this._db.transaction(async (trx) => {
       await this._db(this._state_table).transacting(trx).del();
-      return await this._db(this._table).transacting(trx).del();
+      return this._db(this._table).transacting(trx).del();
     });
   }
 
@@ -106,7 +105,7 @@ class ProcessKnexPersist extends KnexPersist {
   }
 
   async getTasks(filters) {
-    return await this._getTasks(filters);
+    return this._getTasks(filters);
   }
 
   async getWorkflowWithProcesses(filters) {
