@@ -374,8 +374,9 @@ describe("Process test", () => {
       const persistor = PersistorProvider.getPersistor(...settings.persist_options);
       const db = persistor.getPersistInstance("Workflow")._db;
       const engine = new Engine(...settings.persist_options);
+      const processId = "cd4fe660-a931-11ec-8b85-85353dffff77";
       const process_payload = {
-        id: "cd4fe660-a931-11ec-8b85-85353dffff77",
+        id: processId,
         created_at: "2022-03-21T16:13:10.470Z",
         workflow_id: "9a5cd6f0-a931-11ec-b97a-c373d67a14f1",
         blueprint_spec: blueprints_.custom_node,
@@ -386,7 +387,7 @@ describe("Process test", () => {
       const state_payload = {
         id: "cd511ee0-a931-11ec-8b85-85353dffff77",
         created_at: "2022-03-21T16:13:10.478Z",
-        process_id: "cd4fe660-a931-11ec-8b85-85353dffff77",
+        process_id: processId,
         step_number: 1,
         node_id: "1",
         bag: {},
@@ -420,8 +421,8 @@ describe("Process test", () => {
       let process = await engine.fetchProcess(process_payload.id);
       expect(process.status).toEqual(ProcessStatus.UNSTARTED);
 
-      await engine.runProcess(process.id);
-      process = await engine.fetchProcess(process.id);
+      await engine.runProcess(processId);
+      process = await engine.fetchProcess(processId);
       expect(process.status).toEqual(ProcessStatus.FORBIDDEN);
 
       expect(process._state._error).toEqual("Error: Invalid service task, unknow category custom_fn");
