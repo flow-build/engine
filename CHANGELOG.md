@@ -1,3 +1,11 @@
+## [2.13.0](https://github.com/flow-build/engine/compare/v2.12.0...v2.13.0) (2022-08-21)
+
+
+### Features
+
+* **knex:** add information whether workflow is latest ([8cd03c3](https://github.com/flow-build/engine/commit/8cd03c3792b5b8522ea979fef2c69b4e83644947))
+* updates fetch workflow and process ([d3d6b18](https://github.com/flow-build/engine/commit/d3d6b18b7e6fe3edc4c863634e86caece3ee8437))
+
 ## [2.12.0](https://github.com/flow-build/engine/compare/v2.11.1...v2.12.0) (2022-08-16)
 
 
