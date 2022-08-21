@@ -27,6 +27,7 @@ class Workflow extends PersistedEntity {
       workflow._created_at = serialized.created_at;
       workflow._version = serialized.version;
       workflow._blueprint_hash = serialized.blueprint_hash;
+      workflow._latest = serialized?.latest;
 
       return workflow;
     }
@@ -52,13 +53,15 @@ class Workflow extends PersistedEntity {
   constructor(name, description, blueprint_spec, id = null) {
     super();
 
-    Blueprint.assert_is_valid(blueprint_spec);
+    if (blueprint_spec) {
+      //Blueprint.assert_is_valid(blueprint_spec);
+      this._blueprint_hash = JSum.digest(blueprint_spec, "SHA256", "hex");
+    }
 
     this._id = id || uuid();
     this._name = name;
     this._description = description;
     this._blueprint_spec = blueprint_spec;
-    this._blueprint_hash = JSum.digest(blueprint_spec, "SHA256", "hex");
   }
 
   get name() {

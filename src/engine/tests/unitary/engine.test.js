@@ -1,4 +1,5 @@
 const _ = require("lodash");
+const JSum = require("jsum");
 const { v1: uuid } = require("uuid");
 const lisp = require("../../../core/lisp");
 const settings = require("../../../../settings/tests/settings");
@@ -40,79 +41,98 @@ test("constructor works", () => {
   expect(engineTest).toBeInstanceOf(Engine);
 });
 
-test("create and run process for system tasks", async () => {
-  const workflow = await engine.saveWorkflow("sample", "sample", blueprints_.identity_system_task);
-  const process = await createRunProcess(engine, workflow.id, actors_.simpleton);
-  expect(process.status).toBe(ProcessStatus.FINISHED);
-});
-
-test("create and run process for user tasks", async () => {
-  const workflow = await engine.saveWorkflow("sample", "sample", blueprints_.identity_user_task);
-  const process = await createRunProcess(engine, workflow.id, actors_.simpleton);
-  expect(process.status).toBe(ProcessStatus.WAITING);
-});
-
-test("create and run process for restricted system tasks", async () => {
-  const workflow = await engine.saveWorkflow("sample", "sample", blueprints_.admin_identity_system_task);
-  let process = await createRunProcess(engine, workflow.id, actors_.admin);
-  expect(process.status).toBe(ProcessStatus.FINISHED);
-
-  process = await createRunProcess(engine, workflow.id, actors_.simpleton);
-  expect(process.status).toBe(ProcessStatus.FORBIDDEN);
-});
-
-test("create and run process for restricted user tasks", async () => {
-  const workflow = await engine.saveWorkflow("sample", "sample", blueprints_.admin_identity_user_task);
-  let process = await createRunProcess(engine, workflow.id, actors_.admin);
-  expect(process.status).toBe(ProcessStatus.WAITING);
-
-  process = await createRunProcess(engine, workflow.id, actors_.simpleton);
-  expect(process.status).toBe(ProcessStatus.FORBIDDEN);
-});
-
-test("create and run process for restricted multilane system tasks", async () => {
-  const workflow = await engine.saveWorkflow("sample", "sample", blueprints_.restricted_multilane_identity_user_task);
-  let process = await createRunProcess(engine, workflow.id, actors_.sys_admin);
-  process = await engine.runProcess(process.id, actors_.sys_admin, { data: 1 });
-  expect(process.status).toBe(ProcessStatus.FINISHED);
-
-  process = await createRunProcess(engine, workflow.id, actors_.admin);
-  expect(process.status).toBe(ProcessStatus.WAITING);
-  expect(process.state.node_id).toBe("rmiut_4");
-
-  process = await engine.runProcess(process.id, actors_.admin, { data: 1 });
-  expect(process.status).toBe(ProcessStatus.FORBIDDEN);
-
-  process = await createRunProcess(engine, workflow.id, actors_.simpleton);
-  expect(process.status).toBe(ProcessStatus.FORBIDDEN);
-});
-
-test("create and run process accordingly when node run throws error", async () => {
-  const StartNode = require("../../../core/workflow/nodes/index.js").StartNode;
-  const spy = jest.spyOn(StartNode.prototype, "_run");
-  spy.mockImplementation(() => {
-    throw new Error("mock");
+describe("create & run process", () => {
+  test("for system tasks", async () => {
+    const workflow = await engine.saveWorkflow("sample", "sample", blueprints_.identity_system_task);
+    const process = await createRunProcess(engine, workflow.id, actors_.simpleton);
+    expect(process.status).toBe(ProcessStatus.FINISHED);
   });
 
-  const workflow = await engine.saveWorkflow("sample", "sample", blueprints_.minimal);
-  const process = await createRunProcess(engine, workflow.id, actors_.simpleton);
-  expect(process.status).toBe(ProcessStatus.ERROR);
+  test("for user tasks", async () => {
+    const workflow = await engine.saveWorkflow("sample", "sample", blueprints_.identity_user_task);
+    const process = await createRunProcess(engine, workflow.id, actors_.simpleton);
+    expect(process.status).toBe(ProcessStatus.WAITING);
+  });
 
-  spy.mockRestore();
-});
+  test("for restricted system tasks", async () => {
+    const workflow = await engine.saveWorkflow("sample", "sample", blueprints_.admin_identity_system_task);
+    let process = await createRunProcess(engine, workflow.id, actors_.admin);
+    expect(process.status).toBe(ProcessStatus.FINISHED);
 
-test("create and run process with prepare lisp function", async () => {
-  const workflow = await engine.saveWorkflow("sample", "sample", blueprints_.lisp_prepare);
-  const process = await createRunProcess(engine, workflow.id, actors_.simpleton);
-  expect(process.status).toBe(ProcessStatus.FINISHED);
-  expect(process.state.bag).toStrictEqual({ new_bag: "Prepare New Bag" });
-});
+    process = await createRunProcess(engine, workflow.id, actors_.simpleton);
+    expect(process.status).toBe(ProcessStatus.FORBIDDEN);
+  });
 
-test("create and run process with requirements lisp functions", async () => {
-  const workflow = await engine.saveWorkflow("sample", "sample", blueprints_.lisp_requirements);
-  const process = await createRunProcess(engine, workflow.id, actors_.simpleton);
-  expect(process.status).toBe(ProcessStatus.FINISHED);
-  expect(process.state.bag).toStrictEqual({ new_bag: "New Bag 1" });
+  test("for restricted user tasks", async () => {
+    const workflow = await engine.saveWorkflow("sample", "sample", blueprints_.admin_identity_user_task);
+    let process = await createRunProcess(engine, workflow.id, actors_.admin);
+    expect(process.status).toBe(ProcessStatus.WAITING);
+
+    process = await createRunProcess(engine, workflow.id, actors_.simpleton);
+    expect(process.status).toBe(ProcessStatus.FORBIDDEN);
+  });
+
+  test("for restricted multilane system tasks", async () => {
+    const workflow = await engine.saveWorkflow("sample", "sample", blueprints_.restricted_multilane_identity_user_task);
+    let process = await createRunProcess(engine, workflow.id, actors_.sys_admin);
+    process = await engine.runProcess(process.id, actors_.sys_admin, { data: 1 });
+    expect(process.status).toBe(ProcessStatus.FINISHED);
+
+    process = await createRunProcess(engine, workflow.id, actors_.admin);
+    expect(process.status).toBe(ProcessStatus.WAITING);
+    expect(process.state.node_id).toBe("rmiut_4");
+
+    process = await engine.runProcess(process.id, actors_.admin, { data: 1 });
+    expect(process.status).toBe(ProcessStatus.FORBIDDEN);
+
+    process = await createRunProcess(engine, workflow.id, actors_.simpleton);
+    expect(process.status).toBe(ProcessStatus.FORBIDDEN);
+  });
+
+  test("accordingly when node run throws error", async () => {
+    const StartNode = require("../../../core/workflow/nodes/index.js").StartNode;
+    const spy = jest.spyOn(StartNode.prototype, "_run");
+    spy.mockImplementation(() => {
+      throw new Error("mock");
+    });
+
+    const workflow = await engine.saveWorkflow("sample", "sample", blueprints_.minimal);
+    const process = await createRunProcess(engine, workflow.id, actors_.simpleton);
+    expect(process.status).toBe(ProcessStatus.ERROR);
+
+    spy.mockRestore();
+  });
+
+  test("with prepare lisp function", async () => {
+    const workflow = await engine.saveWorkflow("sample", "sample", blueprints_.lisp_prepare);
+    const process = await createRunProcess(engine, workflow.id, actors_.simpleton);
+    expect(process.status).toBe(ProcessStatus.FINISHED);
+    expect(process.state.bag).toStrictEqual({ new_bag: "Prepare New Bag" });
+  });
+
+  test("with requirements lisp functions", async () => {
+    const workflow = await engine.saveWorkflow("sample", "sample", blueprints_.lisp_requirements);
+    const process = await createRunProcess(engine, workflow.id, actors_.simpleton);
+    expect(process.status).toBe(ProcessStatus.FINISHED);
+    expect(process.state.bag).toStrictEqual({ new_bag: "New Bag 1" });
+  });
+
+  test("with default encryption", async () => {
+    const crypto = engine.buildCrypto("", { key: "12345678901234567890123456789012" });
+    expect(crypto).toBeDefined();
+    engine.setCrypto(crypto);
+
+    const workflow = await engine.saveWorkflow("sample", "sample", blueprints_.user_encrypt);
+    let process = await createRunProcess(engine, workflow.id, actors_.simpleton);
+    expect(process.status).toEqual(ProcessStatus.WAITING);
+
+    const user_input = "example user input";
+    process = await engine.runProcess(process.id, actors_.simpleton, { value: user_input });
+    expect(process.status).toEqual(ProcessStatus.FINISHED);
+    expect(process.state.bag).toBeDefined();
+    expect(process.state.bag.crypted).not.toEqual(user_input);
+    expect(process.state.bag.decrypted).toEqual(user_input);
+  });
 });
 
 describe("create and run process with different lane rules", () => {
@@ -182,75 +202,60 @@ describe("create and run process with different lane rules", () => {
   });
 });
 
-test("create and run process with default encryption", async () => {
-  const crypto = engine.buildCrypto("", { key: "12345678901234567890123456789012" });
-  expect(crypto).toBeDefined();
-  engine.setCrypto(crypto);
+describe("runProcess", () => {
+  test("works with prepare and requirements lisp functions", async () => {
+    const workflow = await engine.saveWorkflow("sample", "sample", blueprints_.lisp_requirements_prepare);
+    let process = await createRunProcess(engine, workflow.id, actors_.simpleton);
+    expect(process.status).toBe(ProcessStatus.WAITING);
+    expect(process.state.bag).toStrictEqual({ new_bag: "New Bag" });
+    process = await engine.runProcess(process.id, actors_.simpleton, { external_input: "external_input" });
+    expect(process.status).toBe(ProcessStatus.FINISHED);
+    expect(process.state.bag).toStrictEqual({ new_bag: "New Bag 2" });
+  });
 
-  const workflow = await engine.saveWorkflow("sample", "sample", blueprints_.user_encrypt);
-  let process = await createRunProcess(engine, workflow.id, actors_.simpleton);
-  expect(process.status).toEqual(ProcessStatus.WAITING);
+  test("works for user tasks", async () => {
+    const workflow = await engine.saveWorkflow("sample", "sample", blueprints_.identity_user_task);
+    let process = await createRunProcess(engine, workflow.id, actors_.simpleton);
+    expect(process.status).toBe(ProcessStatus.WAITING);
 
-  const user_input = "example user input";
-  process = await engine.runProcess(process.id, actors_.simpleton, { value: user_input });
-  expect(process.status).toEqual(ProcessStatus.FINISHED);
-  expect(process.state.bag).toBeDefined();
-  expect(process.state.bag.crypted).not.toEqual(user_input);
-  expect(process.state.bag.decrypted).toEqual(user_input);
-});
+    process = await engine.runProcess(process.id, actors_.simpleton, { data: 1 });
+    expect(process.status).toBe(ProcessStatus.FINISHED);
+  });
 
-test("runProcess works with prepare and requirements lisp functions", async () => {
-  const workflow = await engine.saveWorkflow("sample", "sample", blueprints_.lisp_requirements_prepare);
-  let process = await createRunProcess(engine, workflow.id, actors_.simpleton);
-  expect(process.status).toBe(ProcessStatus.WAITING);
-  expect(process.state.bag).toStrictEqual({ new_bag: "New Bag" });
-  process = await engine.runProcess(process.id, actors_.simpleton, { external_input: "external_input" });
-  expect(process.status).toBe(ProcessStatus.FINISHED);
-  expect(process.state.bag).toStrictEqual({ new_bag: "New Bag 2" });
-});
+  test("works for restricted multilane system tasks", async () => {
+    const workflow = await engine.saveWorkflow("sample", "sample", blueprints_.restricted_multilane_identity_user_task);
+    let process = await createRunProcess(engine, workflow.id, actors_.admin);
+    expect(process.status).toBe(ProcessStatus.WAITING);
 
-test("runProcess works for user tasks", async () => {
-  const workflow = await engine.saveWorkflow("sample", "sample", blueprints_.identity_user_task);
-  let process = await createRunProcess(engine, workflow.id, actors_.simpleton);
-  expect(process.status).toBe(ProcessStatus.WAITING);
+    process = await engine.runProcess(process.id, actors_.admin, { data: 1 });
+    expect(process.status).toBe(ProcessStatus.FORBIDDEN);
 
-  process = await engine.runProcess(process.id, actors_.simpleton, { data: 1 });
-  expect(process.status).toBe(ProcessStatus.FINISHED);
-});
+    process = await createRunProcess(engine, workflow.id, actors_.simpleton);
+    expect(process.status).toBe(ProcessStatus.FORBIDDEN);
 
-test("runProcess works for restricted multilane system tasks", async () => {
-  const workflow = await engine.saveWorkflow("sample", "sample", blueprints_.restricted_multilane_identity_user_task);
-  let process = await createRunProcess(engine, workflow.id, actors_.admin);
-  expect(process.status).toBe(ProcessStatus.WAITING);
+    process = await createRunProcess(engine, workflow.id, actors_.admin);
+    expect(process.status).toBe(ProcessStatus.WAITING);
 
-  process = await engine.runProcess(process.id, actors_.admin, { data: 1 });
-  expect(process.status).toBe(ProcessStatus.FORBIDDEN);
+    process = await engine.runProcess(process.id, actors_.simpleton, { data: 1 });
+    expect(process.status).toBe(ProcessStatus.FORBIDDEN);
 
-  process = await createRunProcess(engine, workflow.id, actors_.simpleton);
-  expect(process.status).toBe(ProcessStatus.FORBIDDEN);
+    process = await createRunProcess(engine, workflow.id, actors_.admin);
+    expect(process.status).toBe(ProcessStatus.WAITING);
 
-  process = await createRunProcess(engine, workflow.id, actors_.admin);
-  expect(process.status).toBe(ProcessStatus.WAITING);
+    process = await engine.runProcess(process.id, actors_.sys_admin, { data: 1 });
+    expect(process.status).toBe(ProcessStatus.FINISHED);
+  });
 
-  process = await engine.runProcess(process.id, actors_.simpleton, { data: 1 });
-  expect(process.status).toBe(ProcessStatus.FORBIDDEN);
+  test("that uses actor_data", async () => {
+    const workflow = await engine.saveWorkflow("sample", "sample", blueprints_.use_actor_data);
+    let process = await createRunProcess(engine, workflow.id, actors_.manager);
+    expect(process.status).toEqual(ProcessStatus.WAITING);
 
-  process = await createRunProcess(engine, workflow.id, actors_.admin);
-  expect(process.status).toBe(ProcessStatus.WAITING);
+    process = await engine.runProcess(process.id, actors_.admin, { data: 22 });
+    expect(process.status).toEqual(ProcessStatus.FINISHED);
 
-  process = await engine.runProcess(process.id, actors_.sys_admin, { data: 1 });
-  expect(process.status).toBe(ProcessStatus.FINISHED);
-});
-
-test("runProcess that uses actor_data", async () => {
-  const workflow = await engine.saveWorkflow("sample", "sample", blueprints_.use_actor_data);
-  let process = await createRunProcess(engine, workflow.id, actors_.manager);
-  expect(process.status).toEqual(ProcessStatus.WAITING);
-
-  process = await engine.runProcess(process.id, actors_.admin, { data: 22 });
-  expect(process.status).toEqual(ProcessStatus.FINISHED);
-
-  expect(process._state._bag).toStrictEqual({ runUser: actors_.manager, continueUser: actors_.admin });
+    expect(process._state._bag).toStrictEqual({ runUser: actors_.manager, continueUser: actors_.admin });
+  });
 });
 
 describe("continueProcess", () => {
@@ -341,21 +346,33 @@ describe("abortProcess", () => {
   });
 });
 
-test("saveWorkflow works", async () => {
-  const workflow = await engine.saveWorkflow("sample", "sample", blueprints_.minimal);
-  expect(workflow).toBeInstanceOf(Workflow);
-});
+describe("saveWorkflow", () => {
+  test("works", async () => {
+    const workflow = await engine.saveWorkflow("sample", "sample", blueprints_.minimal);
+    expect(workflow).toBeInstanceOf(Workflow);
+  });
 
-test("saveWorkflow breaks if workflow_id is not an uuid", async () => {
-  const response = await engine.saveWorkflow("sample", "sample", blueprints_.minimal, "not_a_uuid");
-  expect(response.error).toBeDefined();
-});
+  test("breaks if workflow_id is not an uuid", async () => {
+    const response = await engine.saveWorkflow("sample", "sample", blueprints_.minimal, "not_a_uuid");
+    expect(response.error).toBeDefined();
+  });
 
-test("saveWorkflow breaks if workflow_id already exists", async () => {
-  const workflow = await engine.saveWorkflow("sample", "sample", blueprints_.minimal);
-  const response = await engine.saveWorkflow("sample", "sample", blueprints_.minimal, workflow.id);
+  test("breaks if workflow_id already exists", async () => {
+    const workflow = await engine.saveWorkflow("sample", "sample", blueprints_.minimal);
+    const response = await engine.saveWorkflow("sample", "sample", blueprints_.minimal, workflow.id);
 
-  expect(response.error).toBeDefined();
+    expect(response.error).toBeDefined();
+  });
+
+  test("Validation of extra node works", async () => {
+    engine.addCustomSystemCategory(extra_nodes);
+    const custom_bluprint = _.cloneDeep(blueprints_.extra_nodes);
+    const exampleNode = custom_bluprint.nodes.find((node) => node.category === "example");
+    delete exampleNode.parameters.example;
+    await expect(engine.saveWorkflow("sample", "sample", custom_bluprint)).rejects.toThrowError(
+      "parameters_has_example"
+    );
+  });
 });
 
 test("savePackage works", async () => {
@@ -393,14 +410,6 @@ test("deleteWorkflow works", async () => {
   await engine.deleteWorkflow(workflow.id);
   fetched_workflow = await engine.fetchWorkflow(workflow.id);
   expect(fetched_workflow).toBeFalsy();
-});
-
-test("Validation of extra node works", async () => {
-  engine.addCustomSystemCategory(extra_nodes);
-  const custom_bluprint = _.cloneDeep(blueprints_.extra_nodes);
-  const exampleNode = custom_bluprint.nodes.find((node) => node.category === "example");
-  delete exampleNode.parameters.example;
-  await expect(engine.saveWorkflow("sample", "sample", custom_bluprint)).rejects.toThrowError("parameters_has_example");
 });
 
 test("Extra node works", async () => {
@@ -606,6 +615,48 @@ describe("submitActivity", () => {
     expect(error).toBeDefined();
     expect(error.errorType).toEqual("submitActivity");
     expect(error.message).toEqual("Submit activity unavailable");
+  });
+});
+
+describe("fetchProcess", () => {
+  test("works", async () => {
+    const workflow = await engine.saveWorkflow("user_task", "user_task", blueprints_.identity_user_task);
+    const process = await engine.createProcess(workflow.id, actors_.simpleton);
+    await engine.runProcess(process.id, actors_.simpleton);
+    const fetchedProcess = await engine.fetchProcess(process.id);
+    expect(fetchedProcess).toBeDefined();
+    expect(fetchedProcess.id).toBe(process.id);
+  });
+
+  test("returns workflow name, version and latest", async () => {
+    const workflow = await engine.saveWorkflow("user_task", "user_task", blueprints_.identity_user_task);
+    const process = await engine.createProcess(workflow.id, actors_.simpleton);
+    await engine.runProcess(process.id, actors_.simpleton);
+    const fetchedProcess = await engine.fetchProcess(process.id);
+    expect(fetchedProcess._workflow).toBeDefined();
+    expect(fetchedProcess._workflow.name).toBeDefined();
+    expect(fetchedProcess._workflow.version).toBeDefined();
+    expect(fetchedProcess._workflow.isLatest).toBeTruthy();
+    await engine.saveWorkflow("user_task", "user_task1", blueprints_.identity_user_task);
+    const fetchedProcess2 = await engine.fetchProcess(process.id);
+    expect(fetchedProcess2._workflow.isLatest).toBeFalsy();
+  });
+});
+
+describe("fetchWorkflowByName", () => {
+  test("works", async () => {
+    const workflow = await engine.saveWorkflow("sample", "sample", blueprints_.minimal);
+    const fetchedWorkflow = await engine.fetchWorkflowByName("sample");
+    expect(fetchedWorkflow.id).toBe(workflow.id);
+  });
+});
+
+describe("findWorkflowByBlueprintHash", () => {
+  test("works", async () => {
+    const workflow = await engine.saveWorkflow("sample", "sample", blueprints_.minimal);
+    const hash = JSum.digest(blueprints_.minimal, "SHA256", "hex");
+    const fetchedWorkflow = await engine.findWorkflowByBlueprintHash(hash);
+    expect(fetchedWorkflow[0].id).toBe(workflow.id);
   });
 });
 

@@ -1,7 +1,7 @@
 const _ = require("lodash");
 
 const baseSpec = {
-  id: "USER-TASL",
+  id: "USER-TASK",
   type: "UserTask",
   name: "User task",
   next: "END",
