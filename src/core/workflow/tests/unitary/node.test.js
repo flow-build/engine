@@ -9,7 +9,6 @@ const { ProcessStatus } = require("../../../workflow/process_state");
 const process_manager = require("../../process_manager");
 const { nodes_, results_ } = require("./node_samples");
 const axios = require("axios");
-const crypto_manager = require("../../../crypto_manager");
 
 let package_persistor;
 let core_package;
@@ -31,7 +30,6 @@ describe("Constraints test", () => {
       { node_spec: nodes_.start, node: nodes.StartNode },
       { node_spec: nodes_.finish, node: nodes.FinishNode },
       { node_spec: nodes_.flow, node: nodes.FlowNode },
-      { node_spec: nodes_.user_task, node: nodes.UserTaskNode },
       { node_spec: nodes_.script_task, node: nodes.ScriptTaskNode },
       { node_spec: nodes_.system_task, node: nodes.SystemTaskNode },
       { node_spec: nodes_.http_system_task, node: nodes.HttpSystemTaskNode },
@@ -119,7 +117,6 @@ describe("Constraints test", () => {
   describe("Parameter with input constraints", () => {
     const specs_with_parameter_input = [
       { node_spec: nodes_.flow, nodeClass: nodes.FlowNode },
-      { node_spec: nodes_.user_task, nodeClass: nodes.UserTaskNode },
       { node_spec: nodes_.script_task, nodeClass: nodes.ScriptTaskNode },
       { node_spec: nodes_.system_task, nodeClass: nodes.SystemTaskNode },
       { node_spec: nodes_.http_system_task, nodeClass: nodes.HttpSystemTaskNode },
@@ -212,128 +209,6 @@ describe("Constraints test", () => {
     const [is_valid, error] = nodes.FinishNode.validate(spec);
     expect(is_valid).toEqual(false);
     expect(error).toBe("next_is_null");
-  });
-
-  describe("UserTaskNode", () => {
-    test("UserTaskNode next_has_valid_type constraint works", () => {
-      const spec = _.cloneDeep(nodes_.user_task);
-      spec.next = {};
-      const [is_valid, error] = nodes.UserTaskNode.validate(spec);
-      expect(is_valid).toEqual(false);
-      expect(error).toBe("next_has_valid_type");
-    });
-
-    test("UserTaskNode parameters_has_action constraint works", () => {
-      const spec = _.cloneDeep(nodes_.user_task);
-      delete spec.parameters["action"];
-      const [is_valid, error] = nodes.UserTaskNode.validate(spec);
-      expect(is_valid).toEqual(false);
-      expect(error).toBe("parameters_has_action");
-    });
-
-    describe("timeout_has_valid_type constraint works", () => {
-      test("fails with string", () => {
-        const spec = _.cloneDeep(nodes_.user_task);
-        spec.parameters.timeout = "22";
-        const [is_valid, error] = nodes.UserTaskNode.validate(spec);
-        expect(is_valid).toEqual(false);
-        expect(error).toEqual("timeout_has_valid_type");
-      });
-
-      test("valid with undefined", () => {
-        const spec = _.cloneDeep(nodes_.user_task);
-        spec.parameters.timeout = undefined;
-        const [is_valid] = nodes.UserTaskNode.validate(spec);
-        expect(is_valid).toEqual(true);
-      });
-
-      test("valid with number", () => {
-        const spec = _.cloneDeep(nodes_.user_task);
-        spec.parameters.timeout = 10;
-        const [is_valid] = nodes.UserTaskNode.validate(spec);
-        expect(is_valid).toEqual(true);
-      });
-    });
-
-    describe("channels_has_valid_type constraint works", () => {
-      test("fails with string", () => {
-        const spec = _.cloneDeep(nodes_.user_task);
-        spec.parameters.channels = "1";
-
-        const [is_valid, error] = nodes.UserTaskNode.validate(spec);
-
-        expect(is_valid).toEqual(false);
-        expect(error).toEqual("channels_has_valid_type");
-      });
-
-      test("fails with null", () => {
-        const spec = _.cloneDeep(nodes_.user_task);
-        spec.parameters.channels = null;
-
-        const [is_valid, error] = nodes.UserTaskNode.validate(spec);
-
-        expect(is_valid).toEqual(false);
-        expect(error).toEqual("channels_has_valid_type");
-      });
-
-      test("valid with undefined", () => {
-        const spec = _.cloneDeep(nodes_.user_task);
-        spec.parameters.channels = undefined;
-
-        const [is_valid] = nodes.UserTaskNode.validate(spec);
-
-        expect(is_valid).toEqual(true);
-      });
-
-      test("valid with array", () => {
-        const spec = _.cloneDeep(nodes_.user_task);
-        spec.parameters.channels = [];
-
-        const [is_valid] = nodes.UserTaskNode.validate(spec);
-
-        expect(is_valid).toEqual(true);
-      });
-    });
-
-    describe("encrypted_data_has_valid_type constraint works", () => {
-      test("fails with string", () => {
-        const spec = _.cloneDeep(nodes_.user_task);
-        spec.parameters.encrypted_data = "1";
-
-        const [is_valid, error] = nodes.UserTaskNode.validate(spec);
-
-        expect(is_valid).toEqual(false);
-        expect(error).toEqual("encrypted_data_has_valid_type");
-      });
-
-      test("fails with null", () => {
-        const spec = _.cloneDeep(nodes_.user_task);
-        spec.parameters.encrypted_data = null;
-
-        const [is_valid, error] = nodes.UserTaskNode.validate(spec);
-
-        expect(is_valid).toEqual(false);
-        expect(error).toEqual("encrypted_data_has_valid_type");
-      });
-
-      test("valid with undefined", () => {
-        const spec = _.cloneDeep(nodes_.user_task);
-        spec.parameters.encrypted_data = undefined;
-
-        const [is_valid] = nodes.UserTaskNode.validate(spec);
-
-        expect(is_valid).toEqual(true);
-      });
-
-      test("valid with array", () => {
-        const spec = _.cloneDeep(nodes_.user_task);
-        spec.parameters.encrypted_data = [];
-
-        const [is_valid] = nodes.UserTaskNode.validate(spec);
-
-        expect(is_valid).toEqual(true);
-      });
-    });
   });
 
   describe("ScriptTaskNode", () => {

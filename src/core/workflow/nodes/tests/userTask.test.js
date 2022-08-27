@@ -2,6 +2,147 @@ const _ = require("lodash");
 const { UserTaskNode } = require("../userTask");
 const { nodes_, results_ } = require("../../tests/unitary/node_samples");
 const crypto_manager = require("../../../crypto_manager");
+const examples = require("../examples/userTask");
+
+describe("Validation", () => {
+  test("Accept a correct spec", async () => {
+    const node = new UserTaskNode(examples.complete);
+    const [validation, errors] = node.validate();
+    expect(validation).toBeTruthy();
+    expect(errors).toBe("null");
+  });
+
+  test("Must have id", async () => {
+    let spec = _.cloneDeep(examples.minimal);
+    delete spec.id;
+    const node = new UserTaskNode(spec);
+    const [validation, errors] = node.validate();
+    expect(validation).toBeFalsy();
+    const _errors = JSON.parse(errors);
+    expect(_errors[0].message).toBe("must have required property 'id'");
+  });
+
+  test("Must have next", async () => {
+    let nextSpec = _.cloneDeep(examples.minimal);
+    delete nextSpec.next;
+    const node = new UserTaskNode(nextSpec);
+    const [validation, errors] = node.validate();
+    expect(validation).toBeFalsy();
+    const _errors = JSON.parse(errors);
+    expect(_errors[0].message).toBe("must have required property 'next'");
+  });
+
+  test("Must have lane_id", async () => {
+    let spec = _.cloneDeep(examples.minimal);
+    delete spec.lane_id;
+    const node = new UserTaskNode(spec);
+    const [validation, errors] = node.validate();
+    expect(validation).toBeFalsy();
+    const _errors = JSON.parse(errors);
+    expect(_errors[0].message).toBe("must have required property 'lane_id'");
+  });
+
+  test("Must have type", async () => {
+    const spec = _.cloneDeep(examples.minimal);
+    delete spec.type;
+    const node = new UserTaskNode(spec);
+    const [validation, errors] = node.validate();
+    expect(validation).toBeFalsy();
+    const _errors = JSON.parse(errors);
+    expect(_errors[0].message).toBe("must have required property 'type'");
+  });
+
+  test("Must have parameters", async () => {
+    const spec = _.cloneDeep(examples.minimal);
+    delete spec.parameters;
+    const node = new UserTaskNode(spec);
+    const [validation, errors] = node.validate();
+    expect(validation).toBeFalsy();
+    const _errors = JSON.parse(errors);
+    expect(_errors[0].message).toBe("must have required property 'parameters'");
+  });
+
+  describe("parameters", () => {
+    test("Must have action", async () => {
+      const spec = _.cloneDeep(examples.minimal);
+      delete spec.parameters.action;
+      const node = new UserTaskNode(spec);
+      const [validation, errors] = node.validate();
+      expect(validation).toBeFalsy();
+      const _errors = JSON.parse(errors);
+      expect(_errors[0].message).toBe("must have required property 'action'");
+    });
+
+    test("Must have input", async () => {
+      const spec = _.cloneDeep(examples.minimal);
+      delete spec.parameters.input;
+      const node = new UserTaskNode(spec);
+      const [validation, errors] = node.validate();
+      expect(validation).toBeFalsy();
+      const _errors = JSON.parse(errors);
+      expect(_errors[0].message).toBe("must have required property 'input'");
+    });
+
+    describe("timeout", () => {
+      test("timeout can be an object", async () => {
+        let spec = _.cloneDeep(examples.complete);
+        let node = new UserTaskNode(spec);
+        const [validation, errors] = node.validate();
+        expect(validation).toBeTruthy();
+        expect(errors).toBe("null");
+      });
+
+      test("timeout can be a number", async () => {
+        let spec = _.cloneDeep(examples.complete);
+        spec.parameters.timeout = 10;
+        let node = new UserTaskNode(spec);
+        const [validation, errors] = node.validate();
+        expect(validation).toBeTruthy();
+        expect(errors).toBe("null");
+      });
+
+      test("timeout cannot be a string", async () => {
+        let spec = _.cloneDeep(examples.complete);
+        spec.parameters.timeout = "10";
+        let node = new UserTaskNode(spec);
+        const [validation, errors] = node.validate();
+        expect(validation).toBeFalsy();
+        const _errors = JSON.parse(errors);
+        expect(_errors[0].message).toBe("must be number");
+      });
+    });
+
+    test("activity_schema must be a valid JSON Schema", async () => {
+      let actSchemaSpec = _.cloneDeep(examples.minimal);
+      actSchemaSpec.parameters.activity_schema = examples.wrongActivitySchema;
+      const node = new UserTaskNode(actSchemaSpec);
+      const [validation, errors] = node.validate();
+      expect(validation).toBeFalsy();
+      const _errors = JSON.parse(errors);
+      expect(_errors[0].message).toBe("invalid activity_schema");
+    });
+
+    test("encrypted_data must be an array", async () => {
+      let spec = _.cloneDeep(examples.complete);
+      spec.parameters.encrypted_data = "any";
+      const node = new UserTaskNode(spec);
+      const [validation, errors] = node.validate();
+      expect(validation).toBeFalsy();
+      const _errors = JSON.parse(errors);
+      expect(_errors[0].message).toBe("must be array");
+    });
+
+    test("channels cannot be a string", async () => {
+      let spec = _.cloneDeep(examples.complete);
+      spec.parameters.channels = "any";
+      const node = new UserTaskNode(spec);
+      const [validation, errors] = node.validate();
+      expect(validation).toBeFalsy();
+      const _errors = JSON.parse(errors);
+      expect(_errors[0].message).toBe("must be array");
+    });
+  });
+});
 
 describe("UserTaskNode", () => {
   test("UserTaskNode works when waiting", async () => {
