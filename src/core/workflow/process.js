@@ -49,6 +49,11 @@ class Process extends PersistedEntity {
       process._state = state;
       process._current_state_id = serialized.current_state_id;
       process._current_status = serialized.current_status;
+      process._workflow = {
+        name: serialized.workflow_name,
+        version: serialized.workflow_version,
+        isLatest: serialized.latest_version,
+      };
 
       return process;
     }

@@ -39,47 +39,89 @@ test("save works", async () => {
   expect(saved_workflow.id).toBe(workflow.id);
 });
 
-test("fetch works", async () => {
-  let workflow = new Workflow("sample", "sample", blueprints_.minimal);
-  workflow = await workflow.save();
-  const fetched_workflow = await Workflow.fetch(workflow.id);
-  expect(fetched_workflow.id).toBe(workflow.id);
+describe("fetch", () => {
+  test("fetch works", async () => {
+    let workflow = new Workflow("sample", "sample", blueprints_.minimal);
+    workflow = await workflow.save();
+    const fetched_workflow = await Workflow.fetch(workflow.id);
+    expect(fetched_workflow.id).toBe(workflow.id);
+  });
+
+  test("returns if it is the lastest version", async () => {
+    let workflowV1 = new Workflow("sample", "sample1", blueprints_.minimal);
+    workflowV1 = await workflowV1.save();
+    let workflowV2 = new Workflow("sample", "sample2", blueprints_.minimal);
+    workflowV2 = await workflowV2.save();
+    const fetchedWorkflow1 = await Workflow.fetch(workflowV1.id);
+    const fetchedWorkflow2 = await Workflow.fetch(workflowV2.id);
+
+    expect(fetchedWorkflow1._latest).toBeDefined();
+    expect(fetchedWorkflow1._latest).toBeFalsy();
+    expect(fetchedWorkflow2._latest).toBeDefined();
+    expect(fetchedWorkflow2._latest).toBeTruthy();
+  });
 });
 
-test("fetch by name works", async () => {
-  let workflow = new Workflow("sample", "sample", blueprints_.minimal);
-  workflow = await workflow.save();
-  const fetched_workflow = await Workflow.fetchWorkflowByName("sample");
-  expect(fetched_workflow.id).toBe(workflow.id);
+describe("fetch by name", () => {
+  test("fetch by name works", async () => {
+    let workflow = new Workflow("sample", "sample", blueprints_.minimal);
+    workflow = await workflow.save();
+    const fetched_workflow = await Workflow.fetchWorkflowByName("sample");
+    expect(fetched_workflow.id).toBe(workflow.id);
+  });
+
+  test("returns if it is the lastest version", async () => {
+    let workflow = new Workflow("sample", "sample", blueprints_.minimal);
+    workflow = await workflow.save();
+    const fetchedWorkflow = await Workflow.fetchWorkflowByName("sample");
+    expect(fetchedWorkflow.id).toBe(workflow.id);
+    expect(fetchedWorkflow._latest).toBeDefined();
+    expect(fetchedWorkflow._latest).toBeTruthy();
+  });
 });
 
-test("fetch by name with version = null works", async () => {
-  let wfVersion1 = new Workflow("sample", "sample", blueprints_.minimal);
-  await wfVersion1.save();
-  let wfVersion2 = new Workflow("sample", "sample", blueprints_.minimal);
-  wfVersion2 = await wfVersion2.save();
-  const fetchedWorkflow = await Workflow.fetchWorkflowByName("sample", null);
-  expect(fetchedWorkflow.id).toBe(wfVersion2.id);
-});
+describe("fetch by name & version", () => {
+  test("fetch by name with version = null works", async () => {
+    let wfVersion1 = new Workflow("sample", "sample", blueprints_.minimal);
+    await wfVersion1.save();
+    let wfVersion2 = new Workflow("sample", "sample", blueprints_.minimal);
+    wfVersion2 = await wfVersion2.save();
+    const fetchedWorkflow = await Workflow.fetchWorkflowByName("sample", null);
+    expect(fetchedWorkflow.id).toBe(wfVersion2.id);
+  });
 
-test("fetch by name with version = latest works", async () => {
-  let wfVersion1 = new Workflow("sample", "sample", blueprints_.minimal);
-  await wfVersion1.save();
-  let wfVersion2 = new Workflow("sample", "sample", blueprints_.minimal);
-  wfVersion2 = await wfVersion2.save();
-  const fetchedWorkflow = await Workflow.fetchWorkflowByName("sample", "latest");
-  expect(fetchedWorkflow.id).toBe(wfVersion2.id);
-});
+  test("fetch by name with version = latest works", async () => {
+    let wfVersion1 = new Workflow("sample", "sample", blueprints_.minimal);
+    await wfVersion1.save();
+    let wfVersion2 = new Workflow("sample", "sample", blueprints_.minimal);
+    wfVersion2 = await wfVersion2.save();
+    const fetchedWorkflow = await Workflow.fetchWorkflowByName("sample", "latest");
+    expect(fetchedWorkflow.id).toBe(wfVersion2.id);
+  });
 
-test("fetch by name with version = 1 works", async () => {
-  let wfVersion1 = new Workflow("sample", "sample", blueprints_.minimal);
-  wfVersion1 = await wfVersion1.save();
-  let wfVersion2 = new Workflow("sample", "sample", blueprints_.minimal);
-  wfVersion2 = await wfVersion2.save();
-  let fetchedWorkflow = await Workflow.fetchWorkflowByName("sample", 1);
-  expect(fetchedWorkflow.id).toBe(wfVersion1.id);
-  fetchedWorkflow = await Workflow.fetchWorkflowByName("sample");
-  expect(fetchedWorkflow.id).toBe(wfVersion2.id);
+  test("fetch by name with version = 1 works", async () => {
+    let wfVersion1 = new Workflow("sample", "sample", blueprints_.minimal);
+    wfVersion1 = await wfVersion1.save();
+    let wfVersion2 = new Workflow("sample", "sample", blueprints_.minimal);
+    wfVersion2 = await wfVersion2.save();
+    let fetchedWorkflow = await Workflow.fetchWorkflowByName("sample", 1);
+    expect(fetchedWorkflow.id).toBe(wfVersion1.id);
+    fetchedWorkflow = await Workflow.fetchWorkflowByName("sample");
+    expect(fetchedWorkflow.id).toBe(wfVersion2.id);
+  });
+
+  test("fetch by name with version returns latest information", async () => {
+    let wfVersion1 = new Workflow("sample", "sample", blueprints_.minimal);
+    wfVersion1 = await wfVersion1.save();
+    let wfVersion2 = new Workflow("sample", "sample", blueprints_.minimal);
+    wfVersion2 = await wfVersion2.save();
+    let fetchedWorkflow1 = await Workflow.fetchWorkflowByName("sample", 1);
+    expect(fetchedWorkflow1.id).toBe(wfVersion1.id);
+    expect(fetchedWorkflow1._latest).toBeFalsy();
+    fetchedWorkflow2 = await Workflow.fetchWorkflowByName("sample", 2);
+    expect(fetchedWorkflow2.id).toBe(wfVersion2.id);
+    expect(fetchedWorkflow2._latest).toBeTruthy();
+  });
 });
 
 test("fetch by hash works", async () => {
