@@ -68,10 +68,10 @@ class SubProcessNode extends ParameterizedNode {
         }
       }
     }
-    return await this._postRun(bag, input, external_input, lisp);
+    return await this._postRun(bag, external_input);
   }
 
-  async _postRun(bag, input, external_input, lisp) {
+  async _postRun(bag, external_input) {
     return {
       node_id: this.id,
       bag: bag,
