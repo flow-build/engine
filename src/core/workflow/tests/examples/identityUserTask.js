@@ -7,6 +7,6 @@ module.exports = {
   requirements: ["core"],
   environment: {},
   prepare: [],
-  nodes: [buildStartNode({ next: "iut_2" }), buildUserTaskNode({}), finishNode],
+  nodes: [buildStartNode({ next: "iut_2" }), buildUserTaskNode({ id: "iut_2" }), finishNode],
   lanes,
 };

@@ -339,6 +339,30 @@ describe("abortProcess", () => {
     activity_manager = await engine.fetchAvailableActivityForProcess(process.id, actors_.simpleton);
     expect(activity_manager).toBeUndefined();
   });
+
+  test("abort a child process should notify parent process", async () => {
+    const parentWorkflow = await engine.saveWorkflow(
+      "parent",
+      "parent process",
+      blueprints_.sub_process.blueprint_spec
+    );
+    const childWorkflow = await engine.saveWorkflow(
+      "blueprint_spec_son",
+      "child process",
+      blueprints_.identity_user_task
+    );
+    let parentProcess = await engine.createProcess(parentWorkflow.id, actors_.simpleton);
+    parentProcess = await engine.runProcess(parentProcess.id, actors_.simpleton);
+    expect(parentProcess.status).toBe(ProcessStatus.DELEGATED);
+    const childProcess = await engine.fetchProcessList({
+      workflow_id: childWorkflow.id,
+    });
+    await engine.abortProcess(childProcess[0]._id);
+    const childResult2 = await engine.fetchProcess(childProcess[0]._id);
+    expect(childResult2.state.status).toBe(ProcessStatus.INTERRUPTED);
+    const result = await engine.fetchProcess(parentProcess.id);
+    expect(result._state._status).not.toBe(ProcessStatus.DELEGATED);
+  });
 });
 
 test("saveWorkflow works", async () => {
@@ -532,29 +556,28 @@ describe("submitActivity", () => {
     const activity_managers = [];
     engine.setActivityManagerNotifier((activityManager) => activity_managers.push(activityManager));
 
-    let process = await engine.createProcessByWorkflowName("user_user", actors_.simpleton);
-    const process_id = process.id;
-    process = await engine.runProcess(process_id, actors_.simpleton);
-
+    const process = await engine.createProcessByWorkflowName("user_user", actors_.simpleton);
+    await engine.runProcess(process.id, actors_.simpleton);
     expect(activity_managers).toHaveLength(1);
-    await engine.runProcess(process_id, actors_.simpleton, {});
+    const state1 = await engine.fetchProcess(process.id);
+    expect(state1.state.status).toBe(ProcessStatus.WAITING);
+    expect(state1.state.step_number).toEqual(3);
+    expect(state1.state.node_id).toEqual(state1.state.next_node_id);
+
+    await engine.runProcess(process.id, actors_.simpleton, {});
     expect(activity_managers).toHaveLength(2);
+    const state2 = await engine.fetchProcess(process.id);
+    expect(state2.state.status).toBe(ProcessStatus.WAITING);
+    expect(state2.state.step_number).toEqual(5);
+    expect(state2.state.node_id).toEqual(state2.state.next_node_id);
 
     const submit_result = await engine.submitActivity(activity_managers[0]._id, actors_.simpleton, {});
     expect(submit_result).toBeDefined();
     expect(submit_result.error).toBeUndefined();
-    expect(submit_result.processPromise).toBeInstanceOf(Promise);
-    process = await submit_result.processPromise;
-    expect(process.state.status).toEqual(ProcessStatus.WAITING);
-    expect(process.state.step_number).toEqual(5);
-    expect(process.state.node_id).toEqual("3");
-    expect(process.state.next_node_id).toEqual("3");
 
-    process = await engine.fetchProcess(process_id);
-    expect(process.state.status).toEqual(ProcessStatus.WAITING);
-    expect(process.state.step_number).toEqual(5);
-    expect(process.state.node_id).toEqual("3");
-    expect(process.state.next_node_id).toEqual("3");
+    const state3 = await engine.fetchProcess(process.id);
+    expect(state3.state.status).toEqual(ProcessStatus.WAITING);
+    expect(state3).toEqual(state2);
   });
 
   test("Throws commitActivity errorType", async () => {

@@ -8,7 +8,9 @@ const baseSpec = {
   lane_id: "true",
   parameters: {
     action: "do something",
-    input: {},
+    input: {
+      question: "Insert some input.",
+    },
   },
 };
 
