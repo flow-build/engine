@@ -1,3 +1,11 @@
+### [2.13.1](https://github.com/flow-build/engine/compare/v2.13.0...v2.13.1) (2022-08-29)
+
+
+### Bug Fixes
+
+* fix variable name ([fcec895](https://github.com/flow-build/engine/commit/fcec895d23bf1e333a5bde9589d6fee4a7b80fda))
+* **nodes:** fix activity_schema validation ([7173fc5](https://github.com/flow-build/engine/commit/7173fc5a34f4b869ac724f271451fca0d6cab629))
+
 ## [2.13.0](https://github.com/flow-build/engine/compare/v2.12.0...v2.13.0) (2022-08-21)
 
 
