@@ -175,7 +175,7 @@ class ProcessKnexPersist extends KnexPersist {
       } catch (e) {
         emitter.emit("KNEX.UPDATE_PROCESS_ERROR", `Unable to update Process with PID [${id}]`, {
           error: e,
-          process_id,
+          process_id: id,
         });
       }
     }

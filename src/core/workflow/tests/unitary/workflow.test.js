@@ -1,6 +1,5 @@
 const _ = require("lodash");
 const settings = require("../../../../../settings/tests/settings");
-const { AssertionError } = require("assert");
 const { Workflow } = require("../../../workflow/workflow");
 const { ProcessStatus } = require("../../../workflow/process_state");
 const { PersistorProvider } = require("../../../persist/provider");
@@ -22,15 +21,6 @@ afterAll(async () => {
 test("constructor works", () => {
   const workflow = new Workflow("sample", "sample", blueprints_.minimal);
   expect(workflow).toBeInstanceOf(Workflow);
-});
-
-test("constructor fails for invalid blueprint spec", () => {
-  const blueprint = _.cloneDeep(blueprints_.minimal);
-  delete blueprint.nodes[0];
-  const constructor_partial = () => {
-    new Workflow("sample", "sample", blueprint);
-  };
-  expect(constructor_partial).toThrow(AssertionError);
 });
 
 test("save works", async () => {
