@@ -11,8 +11,8 @@ module.exports = {
     buildStartNode({ next: "2" }),
     buildUserTaskNode({
       id: "2",
-      parameters: { action: "first" },
       next: "3",
+      parameters: { action: "first" },
     }),
     buildUserTaskNode({
       id: "3",
