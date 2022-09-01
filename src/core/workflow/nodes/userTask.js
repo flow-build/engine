@@ -1,28 +1,57 @@
 const _ = require("lodash");
-const obju = require("../../utils/object");
 const { ProcessStatus } = require("../process_state");
-const { Validator } = require("../../validators");
 const { getActivityManager } = require("../../utils/activity_manager_factory");
 const crypto_manager = require("../../crypto_manager");
 const { timeoutParse } = require("../../utils/node");
 const { ParameterizedNode } = require("./parameterized");
+const Ajv = require("ajv");
+const addFormats = require("ajv-formats");
 
 class UserTaskNode extends ParameterizedNode {
-  static get rules() {
-    const parameters_rules = {
-      parameters_has_action: [obju.hasField, "action"],
-      timeout_has_valid_type: [obju.isFieldTypeIn, "timeout", ["undefined", "number", "object"]],
-      channels_has_valid_type: [(obj, field) => obj[field] === undefined || obj[field] instanceof Array, "channels"],
-      encrypted_data_has_valid_type: [
-        (obj, field) => obj[field] === undefined || obj[field] instanceof Array,
-        "encrypted_data",
-      ],
-    };
+  static schema() {
     return {
-      ...super.rules,
-      next_has_valid_type: [obju.isFieldTypeIn, "next", ["string", "number"]],
-      parameters_nested_validations: [new Validator(parameters_rules), "parameters"],
+      type: "object",
+      required: ["id", "name", "next", "type", "lane_id", "parameters"],
+      properties: {
+        id: { type: "string" },
+        name: { type: "string" },
+        next: { type: "string" },
+        type: { type: "string" },
+        lane_id: { type: "string" },
+        parameters: {
+          type: "object",
+          required: ["action", "input"],
+          properties: {
+            action: { type: "string" },
+            input: { type: "object" },
+            timeout: {
+              oneOf: [{ type: "number" }, { type: "object" }],
+            },
+            channels: { type: "array" },
+            encrypted_data: {
+              type: "array",
+              items: { type: "string" },
+            },
+            activity_schema: { type: "object" },
+          },
+        },
+      },
     };
+  }
+
+  static validate(spec) {
+    const ajv = new Ajv({ allErrors: true });
+    addFormats(ajv);
+    const validate = ajv.compile(UserTaskNode.schema());
+    const validation = validate(spec);
+    if (validation && spec.parameters.activity_schema) {
+      const activitySchemaValidation = ajv.validateSchema(spec.parameters.activity_schema);
+      if (ajv.errors) {
+        return [activitySchemaValidation, JSON.stringify([{ message: "invalid activity_schema" }])];
+      }
+      return [activitySchemaValidation, "null"];
+    }
+    return [validation, JSON.stringify(validate.errors)];
   }
 
   validate() {

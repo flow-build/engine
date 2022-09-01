@@ -1,4 +1,3 @@
-const readlineSync = require("readline-sync");
 const lisp = require("../src/core/lisp");
 const settings = require("../settings/settings");
 const { Engine } = require("../src/engine/engine");
@@ -17,7 +16,7 @@ const blueprint_spec = {
         input_schema: {},
       },
       next: "2",
-      lane_id: "1"
+      lane_id: "1",
     },
     {
       id: "2",
@@ -30,7 +29,7 @@ const blueprint_spec = {
       },
       next: {
         value: "98",
-        default: "99"
+        default: "99",
       },
       lane_id: "1",
     },
@@ -39,29 +38,29 @@ const blueprint_spec = {
       type: "Finish",
       name: "Finish node",
       next: null,
-      lane_id: "1"
+      lane_id: "1",
     },
     {
       id: "99",
       type: "Finish",
       name: "Finish node",
       next: null,
-      lane_id: "1"
-    }
+      lane_id: "1",
+    },
   ],
   lanes: [
     {
       id: "1",
       name: "the_only_lane",
-      rule: lisp.return_true()
-    }
+      rule: lisp.return_true(),
+    },
   ],
   environment: {},
 };
 
 const actor_data = {
   id: "1",
-  claims: []
+  claims: [],
 };
 
 startEventListener(emitter);
@@ -78,6 +77,6 @@ const run_example = async () => {
 
   const process_with_data = await engine.createProcess(workflow.id, actor_data, { input: "value" });
   await engine.runProcess(process_with_data.id, actor_data);
-}
+};
 
 run_example();
