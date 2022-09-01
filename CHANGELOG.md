@@ -1,3 +1,10 @@
+## [2.14.0](https://github.com/flow-build/engine/compare/v2.13.1...v2.14.0) (2022-09-01)
+
+
+### Features
+
+* **process:** notify parent process on abort ([4deb95b](https://github.com/flow-build/engine/commit/4deb95b389f38d761952e4fb60bf9a137193e21c))
+
 ### [2.13.1](https://github.com/flow-build/engine/compare/v2.13.0...v2.13.1) (2022-08-29)
 
 
