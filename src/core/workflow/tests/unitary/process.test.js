@@ -425,7 +425,7 @@ describe("Process test", () => {
       process = await engine.fetchProcess(processId);
       expect(process.status).toEqual(ProcessStatus.FORBIDDEN);
 
-      expect(process._state._error).toEqual("Error: Invalid service task, unknow category custom_fn");
+      expect(process._state._error).toEqual("Error: Invalid service task, unknown category custom_fn");
     });
   });
 });
