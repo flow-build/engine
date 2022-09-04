@@ -1,103 +1,73 @@
 /* eslint-disable indent */
 const nodes = require("../workflow/nodes/index.js");
 
-const extra_system_category_map = {};
-function getServiceTask(node_spec) {
-  let resultNode;
+const types = {
+  start: nodes.StartNode,
+  finish: nodes.FinishNode,
+  flow: nodes.FlowNode,
+  scripttask: nodes.ScriptTaskNode,
+  usertask: nodes.UserTaskNode,
+  systemtask: nodes.SystemTaskNode,
+  subprocess: nodes.SubProcessNode,
+};
 
-  let node_category = node_spec.category;
-  if (node_category) {
-    node_category = node_category.toLowerCase();
-  } else {
-    throw new Error("Invalid service task, missing category on spec");
+let categories = {
+  http: nodes.HttpSystemTaskNode,
+  settobag: nodes.SetToBagSystemTaskNode,
+  timer: nodes.TimerSystemTaskNode,
+  startprocess: nodes.StartProcessSystemTaskNode,
+  abortprocess: nodes.AbortProcessSystemTaskNode,
+  formrequest: nodes.FormRequestNode,
+};
+
+function getNodeTypes() {
+  return types;
+}
+
+function getNodeCategories() {
+  return categories;
+}
+
+function getNode(nodeSpec) {
+  const nodeType = nodeSpec.type?.toLowerCase();
+
+  if (!nodeType) {
+    throw new Error("Invalid node, missing type on spec");
   }
 
-  const customClass = extra_system_category_map[node_category];
-  if (customClass) {
-    resultNode = new customClass(node_spec);
-  } else {
-    switch (node_category) {
-      case "http": {
-        resultNode = new nodes.HttpSystemTaskNode(node_spec);
-        break;
-      }
-      case "settobag": {
-        resultNode = new nodes.SetToBagSystemTaskNode(node_spec);
-        break;
-      }
-      case "timer": {
-        resultNode = new nodes.TimerSystemTaskNode(node_spec);
-        break;
-      }
-      case "startprocess": {
-        resultNode = new nodes.StartProcessSystemTaskNode(node_spec);
-        break;
-      }
-      case "abortprocess": {
-        resultNode = new nodes.AbortProcessSystemTaskNode(node_spec);
-        break;
-      }
-      case "formrequest": {
-        resultNode = new nodes.FormRequestNode(node_spec);
-        break;
-      }
-      default: {
-        throw new Error(`Invalid service task, unknow category ${node_category}`);
-      }
+  let nodeClass = types[nodeType];
+  if (!nodeClass) {
+    throw new Error(`Invalid node, unknow type ${nodeType}`);
+  }
+
+  if (nodeClass === nodes.SystemTaskNode) {
+    const nodeCategory = nodeSpec.category?.toLowerCase();
+    if (!nodeCategory) {
+      throw new Error("Invalid service task, missing category on spec");
+    }
+    nodeClass = categories[nodeCategory];
+
+    if (!nodeClass) {
+      throw new Error(`Invalid service task, unknown category ${nodeCategory}`);
     }
   }
 
+  const resultNode = new nodeClass(nodeSpec);
+  if (!resultNode) {
+    throw new Error(`Invalid node, unknown type ${nodeType}`);
+  }
   return resultNode;
 }
 
-module.exports = {
-  getNode(node_spec) {
-    let resultNode;
-    let node_type = node_spec.type;
-    if (node_type) {
-      node_type = node_type.toLowerCase();
-    } else {
-      throw new Error("Invalid node, missing type on spec");
-    }
-    switch (node_type) {
-      case "start": {
-        resultNode = new nodes.StartNode(node_spec);
-        break;
-      }
-      case "finish": {
-        resultNode = new nodes.FinishNode(node_spec);
-        break;
-      }
-      case "flow": {
-        resultNode = new nodes.FlowNode(node_spec);
-        break;
-      }
-      case "scripttask": {
-        resultNode = new nodes.ScriptTaskNode(node_spec);
-        break;
-      }
-      case "usertask": {
-        resultNode = new nodes.UserTaskNode(node_spec);
-        break;
-      }
-      case "systemtask": {
-        resultNode = getServiceTask(node_spec);
-        break;
-      }
-      case "subprocess": {
-        resultNode = new nodes.SubProcessNode(node_spec);
-        break;
-      }
-      default: {
-        throw new Error(`Invalid node, unknow type ${node_type}`);
-      }
-    }
+function addSystemTaskCategory(customCategories) {
+  for (const [key, value] of Object.entries(customCategories)) {
+    categories[key.toLowerCase()] = value;
+  }
+}
 
-    return resultNode;
-  },
-  addSystemTaskCategory(map_system_task_category) {
-    for (const [key, value] of Object.entries(map_system_task_category)) {
-      extra_system_category_map[key.toLowerCase()] = value;
-    }
-  },
+module.exports = {
+  getNode,
+  getNodeTypes,
+  getNodeCategories,
+  addSystemTaskCategory,
 };

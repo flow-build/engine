@@ -6,6 +6,37 @@ const extra_nodes = require("../../../../engine/tests/utils/extra_nodes");
 const { minimal } = require("../../../workflow/nodes/examples/formRequest");
 
 describe("node factory", () => {
+  describe("getNodeTypes", () => {
+    test("should work", () => {
+      const response = node_factory.getNodeTypes();
+      expect(response).toBeDefined();
+      const types = Object.keys(response);
+      expect(types.length).toBe(7);
+      expect(response.start).toBeDefined();
+      expect(response.finish).toBeDefined();
+      expect(response.flow).toBeDefined();
+      expect(response.scripttask).toBeDefined();
+      expect(response.usertask).toBeDefined();
+      expect(response.systemtask).toBeDefined();
+      expect(response.subprocess).toBeDefined();
+    });
+  });
+
+  describe("getNodeCategories", () => {
+    test("should work", () => {
+      const response = node_factory.getNodeCategories();
+      expect(response).toBeDefined();
+      const types = Object.keys(response);
+      expect(types.length).toBe(6);
+      expect(response.http).toBeDefined();
+      expect(response.settobag).toBeDefined();
+      expect(response.timer).toBeDefined();
+      expect(response.startprocess).toBeDefined();
+      expect(response.abortprocess).toBeDefined();
+      expect(response.formrequest).toBeDefined();
+    });
+  });
+
   describe("getNode", () => {
     test("Missing type", () => {
       const node_spec = lodash.cloneDeep(node_samples.start);
@@ -130,7 +161,7 @@ describe("node factory", () => {
           category: "unknow",
         };
 
-        expect(() => node_factory.getNode(node_spec)).toThrowError("unknow category");
+        expect(() => node_factory.getNode(node_spec)).toThrowError("unknown category");
       });
     });
 
@@ -208,6 +239,15 @@ describe("node factory", () => {
 
       expect(node).toBeDefined();
       expect(node).toBeInstanceOf(custom_node);
+    });
+
+    test("should mutate getNodeCategories", () => {
+      const response = node_factory.getNodeCategories();
+      expect(response).toBeDefined();
+      const types = Object.keys(response);
+      expect(types.length).toBe(8);
+      expect(response.customcategory).toBeDefined();
+      expect(response.custom).toBeDefined();
     });
   });
 });
