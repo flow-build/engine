@@ -1,3 +1,11 @@
+## [2.15.0](https://github.com/flow-build/engine/compare/v2.14.0...v2.15.0) (2022-09-04)
+
+
+### Features
+
+* FLOW-14 expose functions on index ([b001141](https://github.com/flow-build/engine/commit/b00114178c32ea280fbb91dcf1ac2d7e9a94c064))
+* **nodes:** add getTypes and getCategories to Nodefactory ([c2809cc](https://github.com/flow-build/engine/commit/c2809ccd0e5e26ba627399c45e811df86822037c))
+
 ## [2.14.0](https://github.com/flow-build/engine/compare/v2.13.1...v2.14.0) (2022-09-01)
 
 
