@@ -1,3 +1,4 @@
+/* eslint-disable indent */
 const crypto = require("crypto");
 
 function buildCrypto(type, data) {
@@ -20,7 +21,7 @@ function defaultCrypto(data) {
   return {
     encrypt: (plain_text) => {
       const iv = crypto.randomBytes(16);
-      const cipher = crypto.createCipheriv("aes-256-cbc", key, iv);
+      const cipher = crypto.createCipheriv("AES-256-GCM", key, iv);
       let encrypted = cipher.update(plain_text.toString(), "utf8", "hex");
       encrypted += cipher.final("hex");
       return {
