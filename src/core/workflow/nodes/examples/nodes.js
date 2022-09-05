@@ -1,3 +1,12 @@
+const minimal = {
+  id: "ID",
+  type: "type",
+  name: "basic node",
+  next: "NEXT",
+  lane_id: "1",
+  parameters: {},
+};
+
 const invalidNamespace = {
   id: "2",
   type: "SystemTask",
@@ -12,5 +21,6 @@ const invalidNamespace = {
 };
 
 module.exports = {
+  minimal,
   invalidNamespace,
 };
