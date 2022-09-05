@@ -1,3 +1,10 @@
+## [2.16.0](https://github.com/flow-build/engine/compare/v2.15.0...v2.16.0) (2022-09-05)
+
+
+### Features
+
+* **nodes:** change node validation to JSON Schema ([1146bf6](https://github.com/flow-build/engine/commit/1146bf6ccc13fe5c9c341218ea8ce3a59a8282f1))
+
 ## [2.15.0](https://github.com/flow-build/engine/compare/v2.14.0...v2.15.0) (2022-09-04)
 
 
