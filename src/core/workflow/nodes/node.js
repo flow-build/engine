@@ -1,28 +1,40 @@
 /* eslint-disable indent */
 /* eslint-disable no-unused-vars */
 const _ = require("lodash");
-const obju = require("../../utils/object");
+const Ajv = require("ajv");
+const addFormats = require("ajv-formats");
 const { ProcessStatus } = require("../process_state");
-const { Validator } = require("../../validators");
 const emitter = require("../../utils/emitter");
 
 class Node {
-  static get rules() {
+  static get schema() {
     return {
-      has_id: [obju.hasField, "id"],
-      has_type: [obju.hasField, "type"],
-      has_name: [obju.hasField, "name"],
-      has_next: [obju.hasField, "next"],
-      has_lane_id: [obju.hasField, "lane_id"],
-      id_has_valid_type: [obju.isFieldOfType, "id", "string"],
-      type_has_valid_type: [obju.isFieldOfType, "type", "string"],
-      next_has_valid_type: [obju.isFieldTypeIn, "next", ["string", "object"]],
-      lane_id_has_valid_type: [obju.isFieldOfType, "lane_id", "string"],
+      type: "object",
+      required: ["id", "name", "next", "type", "lane_id", "parameters"],
+      properties: {
+        id: { type: "string" },
+        name: { type: "string" },
+        type: { type: "string" },
+        category: { type: "string" },
+        lane_id: { type: "string" },
+        on_error: { type: "string", enum: ["resumenext", "stop"] },
+        parameters: {
+          type: "object",
+        },
+      },
     };
   }
 
   static validate(spec) {
-    return new Validator(this.rules).validate(spec);
+    const ajv = new Ajv({ allErrors: true });
+    addFormats(ajv);
+    const validate = ajv.compile(Node.schema);
+    const validation = validate(spec);
+    return [validation, JSON.stringify(validate.errors)];
+  }
+
+  validate() {
+    return Node.validate(this._spec);
   }
 
   constructor(node_spec = {}) {
@@ -35,10 +47,6 @@ class Node {
 
   next(result) {
     return this._spec["next"];
-  }
-
-  validate() {
-    return Node.validate(this._spec);
   }
 
   async run({ bag = {}, input = {}, external_input = {}, actor_data = {}, environment = {}, parameters = {} }, lisp) {

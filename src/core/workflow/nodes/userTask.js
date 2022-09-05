@@ -8,16 +8,11 @@ const Ajv = require("ajv");
 const addFormats = require("ajv-formats");
 
 class UserTaskNode extends ParameterizedNode {
-  static schema() {
-    return {
+  static get schema() {
+    return _.merge(super.schema, {
       type: "object",
-      required: ["id", "name", "next", "type", "lane_id", "parameters"],
       properties: {
-        id: { type: "string" },
-        name: { type: "string" },
         next: { type: "string" },
-        type: { type: "string" },
-        lane_id: { type: "string" },
         parameters: {
           type: "object",
           required: ["action", "input"],
@@ -33,16 +28,17 @@ class UserTaskNode extends ParameterizedNode {
               items: { type: "string" },
             },
             activity_schema: { type: "object" },
+            activity_manager: { type: "string", enum: ["commit", "notify"] },
           },
         },
       },
-    };
+    });
   }
 
   static validate(spec) {
     const ajv = new Ajv({ allErrors: true });
     addFormats(ajv);
-    const validate = ajv.compile(UserTaskNode.schema());
+    const validate = ajv.compile(UserTaskNode.schema);
     const validation = validate(spec);
     if (validation && spec.parameters.activity_schema) {
       const activitySchemaValidation = ajv.validateSchema(spec.parameters.activity_schema);

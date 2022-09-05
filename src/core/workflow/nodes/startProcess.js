@@ -1,23 +1,38 @@
-const obju = require("../../utils/object");
+const _ = require("lodash");
+const Ajv = require("ajv");
+const addFormats = require("ajv-formats");
 const { prepare } = require("../../utils/input");
 const { ProcessStatus } = require("../process_state");
-const { Validator } = require("../../validators");
 const process_manager = require("../process_manager");
 const { SystemTaskNode } = require("./systemTask");
 
 class StartProcessSystemTaskNode extends SystemTaskNode {
-  static get rules() {
-    const parameters_rules = {
-      parameters_has_workflow_name: [obju.hasField, "workflow_name"],
-      parameters_workflow_name_has_valid_type: [obju.isFieldTypeIn, "workflow_name", ["string", "object"]],
-      parameters_has_actor_data: [obju.hasField, "actor_data"],
-      parameters_actor_data_has_valid_type: [obju.isFieldOfType, "actor_data", "object"],
-    };
+  static get schema() {
+    return _.merge(super.schema, {
+      type: "object",
+      properties: {
+        next: { type: "string" },
+        parameters: {
+          type: "object",
+          required: ["actor_data", "input", "workflow_name"],
+          properties: {
+            actor_data: { type: "object" },
+            input: { type: "object" },
+            workflow_name: {
+              oneOf: [{ type: "string" }, { type: "object" }],
+            },
+          },
+        },
+      },
+    });
+  }
 
-    return {
-      ...super.rules,
-      parameters_nested_validations: [new Validator(parameters_rules), "parameters"],
-    };
+  static validate(spec) {
+    const ajv = new Ajv({ allErrors: true });
+    addFormats(ajv);
+    const validate = ajv.compile(StartProcessSystemTaskNode.schema);
+    const validation = validate(spec);
+    return [validation, JSON.stringify(validate.errors)];
   }
 
   validate() {

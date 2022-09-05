@@ -1,30 +1,48 @@
-const obju = require("../../utils/object");
+const _ = require("lodash");
+const Ajv = require("ajv");
+const addFormats = require("ajv-formats");
 const { prepare } = require("../../utils/input");
 const { ProcessStatus } = require("../process_state");
-const { Validator } = require("../../validators");
 const { request } = require("../../utils/requests");
 const { SystemTaskNode } = require("./systemTask");
 
 class HttpSystemTaskNode extends SystemTaskNode {
-  static get rules() {
-    const parameters_rules = {
-      parameters_has_request: [obju.hasField, "request"],
-      parameters_request_has_valid_type: [obju.isFieldOfType, "request", "object"],
-      parameters_valid_response_codes_has_valid_type: [
-        (obj, field) => obj[field] === undefined || obj[field] instanceof Array,
-        "valid_response_codes",
-      ],
-    };
-    const request_rules = {
-      request_has_url: [obju.hasField, "url"],
-      request_has_verb: [obju.hasField, "verb"],
-      request_header_has_valid_type: [obju.isFieldTypeIn, "header", ["undefined", "object"]],
-    };
-    return {
-      ...super.rules,
-      parameters_nested_validations: [new Validator(parameters_rules), "parameters"],
-      request_nested_validations: [new Validator(request_rules), "parameters.request"],
-    };
+  static get schema() {
+    return _.merge(super.schema, {
+      type: "object",
+      properties: {
+        next: { type: "string" },
+        parameters: {
+          type: "object",
+          required: ["request"],
+          properties: {
+            request: {
+              type: "object",
+              required: ["url", "verb"],
+              properties: {
+                url: {
+                  oneOf: [{ type: "string" }, { type: "object" }],
+                },
+                verb: { type: "string", enum: ["GET", "POST", "PATCH", "PUT", "DELETE", "HEAD"] },
+                header: { type: "object" },
+              },
+            },
+            valid_response_codes: {
+              type: "array",
+              items: { type: "integer" },
+            },
+          },
+        },
+      },
+    });
+  }
+
+  static validate(spec) {
+    const ajv = new Ajv({ allErrors: true });
+    addFormats(ajv);
+    const validate = ajv.compile(HttpSystemTaskNode.schema);
+    const validation = validate(spec);
+    return [validation, JSON.stringify(validate.errors)];
   }
 
   validate() {

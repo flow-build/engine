@@ -1,3 +1,4 @@
+const _ = require("lodash");
 const { ProcessStatus } = require("../process_state");
 const { prepare } = require("../../utils/input");
 const Ajv = require("ajv");
@@ -7,36 +8,25 @@ const emitter = require("../../utils/emitter");
 const { SystemTaskNode } = require("./systemTask");
 
 class FormRequestNode extends SystemTaskNode {
-  static validate(spec) {
-    const ajv = new Ajv({ allErrors: true });
-    addFormats(ajv);
-    const validate = ajv.compile(FormRequestNode.schema());
-    const validation = validate(spec);
-    return [validation, JSON.stringify(validate.errors)];
-  }
-
-  static schema() {
-    return {
+  static get schema() {
+    return _.merge(super.schema, {
       type: "object",
-      required: ["id", "name", "next", "type", "lane_id", "parameters"],
       properties: {
-        id: { type: "string" },
-        name: { type: "string" },
         next: { type: "string" },
-        type: { type: "string" },
-        lane_id: { type: "string" },
-        category: { type: "string" },
         parameters: {
           type: "object",
+          required: ["request", "input"],
           properties: {
             input: { type: "object" },
             request: {
               type: "object",
               required: ["url", "verb"],
               properties: {
-                url: { oneOf: [{ type: "string" }, { type: "object" }] },
+                url: {
+                  oneOf: [{ type: "string" }, { type: "object" }],
+                },
                 verb: { type: "string", enum: ["POST", "PUT"] },
-                headers: { type: "object" },
+                header: { type: "object" },
                 maxContentLength: {
                   oneOf: [{ type: "number" }, { type: "object" }],
                 },
@@ -50,10 +40,17 @@ class FormRequestNode extends SystemTaskNode {
               items: { type: "integer" },
             },
           },
-          required: ["input", "request"],
         },
       },
-    };
+    });
+  }
+
+  static validate(spec) {
+    const ajv = new Ajv({ allErrors: true });
+    addFormats(ajv);
+    const validate = ajv.compile(FormRequestNode.schema);
+    const validation = validate(spec);
+    return [validation, JSON.stringify(validate.errors)];
   }
 
   validate() {

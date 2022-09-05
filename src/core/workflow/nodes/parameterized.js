@@ -1,20 +1,31 @@
-const obju = require("../../utils/object");
+const _ = require("lodash");
+const Ajv = require("ajv");
+const addFormats = require("ajv-formats");
 const { prepare } = require("../../utils/input");
-const { Validator } = require("../../validators");
 const { Node } = require("./node");
 
 class ParameterizedNode extends Node {
-  static get rules() {
-    const parameters_rules = {
-      parameters_has_input: [obju.hasField, "input"],
-      input_has_valid_type: [obju.isFieldOfType, "input", "object"],
-    };
-    return {
-      ...super.rules,
-      has_parameters: [obju.hasField, "parameters"],
-      parameters_has_valid_type: [obju.isFieldTypeIn, "parameters", ["object"]],
-      parameters_input_validations: [new Validator(parameters_rules), "parameters"],
-    };
+  static get schema() {
+    return _.merge(super.schema, {
+      type: "object",
+      properties: {
+        parameters: {
+          type: "object",
+          required: ["input"],
+          properties: {
+            input: { type: "object" },
+          },
+        },
+      },
+    });
+  }
+
+  static validate(spec) {
+    const ajv = new Ajv({ allErrors: true });
+    addFormats(ajv);
+    const validate = ajv.compile(ParameterizedNode.schema);
+    const validation = validate(spec);
+    return [validation, JSON.stringify(validate.errors)];
   }
 
   validate() {
