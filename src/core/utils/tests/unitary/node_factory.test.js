@@ -1,9 +1,9 @@
 const lodash = require("lodash");
 const node_factory = require("../../node_factory");
-const { nodes_: node_samples } = require("../../../workflow/tests/unitary/node_samples");
 const nodes = require("../../../workflow/nodes/index.js");
 const extra_nodes = require("../../../../engine/tests/utils/extra_nodes");
 const { minimal } = require("../../../workflow/nodes/examples/formRequest");
+const examples = require("../../../workflow/nodes/examples");
 
 describe("node factory", () => {
   describe("getNodeTypes", () => {
@@ -39,42 +39,42 @@ describe("node factory", () => {
 
   describe("getNode", () => {
     test("Missing type", () => {
-      const node_spec = lodash.cloneDeep(node_samples.start);
+      const node_spec = lodash.cloneDeep(examples.start.minimal);
       delete node_spec.type;
 
       expect(() => node_factory.getNode(node_spec)).toThrowError("missing type");
     });
 
     test("Start node", () => {
-      const node = node_factory.getNode(node_samples.start);
+      const node = node_factory.getNode(examples.start.minimal);
 
       expect(node).toBeDefined();
       expect(node).toBeInstanceOf(nodes.StartNode);
     });
 
     test("Finish node", () => {
-      const node = node_factory.getNode(node_samples.finish);
+      const node = node_factory.getNode(examples.finish.minimal);
 
       expect(node).toBeDefined();
       expect(node).toBeInstanceOf(nodes.FinishNode);
     });
 
     test("Flow node", () => {
-      const node = node_factory.getNode(node_samples.flow);
+      const node = node_factory.getNode(examples.flow.minimal);
 
       expect(node).toBeDefined();
       expect(node).toBeInstanceOf(nodes.FlowNode);
     });
 
     test("scriptTask node", () => {
-      const node = node_factory.getNode(node_samples.script_task);
+      const node = node_factory.getNode(examples.script.minimal);
 
       expect(node).toBeDefined();
       expect(node).toBeInstanceOf(nodes.ScriptTaskNode);
     });
 
     test("userTask node", () => {
-      const node = node_factory.getNode(node_samples.user_task);
+      const node = node_factory.getNode(examples.userTask.minimal);
 
       expect(node).toBeDefined();
       expect(node).toBeInstanceOf(nodes.UserTaskNode);
@@ -166,7 +166,7 @@ describe("node factory", () => {
     });
 
     test("Type case insensitive", () => {
-      const start_spec = lodash.cloneDeep(node_samples.start);
+      const start_spec = lodash.cloneDeep(examples.start.minimal);
       start_spec.type = "START";
 
       let node = node_factory.getNode(start_spec);
@@ -190,7 +190,7 @@ describe("node factory", () => {
     });
 
     test("Unknow type", () => {
-      const node_spec = lodash.cloneDeep(node_samples.start);
+      const node_spec = lodash.cloneDeep(examples.start.minimal);
       node_spec.type = "unknowType";
 
       expect(() => node_factory.getNode(node_spec)).toThrowError("unknow type");

@@ -1,7 +1,7 @@
 const _ = require("lodash");
-const obju = require("../../utils/object");
+const Ajv = require("ajv");
+const addFormats = require("ajv-formats");
 const { ProcessStatus } = require("../process_state");
-const { Validator } = require("../../validators");
 const { ParameterizedNode } = require("./parameterized");
 
 const writeJsFunction = (function_name) => {
@@ -9,21 +9,37 @@ const writeJsFunction = (function_name) => {
 };
 
 class ScriptTaskNode extends ParameterizedNode {
-  static get rules() {
-    const parameters_rules = {
-      parameters_has_script: [obju.hasField, "script"],
-      parameters_script_has_valid_type: [obju.isFieldOfType, "script", "object"],
-    };
-    const script_rules = {
-      script_has_function: [obju.hasField, "function"],
-      script_args_has_valid_type: [obju.isFieldTypeIn, "args", ["undefined", "object"]],
-    };
-    return {
-      ...super.rules,
-      next_has_valid_type: [obju.isFieldTypeIn, "next", ["string", "number"]],
-      parameters_nested_validations: [new Validator(parameters_rules), "parameters"],
-      script_nested_validations: [new Validator(script_rules), "parameters.script"],
-    };
+  static get schema() {
+    return _.merge(super.schema, {
+      type: "object",
+      properties: {
+        next: { type: "string" },
+        parameters: {
+          type: "object",
+          required: ["script"],
+          properties: {
+            script: {
+              type: "object",
+              required: ["function"],
+              properties: {
+                function: {
+                  oneOf: [{ type: "string" }, { type: "array" }],
+                },
+                args: { type: "object" },
+              },
+            },
+          },
+        },
+      },
+    });
+  }
+
+  static validate(spec) {
+    const ajv = new Ajv({ allErrors: true });
+    addFormats(ajv);
+    const validate = ajv.compile(ScriptTaskNode.schema);
+    const validation = validate(spec);
+    return [validation, JSON.stringify(validate.errors)];
   }
 
   validate() {

@@ -1,30 +1,46 @@
 const _ = require("lodash");
-const obju = require("../../utils/object");
+const Ajv = require("ajv");
+const addFormats = require("ajv-formats");
 const { ProcessStatus } = require("../process_state");
-const { Validator } = require("../../validators");
 const { ParameterizedNode } = require("./parameterized");
 
 class FlowNode extends ParameterizedNode {
-  static get rules() {
-    const input_rules = {
-      input_has_one_key: [obju.hasManyKeys, "1"],
-    };
-    const next_rules = {
-      next_has_default: [obju.hasField, "default"],
-    };
-    return {
-      ...super.rules,
-      next_has_valid_type: [obju.isFieldOfType, "next", "object"],
-      next_nested_validations: [new Validator(next_rules), "next"],
-      input_nested_validations: [new Validator(input_rules), "parameters.input"],
-    };
+  static get schema() {
+    return _.merge(super.schema, {
+      type: "object",
+      properties: {
+        next: {
+          type: "object",
+          required: ["default"],
+          properties: {
+            default: { type: "string" },
+          },
+        },
+        parameters: {
+          type: "object",
+          maxProperties: 1,
+          minProperties: 1,
+          properties: {
+            input: { type: "object" },
+          },
+        },
+      },
+    });
+  }
+
+  static validate(spec) {
+    const ajv = new Ajv({ allErrors: true });
+    addFormats(ajv);
+    const validate = ajv.compile(FlowNode.schema);
+    const validation = validate(spec);
+    return [validation, JSON.stringify(validate.errors)];
   }
 
   validate() {
     return FlowNode.validate(this._spec);
   }
 
-  async run({ bag = {}, input = {}, external_input = {}, actor_data = {}, environment = {}, parameters = {} }, lisp) {
+  async run({ bag = {}, input = {}, external_input = {}, actor_data = {}, environment = {}, parameters = {} }) {
     try {
       const execution_data = this._preProcessing({ bag, input, actor_data, environment, parameters });
       return {

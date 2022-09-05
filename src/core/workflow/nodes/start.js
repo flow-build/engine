@@ -1,24 +1,35 @@
-const obju = require("../../utils/object");
+const _ = require("lodash");
+const Ajv = require("ajv");
+const addFormats = require("ajv-formats");
 const { ProcessStatus } = require("../process_state");
-const { Validator } = require("../../validators");
 const ajvValidator = require("../../utils/ajvValidator");
 const emitter = require("../../utils/emitter");
 const { timeoutParse } = require("../../utils/node");
 const { Node } = require("./node");
 
 class StartNode extends Node {
-  static get rules() {
-    const parameters_inpupt_schema_rules = {
-      parameters_has_input_schema: [obju.hasField, "input_schema"],
-      input_schema_has_valid_type: [obju.isFieldOfType, "input_schema", "object"],
-    };
-    return {
-      ...super.rules,
-      next_has_valid_type: [obju.isFieldTypeIn, "next", ["string", "number"]],
-      has_parameters: [obju.hasField, "parameters"],
-      parameters_has_valid_type: [obju.isFieldOfType, "parameters", "object"],
-      parameters_input_schema_validations: [new Validator(parameters_inpupt_schema_rules), "parameters"],
-    };
+  static get schema() {
+    return _.merge(super.schema, {
+      type: "object",
+      properties: {
+        next: { type: "string" },
+        parameters: {
+          type: "object",
+          required: ["input_schema"],
+          properties: {
+            input_schema: { type: "object" },
+          },
+        },
+      },
+    });
+  }
+
+  static validate(spec) {
+    const ajv = new Ajv({ allErrors: true });
+    addFormats(ajv);
+    const validate = ajv.compile(StartNode.schema);
+    const validation = validate(spec);
+    return [validation, JSON.stringify(validate.errors)];
   }
 
   validate() {
