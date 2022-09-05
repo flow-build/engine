@@ -1,7 +1,6 @@
 const _ = require("lodash");
 const { v1: uuid } = require("uuid");
 const settings = require("../../../../settings/tests/settings");
-const { Workflow } = require("../../../core/workflow/workflow");
 const { ProcessStatus } = require("../../../core/workflow/process_state");
 const { Cockpit } = require("../../cockpit");
 const { Engine } = require("../../../engine/engine");
@@ -10,6 +9,7 @@ const { blueprints_, actors_ } = require("../../../core/workflow/tests/unitary/b
 const extra_nodes = require("../../../engine/tests/utils/extra_nodes");
 
 const cockpit = new Cockpit(...settings.persist_options);
+const engine = new Engine(...settings.persist_options);
 
 beforeEach(async () => {
   await _clean();
@@ -18,14 +18,10 @@ beforeEach(async () => {
 afterAll(async () => {
   Engine.kill();
   await _clean();
-  if (settings.persist_options[0] === "knex") {
-    await Workflow.getPersist()._db.destroy();
-  }
 });
 
 describe("getProcessStateHistory works", () => {
   test("getProcessStateHistory when there are states for the process", async () => {
-    const engine = new Engine(...settings.persist_options);
     const workflow = await engine.saveWorkflow("sample", "sample", blueprints_.identity_system_task);
     let process = await engine.createProcess(workflow.id, actors_.simpleton);
     process = await engine.runProcess(process.id, actors_.simpleton);
@@ -39,7 +35,6 @@ describe("getProcessStateHistory works", () => {
   });
 
   test("getProcessStateHistory works for no states", async () => {
-    const engine = new Engine(...settings.persist_options);
     const workflow = await engine.saveWorkflow("sample", "sample", blueprints_.identity_system_task);
     let process = await engine.createProcess(workflow.id, actors_.admin);
     await engine.runProcess(process.id, actors_.admin);
@@ -48,7 +43,6 @@ describe("getProcessStateHistory works", () => {
   });
 
   test("getProcessStateHistory works when there are many processes with states", async () => {
-    const engine = new Engine(...settings.persist_options);
     const workflow = await engine.saveWorkflow("sample", "sample", blueprints_.identity_system_task);
     let simpleton_process = await engine.createProcess(workflow.id, actors_.simpleton);
     simpleton_process = await engine.runProcess(simpleton_process.id, actors_.simpleton);
@@ -73,7 +67,6 @@ describe("getProcessStateHistory works", () => {
 
 describe("getWorkflowsForActor works", () => {
   test("getWorkflowsForActor when there are workflows available to actor", async () => {
-    const engine = new Engine(...settings.persist_options);
     const workflow = await engine.saveWorkflow("sample", "sample", blueprints_.identity_system_task);
     const actor_workflows_data = await cockpit.getWorkflowsForActor(actors_.simpleton);
     expect(actor_workflows_data).toHaveLength(1);
@@ -86,7 +79,6 @@ describe("getWorkflowsForActor works", () => {
   });
 
   test("getWorkflowsForActor when there are workflows, but not all are available to actor", async () => {
-    const engine = new Engine(...settings.persist_options);
     const open_workflow = await engine.saveWorkflow("open", "open", blueprints_.identity_system_task);
     const restricted_workflow = await engine.saveWorkflow(
       "restricted",
@@ -105,7 +97,6 @@ describe("getWorkflowsForActor works", () => {
   });
 
   test("getWorkflowsForActor list workflows with multiple starts and only one start node is allowed", async () => {
-    const engine = new Engine(...settings.persist_options);
     const open_workflow = await engine.saveWorkflow("multiple", "multiple", blueprints_.multiple_starts);
     const simpleton_workflows_data = await cockpit.getWorkflowsForActor(actors_.simpleton);
     expect(simpleton_workflows_data).toHaveLength(1);
@@ -113,7 +104,6 @@ describe("getWorkflowsForActor works", () => {
   });
 
   test("getWorkflowsForActor filters workflows with multiple starts and many start nodes are allowed", async () => {
-    const engine = new Engine(...settings.persist_options);
     await engine.saveWorkflow("multiple", "multiple", blueprints_.multiple_starts);
     const simpleton_workflows_data = await cockpit.getWorkflowsForActor(actors_.admin);
     expect(simpleton_workflows_data).toHaveLength(0);
@@ -127,7 +117,7 @@ describe("Adding extra nodes works", () => {
     const exampleNode = custom_bluprint.nodes.find((node) => node.category === "example");
     delete exampleNode.parameters.example;
     await expect(cockpit.saveWorkflow("sample", "sample", custom_bluprint)).rejects.toThrowError(
-      "parameters_has_example"
+      "must have required property 'example'"
     );
   });
 
@@ -228,6 +218,12 @@ describe("fetchWorkflowsWithProcessStatusCount", () => {
   });
 });
 
+describe("setProcessState", () => {
+  test("a valid processId must be provided", async () => {
+    await expect(cockpit.setProcessState(uuid(), {})).rejects.toThrowError("Process not found");
+  });
+});
+
 describe("runPendingProcess", () => {
   test("works", async () => {
     const workflow = await cockpit.saveWorkflow("sample", "sample", blueprints_.minimal);
@@ -267,7 +263,6 @@ describe("runPendingProcess", () => {
 
   test("exception with unknow process id", async () => {
     const process_id = uuid();
-
     await expect(cockpit.runPendingProcess(process_id)).rejects.toThrowError("Process not found");
   });
 
@@ -294,7 +289,6 @@ describe("runPendingProcess", () => {
 describe("fetch states", () => {
   let process;
   let history;
-  const engine = new Engine(...settings.persist_options);
 
   beforeEach(async () => {
     const workflow = await cockpit.saveWorkflow("sample", "sample", blueprints_.minimal);
@@ -309,16 +303,40 @@ describe("fetch states", () => {
     expect(result).toEqual(history[0]);
   });
 
+  test("getProcessState should throw if no state is provided", async () => {
+    await expect(cockpit.getProcessState()).rejects.toThrowError("Process Id not provided");
+  });
+
   test("findProcessStatesByStepNumber", async () => {
     const result = await cockpit.findProcessStatesByStepNumber(process.id, 1);
     expect(result).toBeDefined();
     expect(result.id).toEqual(_.last(history)._id);
   });
 
+  test("findProcessStatesByStepNumber should throw if no process id is provided", async () => {
+    await expect(cockpit.findProcessStatesByStepNumber()).rejects.toThrowError("Process Id not provided");
+  });
+
+  test("findProcessStatesByStepNumber should throw if no process id is provided", async () => {
+    await expect(cockpit.findProcessStatesByStepNumber(process.id, undefined)).rejects.toThrowError(
+      "stepNumber not provided"
+    );
+  });
+
   test("findProcessStatesByNodeId", async () => {
     const result = await cockpit.findProcessStatesByNodeId(process.id, "minimal_1");
     expect(result).toBeDefined();
     expect(result).toHaveLength(2);
+  });
+
+  test("findProcessStatesByNodeId should throw if no process id is provided", async () => {
+    await expect(cockpit.findProcessStatesByNodeId(undefined, "minimal_1")).rejects.toThrowError(
+      "Process Id not provided"
+    );
+  });
+
+  test("findProcessStatesByNodeId should throw if no process id is provided", async () => {
+    await expect(cockpit.findProcessStatesByNodeId(process.id, undefined)).rejects.toThrowError("NodeId not provided");
   });
 });
 

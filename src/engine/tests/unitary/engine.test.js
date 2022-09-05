@@ -394,7 +394,7 @@ describe("saveWorkflow", () => {
     const exampleNode = custom_bluprint.nodes.find((node) => node.category === "example");
     delete exampleNode.parameters.example;
     await expect(engine.saveWorkflow("sample", "sample", custom_bluprint)).rejects.toThrowError(
-      "parameters_has_example"
+      "must have required property 'example'"
     );
   });
 });

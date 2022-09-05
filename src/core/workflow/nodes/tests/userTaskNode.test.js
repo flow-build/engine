@@ -1,8 +1,21 @@
 const _ = require("lodash");
 const { UserTaskNode } = require("../userTask");
-const { nodes_, results_ } = require("../../tests/unitary/node_samples");
 const crypto_manager = require("../../../crypto_manager");
 const examples = require("../examples/userTask");
+
+describe("static Schema", () => {
+  test("Should merge Node and UserTaskNode schema", async () => {
+    const schema = UserTaskNode.schema;
+    expect(schema.properties.id).toBeDefined();
+    expect(schema.properties.next.type).toBe("string");
+    expect(schema.properties.parameters.required).toEqual(expect.arrayContaining(["action", "input"]));
+    expect(schema.properties.parameters.properties.timeout).toBeDefined();
+    expect(schema.properties.parameters.properties.channels).toBeDefined();
+    expect(schema.properties.parameters.properties.encrypted_data).toBeDefined();
+    expect(schema.properties.parameters.properties.activity_schema).toBeDefined();
+    expect(schema.properties.parameters.properties.activity_manager).toBeDefined();
+  });
+});
 
 describe("Validation", () => {
   test("Accept a correct spec", async () => {
@@ -146,18 +159,18 @@ describe("Validation", () => {
 
 describe("UserTaskNode", () => {
   test("UserTaskNode works when waiting", async () => {
-    const node = new UserTaskNode(nodes_.user_task);
+    const node = new UserTaskNode(examples.minimal);
 
     const bag = { identity_user_data: "bag" };
     const input = { data: "result" };
     const external_input = null;
     const actor_data = {};
     const result = await node.run({ bag, input, external_input, actor_data });
-    expect(result).toEqual(expect.objectContaining(results_.success_waiting_user_task_result));
+    expect(result).toEqual(expect.objectContaining(examples.minimalSuccessWaiting));
   });
 
   test("UserTaskNode works", async () => {
-    const node = new UserTaskNode(nodes_.user_task);
+    const node = new UserTaskNode(examples.minimal);
 
     const bag = { identity_user_data: "bag" };
     const input = { identity_user_data: "bag" };
@@ -165,12 +178,12 @@ describe("UserTaskNode", () => {
     const actor_data = {};
     await node.run({ bag, input, external_input, actor_data });
     const result = await node.run({ bag, input, external_input, actor_data });
-    expect(result).toMatchObject(results_.success_user_task_result);
+    expect(result).toMatchObject(examples.minimalSuccessRunning);
   });
 
   describe("UserTaskNode encrypted_data works", () => {
     function getNode(encrypted_data) {
-      const node_spec = _.cloneDeep(nodes_.user_task);
+      const node_spec = _.cloneDeep(examples.minimal);
       node_spec.parameters.encrypted_data = encrypted_data;
 
       return new UserTaskNode(node_spec);
@@ -284,7 +297,7 @@ describe("UserTaskNode", () => {
   });
 
   test("Creates activity manager with parameter timeout", async () => {
-    const node_spec = _.cloneDeep(nodes_.user_task);
+    const node_spec = _.cloneDeep(examples.minimal);
     node_spec.parameters.timeout = 10;
 
     const node = new UserTaskNode(node_spec);
@@ -298,7 +311,7 @@ describe("UserTaskNode", () => {
   });
 
   test("Creates activity manager with parameter channel", async () => {
-    const node_spec = _.cloneDeep(nodes_.user_task);
+    const node_spec = _.cloneDeep(examples.minimal);
     node_spec.parameters.channels = ["1"];
 
     const node = new UserTaskNode(node_spec);
@@ -312,7 +325,7 @@ describe("UserTaskNode", () => {
   });
 
   test("Creates activity manager with parameter crypto", async () => {
-    const node_spec = _.cloneDeep(nodes_.user_task);
+    const node_spec = _.cloneDeep(examples.minimal);
     node_spec.parameters.encrypted_data = ["password"];
 
     const node = new UserTaskNode(node_spec);
@@ -328,7 +341,7 @@ describe("UserTaskNode", () => {
   });
 
   test("Can reference actor_data on input", async () => {
-    const node_spec = _.cloneDeep(nodes_.user_task);
+    const node_spec = _.cloneDeep(examples.minimal);
     node_spec.parameters.input.identity_user_data = { $ref: "actor_data.id" };
 
     const node = new UserTaskNode(node_spec);
@@ -339,14 +352,14 @@ describe("UserTaskNode", () => {
     const actor_data = { id: 22 };
     const result = await node.run({ bag, input, external_input, actor_data });
 
-    const expected_result = _.cloneDeep(results_.success_waiting_user_task_result);
+    const expected_result = _.cloneDeep(examples.minimalSuccessWaiting);
     expected_result.result.identity_user_data = 22;
 
     expect(result).toMatchObject(expected_result);
   });
 
   test("Can reference environment on input", async () => {
-    const node_spec = _.cloneDeep(nodes_.user_task);
+    const node_spec = _.cloneDeep(examples.minimal);
     node_spec.parameters.input.identity_user_data = { $mustache: "user of {{environment.node_env}}" };
 
     const node = new UserTaskNode(node_spec);
@@ -360,14 +373,14 @@ describe("UserTaskNode", () => {
 
     const result = await node.run({ bag, input, actor_data, environment });
 
-    const expected_result = _.cloneDeep(results_.success_waiting_user_task_result);
+    const expected_result = _.cloneDeep(examples.minimalSuccessWaiting);
     expected_result.result.identity_user_data = "user of test";
 
     expect(result).toMatchObject(expected_result);
   });
 
   test("Can reference parameters on input", async () => {
-    const node_spec = _.cloneDeep(nodes_.user_task);
+    const node_spec = _.cloneDeep(examples.minimal);
     node_spec.parameters.input.identity_user_data = { $mustache: "user of {{parameters.data}}" };
 
     const node = new UserTaskNode(node_spec);
@@ -380,7 +393,7 @@ describe("UserTaskNode", () => {
 
     const result = await node.run({ bag, input, actor_data, environment, parameters });
 
-    const expected_result = _.cloneDeep(results_.success_waiting_user_task_result);
+    const expected_result = _.cloneDeep(examples.minimalSuccessWaiting);
     expected_result.result.identity_user_data = "user of params";
 
     expect(result).toMatchObject(expected_result);

@@ -10,26 +10,21 @@ nodes_.node = {
 };
 
 nodes_.start = {
-  id: "1",
-  type: "Start",
-  name: "Initial Node",
+  id: "START",
+  name: "minimal start",
+  next: "CONFIG",
+  type: "start",
+  lane_id: "anyone",
+  on_error: "stop",
   parameters: {
-    input_schema: {},
+    input_schema: {
+      type: "object",
+      required: ["data"],
+      properties: {
+        data: { type: "string" },
+      },
+    },
   },
-  next: "2",
-  lane_id: "1",
-};
-
-nodes_.start_w_timeout = {
-  id: "1",
-  type: "Start",
-  name: "Initial Node",
-  parameters: {
-    input_schema: {},
-    timeout: 5,
-  },
-  next: "2",
-  lane_id: "1",
 };
 
 nodes_.finish = {
@@ -48,27 +43,15 @@ nodes_.finish = {
 };
 
 nodes_.flow = {
-  id: "2",
-  type: "Flow",
-  name: "Flow Node",
+  id: "FLOW",
+  name: "minimal start",
   next: { 1: "3", 2: "4", default: "5" },
-  lane_id: "1",
+  type: "flow",
+  lane_id: "anyone",
+  on_error: "stop",
   parameters: {
     input: {
       decision_key: { $ref: "result.next_node" },
-    },
-  },
-};
-
-nodes_.flow_parameters = {
-  id: "2",
-  type: "Flow",
-  name: "Flow Node",
-  next: { data: "3", default: "5" },
-  lane_id: "1",
-  parameters: {
-    input: {
-      decision_key: { $ref: "parameters.next_node" },
     },
   },
 };
@@ -112,27 +95,6 @@ nodes_.system_task = {
   parameters: {
     input: {
       identity_system_data: { $ref: "bag.identity_system_data" },
-    },
-  },
-};
-
-nodes_.http_system_task = {
-  id: "3",
-  type: "SystemTask",
-  category: "Http",
-  name: "HTTP Node",
-  next: "4",
-  lane_id: "1",
-  parameters: {
-    input: {
-      payload: { $ref: "bag.payload" },
-    },
-    request: {
-      url: "https://koa-app:3000/test_api",
-      verb: "GET",
-      headers: {
-        "Content-Type": "application/json",
-      },
     },
   },
 };
@@ -218,32 +180,6 @@ nodes_.subprocess_task = {
   },
 };
 
-nodes_.invalid_namespace = {
-  id: "2",
-  type: "SystemTask",
-  name: "System  Task Node",
-  next: "3",
-  lane_id: "1",
-  parameters: {
-    input: {
-      key: { $ref: "invalid.node_data" },
-    },
-  },
-};
-
-nodes_.inexistant_key = {
-  id: "2",
-  type: "SystemTask",
-  name: "System  Task Node",
-  next: "3",
-  lane_id: "1",
-  parameters: {
-    input: {
-      key: { $ref: "bag.inexistant_key" },
-    },
-  },
-};
-
 results_.success_start_result = {
   bag: { data: "bag" },
   error: null,
@@ -276,16 +212,6 @@ results_.success_finish_result = {
     resultRef: "result",
   },
   status: "finished",
-};
-
-results_.success_flow_result = {
-  bag: { data: "bag" },
-  error: null,
-  external_input: { data: "external" },
-  next_node_id: "3",
-  node_id: "2",
-  result: { result: "1" },
-  status: "running",
 };
 
 results_.success_user_task_result = {
@@ -326,36 +252,6 @@ results_.success_script_task_result = {
   next_node_id: "4",
   node_id: "3",
   result: { lisp_system_data: "bag" },
-  status: "running",
-};
-
-results_.success_get_http_result = {
-  bag: { payload: { dummy: "payload" } },
-  error: null,
-  external_input: {},
-  next_node_id: "4",
-  node_id: "3",
-  result: { status: 200, data: { response: "get_success" } },
-  status: "running",
-};
-
-results_.success_post_http_result = {
-  bag: { payload: { dummy: "payload" } },
-  error: null,
-  external_input: {},
-  next_node_id: "4",
-  node_id: "3",
-  result: { status: 201, data: { response: "post_success" } },
-  status: "running",
-};
-
-results_.success_delete_http_result = {
-  bag: { payload: { dummy: "payload" } },
-  error: null,
-  external_input: {},
-  next_node_id: "4",
-  node_id: "3",
-  result: { status: 204, data: { response: "delete_success" } },
   status: "running",
 };
 

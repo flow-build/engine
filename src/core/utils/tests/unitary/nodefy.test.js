@@ -1,7 +1,7 @@
 const _ = require("lodash");
 const { nodefyClass, nodefyFunction } = require("../../nodefy");
 const { SystemTaskNode } = require("../../../workflow/nodes/index.js");
-const { nodes_ } = require("../../../workflow/tests/unitary/node_samples");
+const { customNode } = require("../../../workflow/nodes/examples/custom");
 
 function testFunction(firstTestArg, secondTestArg) {
   return {
@@ -67,7 +67,7 @@ describe("Nodefy Function should work", () => {
   });
 
   test("CustomSystemTaskNode runs its validations correctly", () => {
-    const node_spec = _.cloneDeep(nodes_.custom_system_task);
+    const node_spec = _.cloneDeep(customNode);
     const custom_node_class = nodefyFunction(testFunction);
     const custom_node = new custom_node_class(node_spec);
     const result = custom_node.validate(node_spec);
@@ -75,7 +75,7 @@ describe("Nodefy Function should work", () => {
   });
 
   test("CustomSystemTaskNode run works correctly", async () => {
-    const node_spec = _.cloneDeep(nodes_.custom_system_task);
+    const node_spec = _.cloneDeep(customNode);
     const custom_node_class = nodefyFunction(testFunction);
 
     const custom_node = new custom_node_class(node_spec);
@@ -93,7 +93,7 @@ describe("Nodefy Function should work", () => {
   });
 
   test("CustomSysteemTaskNode returns error if function throw error", async () => {
-    const node_spec = _.cloneDeep(nodes_.custom_system_task);
+    const node_spec = _.cloneDeep(customNode);
     const custom_node_class = nodefyFunction(() => {
       throw new Error("Error at custom function");
     });
@@ -138,7 +138,7 @@ describe("Nodefy Class should work", () => {
   });
 
   test("CustomSystemTaskNode runs its validations correctly", () => {
-    const node_spec = _.cloneDeep(nodes_.custom_system_task);
+    const node_spec = _.cloneDeep(customNode);
     const custom_node_map = nodefyClass(testClass);
     const custom_node_class = custom_node_map["firstTestMethod"];
     const custom_node = new custom_node_class(node_spec);
@@ -147,7 +147,7 @@ describe("Nodefy Class should work", () => {
   });
 
   test("CustomSystemTaskNode run works correctly", async () => {
-    const node_spec = _.cloneDeep(nodes_.custom_system_task);
+    const node_spec = _.cloneDeep(customNode);
     node_spec.category = "secondTestMethod";
 
     const custom_node_map = nodefyClass(testClass);
