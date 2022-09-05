@@ -5,8 +5,10 @@ const minimal = {
   type: "UserTask",
   lane_id: "any",
   parameters: {
-    input: {},
-    action: "ANY ACTION",
+    input: {
+      identity_user_data: "bag",
+    },
+    action: "do something",
   },
 };
 
@@ -40,8 +42,31 @@ const wrongActivitySchema = {
   },
 };
 
+const minimalSuccessWaiting = {
+  bag: { identity_user_data: "bag" },
+  error: null,
+  external_input: null,
+  next_node_id: "MINIMAL",
+  node_id: "MINIMAL",
+  result: { identity_user_data: "bag" },
+  status: "waiting",
+  action: "do something",
+};
+
+const minimalSuccessRunning = {
+  bag: { identity_user_data: "bag" },
+  error: null,
+  external_input: { data: "external" },
+  next_node_id: "NEXT",
+  node_id: "MINIMAL",
+  result: { data: "external" },
+  status: "running",
+};
+
 module.exports = {
   minimal,
+  minimalSuccessWaiting,
+  minimalSuccessRunning,
   complete,
   wrongActivitySchema,
 };
