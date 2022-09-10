@@ -420,7 +420,7 @@ test("run process that creaters another process", async () => {
 });
 
 test("child process has restricted input schema", async () => {
-  const engine = new Engine(...settings.persist_options);
+  //const engine = new Engine(...settings.persist_options);
 
   const childWorkflow = await engine.saveWorkflow(
     "restricted_schema",
@@ -729,7 +729,7 @@ describe("User task timeout", () => {
 });
 
 test("Commit activity only on type 'commit' activity manager", async () => {
-  const engine = new Engine(...settings.persist_options);
+  //const engine = new Engine(...settings.persist_options);
   await engine.saveWorkflow("sample", "sample", blueprints_.notify_and_user_task);
 
   let process = await engine.createProcessByWorkflowName("sample", actors_.simpleton);
@@ -810,7 +810,7 @@ test("Push activity should return error to an non-existant activity manager", as
 test("Beat won't break despite orphan timer", async () => {
   const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
-  const engine = new Engine(...settings.persist_options);
+  //const engine = new Engine(...settings.persist_options);
   const workflow = await engine.saveWorkflow(
     "user_timeout_one_hour",
     "user_timeout_one_hour",
