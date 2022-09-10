@@ -11,25 +11,25 @@ describe("validateSchema", () => {
 
   test("No error for valid schema", () => {
     const schema = {
-      type: "object"
+      type: "object",
     };
 
     expect(() => ajvValidator.validateSchema(schema)).not.toThrowError();
   });
-})
+});
 
 describe("validateData", () => {
   test("Invalid schema", () => {
     const schema = {
       type: "unknowType",
-    }
+    };
     const data = 99;
     expect(() => ajvValidator.validateData(schema, data)).toThrowError("schema is invalid");
-  })
+  });
 
   test("Throws error with error message", () => {
     const schema = {
-      type: "object"
+      type: "object",
     };
     const data = "input";
     expect(() => ajvValidator.validateData(schema, data)).toThrowError("data must be object");
@@ -39,29 +39,29 @@ describe("validateData", () => {
     const schema = {
       type: "object",
       properties: {
-        name: {type: "string"},
-        age: {type: "number"}
-      }
+        name: { type: "string" },
+        age: { type: "number" },
+      },
     };
     const data = {
-      name: {firstName: "exampleName"},
+      name: { firstName: "exampleName" },
       age: "22",
     };
     try {
-      ajvValidator.validateData(schema, data)
+      ajvValidator.validateData(schema, data);
     } catch (error) {
       expect(error.message).toMatch("data/name must be string");
       expect(error.message).toMatch("data/age must be number");
     }
-  })
+  });
 
   test("Validate uuid", () => {
     const schema = {
       type: "object",
       properties: {
-        id: {type: "string", format: "uuid"}
-      }
-    }
+        id: { type: "string", format: "uuid" },
+      },
+    };
     const data = {
       id: "3d2f6ce3-ed63-40aa-89bb-048fed01c15c",
     };
@@ -73,11 +73,11 @@ describe("validateData", () => {
     const schema = {
       type: "object",
       properties: {
-        dataInicio: {type: "string", format: "date-time"}
-      }
-    }
+        dataInicio: { type: "string", format: "date-time" },
+      },
+    };
     const data = {
-      dataInicio: "2020-11-20T14:44:00.1234Z"
+      dataInicio: "2020-11-20T14:44:00.1234Z",
     };
     const resultError = ajvValidator.validateData(schema, data);
     expect(resultError).toBeUndefined();
@@ -87,11 +87,11 @@ describe("validateData", () => {
     const schema = {
       type: "object",
       properties: {
-        data: {type: "string", format: "dateTime"}
-      }
-    }
+        data: { type: "string", format: "dateTime" },
+      },
+    };
     const data = {
-      data: "2020-11-20T14:44:00"
+      data: "2020-11-20T14:44:00",
     };
     const resultError = ajvValidator.validateData(schema, data);
     expect(resultError).toBeUndefined();
@@ -101,11 +101,11 @@ describe("validateData", () => {
     const schema = {
       type: "object",
       properties: {
-        data: {type: "string", format: "date"}
-      }
-    }
+        data: { type: "string", format: "date" },
+      },
+    };
     const data = {
-      data: "2020-19-20"
+      data: "2020-19-20",
     };
     try {
       ajvValidator.validateData(schema, data);
@@ -118,12 +118,12 @@ describe("validateData", () => {
     const schema = {
       type: "object",
       properties: {
-        data: {type: "string", format: "cpf"}
-      }
-    }
-        
+        data: { type: "string", format: "cpf" },
+      },
+    };
+
     const data = {
-      cpf: "123.123.123-12"
+      cpf: "123.123.123-12",
     };
     try {
       ajvValidator.validateData(schema, data);
@@ -132,18 +132,17 @@ describe("validateData", () => {
     }
   });
 
-
   test("Validate cpf", () => {
     const schema = {
       type: "object",
       properties: {
-        data: {type: "string", format: "cpf"}
-      }
-    }
+        data: { type: "string", format: "cpf" },
+      },
+    };
 
     const data = {
-      cpf: "825.566.405-02"
-    }
+      cpf: "825.566.405-02",
+    };
     const resultError = ajvValidator.validateData(schema, data);
     expect(resultError).toBeUndefined();
   });
@@ -152,12 +151,12 @@ describe("validateData", () => {
     const schema = {
       type: "object",
       properties: {
-        cpf: {type: "string", format: "cpf"},
+        cpf: { type: "string", format: "cpf" },
       },
-      required: ["cpf"]
-    }
+      required: ["cpf"],
+    };
     const data = {
-      cpf: '825.566.405-02'
+      cpf: "825.566.405-02",
     };
     const resultError = ajvValidator.validateResult(schema, data);
     expect(resultError).toBeUndefined();
@@ -167,35 +166,34 @@ describe("validateData", () => {
     const schema = {
       type: "object",
       properties: {
-        cpf: {type: "string", format: "cpf"},
+        cpf: { type: "string", format: "cpf" },
       },
-      required: ["cpf"]
-    }
+      required: ["cpf"],
+    };
     const data = {
-      cpf: 'a825.566.405-02'
+      cpf: "a825.566.405-02",
     };
     const resultError = ajvValidator.validateResult(schema, data);
     expect(resultError).toBeDefined();
-    expect(resultError.message).toMatch("data/cpf must match format \"cpf\"");
-
+    expect(resultError.message).toMatch('data/cpf must match format "cpf"');
   });
 
   test("Validate date properties", () => {
     const schema = {
       type: "object",
       properties: {
-        id: {type: "string", format: "uuid"},
-        dataInicio: {type: "string", format: "date-time"},
-        dataFim: {type: "string", format: "date"},
-        nome: {type: "string", minLength: 3}
+        id: { type: "string", format: "uuid" },
+        dataInicio: { type: "string", format: "date-time" },
+        dataFim: { type: "string", format: "date" },
+        nome: { type: "string", minLength: 3 },
       },
-      required: ["id", "dataInicio", "dataFim", "nome"]
-    }
+      required: ["id", "dataInicio", "dataFim", "nome"],
+    };
     const data = {
       id: "3d2f6ce3-ed63-40aa-89bb-048fed01c15c",
       dataInicio: "2020-11-20T14:44:00.1234Z",
       dataFim: "2020-11-21",
-      nome: "Didi"
+      nome: "Didi",
     };
     const resultError = ajvValidator.validateData(schema, data);
     expect(resultError).toBeUndefined();
@@ -205,18 +203,18 @@ describe("validateData", () => {
     const schema = {
       type: "object",
       properties: {
-        id: {type: "string", format: "uuid"},
-        dataInicio: {type: "string", format: "date-time"},
-        dataFim: {type: "string", format: "date"},
-        nome: {type: "string", minLength: 3}
+        id: { type: "string", format: "uuid" },
+        dataInicio: { type: "string", format: "date-time" },
+        dataFim: { type: "string", format: "date" },
+        nome: { type: "string", minLength: 3 },
       },
-      required: ["id", "dataInicio", "dataFim", "nome"]
-    }
+      required: ["id", "dataInicio", "dataFim", "nome"],
+    };
     const data = {
       id: "3d2f6ce3-ed63-40aa-89bb-048fed01c15c",
       dataInicio: "2020-11-20T14:44:00.1234Z",
       dataFim: "2020-11-21",
-      nome: "Didi"
+      nome: "Didi",
     };
     const resultError = ajvValidator.validateData(schema, data);
     expect(resultError).toBeUndefined();
@@ -226,20 +224,20 @@ describe("validateData", () => {
     const schema = {
       type: "object",
       properties: {
-        id: {type: "string", format: "uuid"},
-        dataInicio: {type: "string", format: "date-time"},
-        dataFim: {type: "string", format: "date"},
-        nome: {type: "string", minLength: 3}
+        id: { type: "string", format: "uuid" },
+        dataInicio: { type: "string", format: "date-time" },
+        dataFim: { type: "string", format: "date" },
+        nome: { type: "string", minLength: 3 },
       },
-      required: ["id", "dataInicio", "dataFim", "nome"]
-    }
+      required: ["id", "dataInicio", "dataFim", "nome"],
+    };
     const data = {
       id: "3d2f6ce3-ed63-40aa-89bb-048fed01c15c",
       dataInicio: "2020-11-20T14:44:00.1234Z",
-      dataFim: "2020-11-21"
+      dataFim: "2020-11-21",
     };
     try {
-      ajvValidator.validateData(schema, data)
+      ajvValidator.validateData(schema, data);
     } catch (error) {
       expect(error).toBeDefined();
       expect(error.message).toMatch("data must have required property 'nome'");
@@ -250,17 +248,17 @@ describe("validateData", () => {
     const schema = {
       type: "object",
       properties: {
-        id: {type: "string", format: "uuid"},
+        id: { type: "string", format: "uuid" },
       },
       required: ["id"],
-      additionalProperties: false
-    }
+      additionalProperties: false,
+    };
     const data = {
       id: "3d2f6ce3-ed63-40aa-89bb-048fed01c15c",
-      nome: "Didi"
+      nome: "Didi",
     };
     try {
-      ajvValidator.validateData(schema, data)
+      ajvValidator.validateData(schema, data);
     } catch (error) {
       expect(error).toBeDefined();
       expect(error.message).toMatch("data must NOT have additional properties");
@@ -271,31 +269,31 @@ describe("validateData", () => {
     const schema = {
       type: "object",
       properties: {
-        id: {type: "string", format: "uuid"},
+        id: { type: "string", format: "uuid" },
       },
       required: ["id"],
-      additionalProperties: true
-    }
+      additionalProperties: true,
+    };
     const data = {
       id: "3d2f6ce3-ed63-40aa-89bb-048fed01c15c",
-      nome: "Didi"
+      nome: "Didi",
     };
     const resultError = ajvValidator.validateData(schema, data);
     expect(resultError).toBeUndefined();
   });
-})
+});
 
 describe("validateResult", () => {
   test("Valid schema with data.data", () => {
     const schema = {
       type: "object",
       properties: {
-        id: {type: "string"},
-        qty: {type: "number"},
-        status: {type: "string"},
-        flavors: {type: "array"},
-        comments: {type: "string"},
-        createdAt: {type: "string", format: "date-time"}
+        id: { type: "string" },
+        qty: { type: "number" },
+        status: { type: "string" },
+        flavors: { type: "array" },
+        comments: { type: "string" },
+        createdAt: { type: "string", format: "date-time" },
       },
     };
     const data = {
@@ -304,12 +302,10 @@ describe("validateResult", () => {
         id: "5",
         createdAt: "2021-01-12T22:32:28.199Z",
         qty: 1,
-        flavors: [
-          "portuguesa"
-        ],
+        flavors: ["portuguesa"],
         comments: "comentarios",
-        status: "pending"
-      }
+        status: "pending",
+      },
     };
 
     const resultError = ajvValidator.validateResult(schema, data);
@@ -320,14 +316,14 @@ describe("validateResult", () => {
     const schema = {
       type: "object",
       properties: {
-        id: {type: "string"},
-        qty: {type: "number"},
-        status: {type: "string"},
-        flavors: {type: "array"},
-        comments: {type: "string"},
-        createdAt: {type: "string", format: "date-time"}
+        id: { type: "string" },
+        qty: { type: "number" },
+        status: { type: "string" },
+        flavors: { type: "array" },
+        comments: { type: "string" },
+        createdAt: { type: "string", format: "date-time" },
       },
-      required: ["id"]
+      required: ["id"],
     };
     const data = {
       status: 201,
@@ -335,12 +331,10 @@ describe("validateResult", () => {
         id: "5",
         createdAt: "2021-01-12T22:32:28.199Z",
         qty: 1,
-        flavors: [
-          "portuguesa"
-        ],
+        flavors: ["portuguesa"],
         comments: "comentarios",
-        status: "pending"
-      }
+        status: "pending",
+      },
     };
 
     const resultError = ajvValidator.validateResult(schema, data);
@@ -351,25 +345,23 @@ describe("validateResult", () => {
     const schema = {
       type: "object",
       properties: {
-        id: {type: "string"},
-        qty: {type: "number"},
-        status: {type: "string"},
-        flavors: {type: "array"},
-        comments: {type: "string"},
-        createdAt: {type: "string", format: "date-time"}
+        id: { type: "string" },
+        qty: { type: "number" },
+        status: { type: "string" },
+        flavors: { type: "array" },
+        comments: { type: "string" },
+        createdAt: { type: "string", format: "date-time" },
       },
-      required: ["id"]
+      required: ["id"],
     };
     const data = {
       status: 201,
       data: {
         createdAt: "2021-01-12T22:32:28.199Z",
-        flavors: [
-          "portuguesa"
-        ],
+        flavors: ["portuguesa"],
         comments: "comentarios",
-        status: "pending"
-      }
+        status: "pending",
+      },
     };
 
     const resultError = ajvValidator.validateResult(schema, data);
@@ -381,23 +373,21 @@ describe("validateResult", () => {
     const schema = {
       type: "object",
       properties: {
-        id: {type: "string"},
-        qty: {type: "number"},
-        status: {type: "string"},
-        flavors: {type: "array"},
-        comments: {type: "string"},
-        createdAt: {type: "string", format: "date-time"}
+        id: { type: "string" },
+        qty: { type: "number" },
+        status: { type: "string" },
+        flavors: { type: "array" },
+        comments: { type: "string" },
+        createdAt: { type: "string", format: "date-time" },
       },
     };
     const data = {
       id: "5",
       createdAt: "2021-01-12T22:32:28.199Z",
       qty: 1,
-      flavors: [
-        "portuguesa"
-      ],
+      flavors: ["portuguesa"],
       comments: "comentarios",
-      status: "pending"
+      status: "pending",
     };
 
     const resultError = ajvValidator.validateResult(schema, data);
@@ -408,24 +398,22 @@ describe("validateResult", () => {
     const schema = {
       type: "object",
       properties: {
-        id: {type: "string"},
-        qty: {type: "number"},
-        status: {type: "string"},
-        flavors: {type: "array"},
-        comments: {type: "string"},
-        createdAt: {type: "string", format: "date-time"}
+        id: { type: "string" },
+        qty: { type: "number" },
+        status: { type: "string" },
+        flavors: { type: "array" },
+        comments: { type: "string" },
+        createdAt: { type: "string", format: "date-time" },
       },
-      required: ["id"]
+      required: ["id"],
     };
     const data = {
       id: "5",
       createdAt: "2021-01-12T22:32:28.199Z",
       qty: 1,
-      flavors: [
-        "portuguesa"
-      ],
+      flavors: ["portuguesa"],
       comments: "comentarios",
-      status: "pending"
+      status: "pending",
     };
 
     const resultError = ajvValidator.validateResult(schema, data);
@@ -436,22 +424,20 @@ describe("validateResult", () => {
     const schema = {
       type: "object",
       properties: {
-        id: {type: "string"},
-        qty: {type: "number"},
-        status: {type: "string"},
-        flavors: {type: "array"},
-        comments: {type: "string"},
-        createdAt: {type: "string", format: "date-time"}
+        id: { type: "string" },
+        qty: { type: "number" },
+        status: { type: "string" },
+        flavors: { type: "array" },
+        comments: { type: "string" },
+        createdAt: { type: "string", format: "date-time" },
       },
-      required: ["id"]
+      required: ["id"],
     };
     const data = {
       createdAt: "2021-01-12T22:32:28.199Z",
-      flavors: [
-        "portuguesa"
-      ],
+      flavors: ["portuguesa"],
       comments: "comentarios",
-      status: "pending"
+      status: "pending",
     };
 
     const resultError = ajvValidator.validateResult(schema, data);
@@ -466,21 +452,21 @@ describe("validateResult", () => {
         input: {
           type: "object",
           properties: {
-            email: {type: "string", format: "email"},
-            password: {type: "string"},
-            save_password: {type: "boolean"}
+            email: { type: "string", format: "email" },
+            password: { type: "string" },
+            save_password: { type: "boolean" },
           },
-          required: ["email", "password"]
-        }
+          required: ["email", "password"],
+        },
       },
-      required: ["input"]
+      required: ["input"],
     };
     const data = {
       input: {
         email: "didi_moco@gmail.com",
         password: "trapalhoes",
-        save_password: true
-      }
+        save_password: true,
+      },
     };
 
     const resultError = ajvValidator.validateResult(schema, data);
@@ -494,23 +480,23 @@ describe("validateResult", () => {
         input: {
           type: "object",
           properties: {
-            email: {type: "string", format: "email"},
-            password: {type: "string"},
-            save_password: {type: "boolean"}
+            email: { type: "string", format: "email" },
+            password: { type: "string" },
+            save_password: { type: "boolean" },
           },
-          required: ["email", "password"]
-        }
+          required: ["email", "password"],
+        },
       },
-      required: ["input"]
+      required: ["input"],
     };
     const data = {
       data: {
         input: {
           email: "didi_moco@gmail.com",
           password: "trapalhoes",
-          save_password: true
-        }
-      }
+          save_password: true,
+        },
+      },
     };
 
     const resultError = ajvValidator.validateResult(schema, data);
@@ -524,20 +510,20 @@ describe("validateResult", () => {
         input: {
           type: "object",
           properties: {
-            email: {type: "string", format: "email"},
-            password: {type: "string"},
-            save_password: {type: "boolean"}
+            email: { type: "string", format: "email" },
+            password: { type: "string" },
+            save_password: { type: "boolean" },
           },
-          required: ["email", "password"]
-        }
+          required: ["email", "password"],
+        },
       },
-      required: ["input"]
+      required: ["input"],
     };
     const data = {
       input: {
         email: "didi_moco@gmail.com",
-        save_password: true
-      }
+        save_password: true,
+      },
     };
 
     const resultError = ajvValidator.validateResult(schema, data);
@@ -547,52 +533,51 @@ describe("validateResult", () => {
 });
 
 describe("validateTimeInterval", () => {
-
   test("Pass with date type number", () => {
     const input = {
-      id: '3d2f6ce3-ed63-40aa-89bb-048fed01c15c',
+      id: "3d2f6ce3-ed63-40aa-89bb-048fed01c15c",
       date: 120,
-      resource_type: 'ActivityManager'
-    }
+      resource_type: "ActivityManager",
+    };
     const resultError = ajvValidator.validateTimeInterval(input);
     expect(resultError).toBeUndefined();
   });
 
   test("Pass with date type dateTime", () => {
     const input = {
-      id: '3d2f6ce3-ed63-40aa-89bb-048fed01c15c',
-      date: '2022-05-13T00:00:00',
-      resource_type: 'ActivityManager'
-    }
+      id: "3d2f6ce3-ed63-40aa-89bb-048fed01c15c",
+      date: "2022-05-13T00:00:00",
+      resource_type: "ActivityManager",
+    };
     const resultError = ajvValidator.validateTimeInterval(input);
     expect(resultError).toBeUndefined();
   });
 
   test("Throw error with invalid date type", () => {
     const input = {
-      id: '3d2f6ce3-ed63-40aa-89bb-048fed01c15c',
-      date: '120',
-      resource_type: 'ActivityManager'
-    }
+      id: "3d2f6ce3-ed63-40aa-89bb-048fed01c15c",
+      date: "120",
+      resource_type: "ActivityManager",
+    };
     try {
       ajvValidator.validateTimeInterval(input);
     } catch (resultError) {
       expect(resultError).toBeDefined();
     }
   });
-})
+});
 
 describe("validateActivityManager", () => {
   test("Pass with a valid schema", () => {
     const schema = {
       type: "object",
       properties: {
-        id: {type: "string"},
-        qty: {type: "number"},
-        status: {type: "string"},
-        flavors: {type: "array"},
-        comments: {type: "string"},
-        createdAt: {type: "string", format: "date-time"}
+        id: { type: "string" },
+        qty: { type: "number" },
+        status: { type: "string" },
+        flavors: { type: "array" },
+        comments: { type: "string" },
+        createdAt: { type: "string", format: "date-time" },
       },
     };
 
@@ -600,72 +585,77 @@ describe("validateActivityManager", () => {
       id: "5",
       qty: 1,
       status: "pending",
-      flavors: [
-        "portuguesa"
-      ],
+      flavors: ["portuguesa"],
       comments: "comentarios",
-      createdAt: "2021-01-12T22:32:28.199Z"  
+      createdAt: "2021-01-12T22:32:28.199Z",
     };
-  
+
     const resultError = ajvValidator.validateActivityManager(schema, data);
     expect(resultError).toBeUndefined();
   });
-   
+
+  test("Pass with an empty object", () => {
+    const schema = {};
+    const data = {
+      id: "5",
+      qty: 1,
+    };
+
+    const resultError = ajvValidator.validateActivityManager(schema, data);
+    expect(resultError).toBeUndefined();
+  });
+
   test("Throw error without required property id", () => {
     const schema = {
       type: "object",
       properties: {
-        id: {type: "string"},
-        qty: {type: "number"},
-        status: {type: "string"},
-        flavors: {type: "array"},
-        comments: {type: "string"},
-        createdAt: {type: "string", format: "date-time"}
+        id: { type: "string" },
+        qty: { type: "number" },
+        status: { type: "string" },
+        flavors: { type: "array" },
+        comments: { type: "string" },
+        createdAt: { type: "string", format: "date-time" },
       },
-      required: ["id"]
+      required: ["id"],
     };
 
     const data = {
       qty: 1,
       status: "pending",
-      flavors: [
-        "portuguesa"
-      ],
+      flavors: ["portuguesa"],
       comments: "comentarios",
-      createdAt: "2021-01-12T22:32:28.199Z"  
+      createdAt: "2021-01-12T22:32:28.199Z",
     };
-  
+
     const resultError = () => ajvValidator.validateActivityManager(schema, data);
     expect(resultError).toThrowError("data must have required property 'id'");
   });
-  
+
   test("Should rebuild schema if no type object is defined", () => {
     const schema = {
       properties: {
-        id: {type: "string"},
-        qty: {type: "number"},
-        status: {type: "string"},
-        flavors: {type: "array"},
-        comments: {type: "string"},
-        createdAt: {type: "string", format: "date-time"}
+        id: { type: "string" },
+        qty: { type: "number" },
+        status: { type: "string" },
+        flavors: { type: "array" },
+        comments: { type: "string" },
+        createdAt: { type: "string", format: "date-time" },
       },
     };
-    
+
     const data = {
       id: "5",
       qty: 1,
       status: "pending",
-      flavors: [
-        "portuguesa"
-      ],
+      flavors: ["portuguesa"],
       comments: "comentarios",
-      createdAt: "2021-01-12T22:32:28.199Z"  
+      createdAt: "2021-01-12T22:32:28.199Z",
     };
-  
+
     const resultError = ajvValidator.validateActivityManager(schema, data);
     expect(resultError).toBeUndefined();
   });
-   
+
   test("Pass with required in nested items", () => {
     const schema = {
       type: "object",
@@ -673,27 +663,27 @@ describe("validateActivityManager", () => {
         input: {
           type: "object",
           properties: {
-            email: {type: "string", format: "email"},
-            password: {type: "string"},
-            save_password: {type: "boolean"}
+            email: { type: "string", format: "email" },
+            password: { type: "string" },
+            save_password: { type: "boolean" },
           },
-          required: ["email", "password"]
-        }
+          required: ["email", "password"],
+        },
       },
-      required: ["input"]
+      required: ["input"],
     };
     const data = {
       input: {
         email: "didi_moco@gmail.com",
         password: "trapalhoes",
-        save_password: true
-      }
+        save_password: true,
+      },
     };
-  
+
     const resultError = ajvValidator.validateActivityManager(schema, data);
     expect(resultError).toBeUndefined();
-  }); 
-  
+  });
+
   test("Throw error with required in nested items", () => {
     const schema = {
       type: "object",
@@ -701,22 +691,22 @@ describe("validateActivityManager", () => {
         input: {
           type: "object",
           properties: {
-            email: {type: "string", format: "email"},
-            password: {type: "string"},
-            save_password: {type: "boolean"}
+            email: { type: "string", format: "email" },
+            password: { type: "string" },
+            save_password: { type: "boolean" },
           },
-          required: ["email", "password"]
-        }
+          required: ["email", "password"],
+        },
       },
-      required: ["input"]
+      required: ["input"],
     };
     const data = {
       input: {
         email: "didi_moco@gmail.com",
-        save_password: true
-      }
+        save_password: true,
+      },
     };
-  
+
     const resultError = () => ajvValidator.validateActivityManager(schema, data);
     expect(resultError).toThrowError("data/input must have required property 'password'");
   });
@@ -725,14 +715,14 @@ describe("validateActivityManager", () => {
     const schema = {
       type: "object",
       properties: {
-        dt: { type: "string", format: "date" }
+        dt: { type: "string", format: "date" },
       },
-      required: ['dt']
+      required: ["dt"],
     };
     const data = {
-      dt: "2021-19-12"
+      dt: "2021-19-12",
     };
-  
+
     const resultError = () => ajvValidator.validateActivityManager(schema, data);
     expect(resultError).toThrowError('data/dt must match format "date"');
   });

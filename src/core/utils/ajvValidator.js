@@ -1,35 +1,42 @@
 const Ajv = require("ajv");
 const addFormats = require("ajv-formats");
-const ajv = new Ajv({allErrors: true});
-addFormats(ajv, { mode: 'full'});
+const ajv = new Ajv({ allErrors: true });
+addFormats(ajv, { mode: "full" });
+const _ = require("lodash");
 
 // eslint-disable-next-line no-useless-escape
-const dateTimeRegex = new RegExp('^(19[0-9]{2}|2[0-9]{3})-(0[1-9]|1[012])-([123]0|[012][1-9]|31)[ \/T\/t]([01][0-9]|2[0-3]):([0-5][0-9])(?::([0-5][0-9]))?$');
-ajv.addFormat('dateTime', {
-  validate: (dateTimeString) => dateTimeRegex.test(dateTimeString)
+const dateTimeRegex = new RegExp(
+  "^(19[0-9]{2}|2[0-9]{3})-(0[1-9]|1[012])-([123]0|[012][1-9]|31)[ /T/t]([01][0-9]|2[0-3]):([0-5][0-9])(?::([0-5][0-9]))?$"
+);
+ajv.addFormat("dateTime", {
+  validate: (dateTimeString) => dateTimeRegex.test(dateTimeString),
 });
 
-ajv.addFormat('cpf', {
+ajv.addFormat("cpf", {
   validate: (cpf) => {
     if (/[a-zA-Z]/.test(cpf)) {
       return false;
     }
-    cpf = cpf.replace(/\D/g, '');
-    if(cpf.toString().length != 11 || /^(\d)\1{10}$/.test(cpf)) return false;
+    cpf = cpf.replace(/\D/g, "");
+    if (cpf.toString().length != 11 || /^(\d)\1{10}$/.test(cpf)) return false;
     var result = true;
-    [9,10].forEach(function(j){
-      var sum = 0, r;
-      cpf.split(/(?=)/).splice(0,j).forEach(function(e, i){
-        sum += parseInt(e) * ((j+2)-(i+1));
-      });
+    [9, 10].forEach(function (j) {
+      var sum = 0,
+        r;
+      cpf
+        .split(/(?=)/)
+        .splice(0, j)
+        .forEach(function (e, i) {
+          sum += parseInt(e) * (j + 2 - (i + 1));
+        });
       r = sum % 11;
-      r = (r <2)?0:11-r;
-      if(r != cpf.substring(j, j+1)) result = false;
+      r = r < 2 ? 0 : 11 - r;
+      if (r != cpf.substring(j, j + 1)) result = false;
     });
     return result;
   },
   errors: false,
-})
+});
 
 function validateSchema(schema) {
   const is_valid = ajv.validateSchema(schema);
@@ -39,15 +46,14 @@ function validateSchema(schema) {
 }
 
 function validateData(schema, data) {
-
   let schemaValidate;
   if (schema.properties) {
     schemaValidate = {
-      type: 'object',
+      type: "object",
       properties: schema.properties,
       required: schema.required,
-      additionalProperties: schema.additionalProperties
-    }
+      additionalProperties: schema.additionalProperties,
+    };
   } else {
     schemaValidate = schema;
   }
@@ -59,24 +65,8 @@ function validateData(schema, data) {
 }
 
 function validateActivityManager(schema, data) {
-  let schemaValidate;
-  if(!schema.type || schema.type !== 'object') {
-    schemaValidate = {
-      type: 'object',
-      properties: {},
-      required: schema.required,
-      additionalProperties: schema.additionalProperties
-    }
-    
-    Object.entries(schema.properties).map(param => {
-      if (param[0] !== 'required') {
-        schemaValidate.properties[param[0]] = param[1];
-      }
-    })
-  } else {
-    schemaValidate = schema;
-  }
-    
+  let schemaValidate = _.cloneDeep(schema);
+  schemaValidate.type = "object";
   const is_valid = ajv.validate(schemaValidate, data);
   if (!is_valid) {
     throw new Error(ajv.errorsText());
@@ -84,7 +74,6 @@ function validateActivityManager(schema, data) {
 }
 
 function validateResult(schema, data) {
-
   let dataValidate;
   if (data.data) {
     dataValidate = data.data;
@@ -101,9 +90,9 @@ function validateBlueprintParameters(data) {
   const schemaBlueprintParametersValidate = {
     type: "object",
     properties: {
-      max_step_number: {type: "integer"}
-    }
-  }
+      max_step_number: { type: "integer" },
+    },
+  };
 
   const is_valid = ajv.validate(schemaBlueprintParametersValidate, data);
 
@@ -113,19 +102,18 @@ function validateBlueprintParameters(data) {
 }
 
 function validateTimeInterval(input) {
-
   let schemaValidate;
 
   schemaValidate = {
-    type: 'object',
+    type: "object",
     properties: {
-      id: {type: 'string', format: 'uuid'},
+      id: { type: "string", format: "uuid" },
       date: {
-        oneOf: [{type: 'number'}, {type: 'string', format: 'dateTime'}]
+        oneOf: [{ type: "number" }, { type: "string", format: "dateTime" }],
       },
-      resource_type: {type: 'string', enum: ['ActivityManager', 'Process', 'Mock']}
-    }
-  }
+      resource_type: { type: "string", enum: ["ActivityManager", "Process", "Mock"] },
+    },
+  };
 
   const is_valid = ajv.validate(schemaValidate, input);
   if (!is_valid) {
@@ -139,5 +127,5 @@ module.exports = {
   validateActivityManager: validateActivityManager,
   validateResult: validateResult,
   validateBlueprintParameters: validateBlueprintParameters,
-  validateTimeInterval:validateTimeInterval
+  validateTimeInterval: validateTimeInterval,
 };
