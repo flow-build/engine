@@ -6,7 +6,7 @@ const _ = require("lodash");
 
 // eslint-disable-next-line no-useless-escape
 const dateTimeRegex = new RegExp(
-  "^(19[0-9]{2}|2[0-9]{3})-(0[1-9]|1[012])-([123]0|[012][1-9]|31)[ /T/t]([01][0-9]|2[0-3]):([0-5][0-9])(?::([0-5][0-9]))?$"
+  "^(19\\d{2}|2\\d{3})-(0[1-9]|1[012])-([123]0|[012][1-9]|31)[ /T/t]([01]\\d|2[0-3]):([0-5]\\d)(?::([0-5]\\d))?$"
 );
 ajv.addFormat("dateTime", {
   validate: (dateTimeString) => dateTimeRegex.test(dateTimeString),
@@ -21,7 +21,7 @@ ajv.addFormat("cpf", {
     if (cpf.toString().length != 11 || /^(\d)\1{10}$/.test(cpf)) return false;
     var result = true;
     [9, 10].forEach(function (j) {
-      var sum = 0,
+      let sum = 0,
         r;
       cpf
         .split(/(?=)/)

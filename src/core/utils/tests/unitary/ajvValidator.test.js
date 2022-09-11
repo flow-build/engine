@@ -90,6 +90,30 @@ describe("validateData", () => {
 });
 
 describe("validateResult", () => {
+  const nestedRequiredSchema = {
+    type: "object",
+    properties: {
+      input: {
+        type: "object",
+        properties: {
+          emailType: { type: "string", format: "email" },
+          stringType: { type: "string" },
+          booleanType: { type: "boolean" },
+        },
+        required: ["emailType", "booleanType"],
+      },
+    },
+    required: ["input"],
+  };
+
+  const testData = {
+    input: {
+      emailType: "didi_moco@gmail.com",
+      stringType: "trapalhoes",
+      booleanType: true,
+    },
+  };
+
   test("Valid schema with data.data", () => {
     const data = {
       status: 201,
@@ -179,89 +203,23 @@ describe("validateResult", () => {
   });
 
   test("Pass with required in nested items in data only", () => {
-    const schema = {
-      type: "object",
-      properties: {
-        input: {
-          type: "object",
-          properties: {
-            email: { type: "string", format: "email" },
-            password: { type: "string" },
-            save_password: { type: "boolean" },
-          },
-          required: ["email", "password"],
-        },
-      },
-      required: ["input"],
-    };
-    const data = {
-      input: {
-        email: "didi_moco@gmail.com",
-        password: "trapalhoes",
-        save_password: true,
-      },
-    };
-
-    const resultError = ajvValidator.validateResult(schema, data);
+    const resultError = ajvValidator.validateResult(nestedRequiredSchema, testData);
     expect(resultError).toBeUndefined();
   });
 
   test("Pass with required in nested items in data data", () => {
-    const schema = {
-      type: "object",
-      properties: {
-        input: {
-          type: "object",
-          properties: {
-            email: { type: "string", format: "email" },
-            password: { type: "string" },
-            save_password: { type: "boolean" },
-          },
-          required: ["email", "password"],
-        },
-      },
-      required: ["input"],
-    };
-    const data = {
-      data: {
-        input: {
-          email: "didi_moco@gmail.com",
-          password: "trapalhoes",
-          save_password: true,
-        },
-      },
-    };
-
-    const resultError = ajvValidator.validateResult(schema, data);
+    const data = { data: testData };
+    const resultError = ajvValidator.validateResult(nestedRequiredSchema, data);
     expect(resultError).toBeUndefined();
   });
 
   test("Throw error with required in nested items in data only", () => {
-    const schema = {
-      type: "object",
-      properties: {
-        input: {
-          type: "object",
-          properties: {
-            email: { type: "string", format: "email" },
-            password: { type: "string" },
-            save_password: { type: "boolean" },
-          },
-          required: ["email", "password"],
-        },
-      },
-      required: ["input"],
-    };
-    const data = {
-      input: {
-        email: "didi_moco@gmail.com",
-        save_password: true,
-      },
-    };
+    const data = _.cloneDeep(testData);
+    delete data.input.emailType;
 
-    const resultError = ajvValidator.validateResult(schema, data);
+    const resultError = ajvValidator.validateResult(nestedRequiredSchema, data);
     expect(resultError).toBeDefined();
-    expect(resultError.message).toMatch("data/input must have required property 'password'");
+    expect(resultError.message).toMatch("data/input must have required property 'emailType'");
   });
 });
 
