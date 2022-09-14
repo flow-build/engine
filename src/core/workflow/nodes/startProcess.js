@@ -88,7 +88,7 @@ class StartProcessSystemTaskNode extends SystemTaskNode {
         bag: this._setBag(bag, result),
         external_input: external_input,
         result: result,
-        error: null,
+        error: result.error,
         status: status,
         next_node_id: this.next(result),
         time_elapsed: time_elapsed,
@@ -101,6 +101,13 @@ class StartProcessSystemTaskNode extends SystemTaskNode {
   }
 
   async _run(execution_data) {
+    const { Workflow } = require("../workflow");
+    const workflow = await Workflow.fetchWorkflowByName(execution_data.workflow_name);
+    if (!workflow) {
+      emitter.emit("NODE.RESULT_ERROR", `WORKFLOW NAME ${execution_data.workflow_name} NOT FOUND`, {});
+      return [{ process_id: "", error: "workflow not found" }, ProcessStatus.ERROR];
+    }
+
     const process = await process_manager.createProcessByWorkflowName(
       execution_data.workflow_name,
       execution_data.actor_data,

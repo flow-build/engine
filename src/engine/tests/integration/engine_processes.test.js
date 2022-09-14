@@ -35,7 +35,6 @@ test("Workflow should not work with missing requirements", async () => {
 });
 
 test("Engine create process", async () => {
-  //const engine = new Engine(...settings.persist_options);
   const workflow = await engine.saveWorkflow("sample", "sample", blueprints_.minimal);
   const process = await engine.createProcess(workflow.id, actors_.simpleton);
   expect(process.id).toBeDefined();
@@ -43,7 +42,6 @@ test("Engine create process", async () => {
 });
 
 test("Engine create process without permission", async () => {
-  //const engine = new Engine(...settings.persist_options);
   const workflow = await engine.saveWorkflow("sample", "sample", blueprints_.admin_identity_user_task);
   const process = await engine.createProcess(workflow.id, actors_.simpleton);
   expect(process.id).toBeUndefined();
@@ -51,7 +49,6 @@ test("Engine create process without permission", async () => {
 });
 
 test("Engine create process by workflow name", async () => {
-  //const engine = new Engine(...settings.persist_options);
   await engine.saveWorkflow("sample", "sample", blueprints_.minimal);
   const process = await engine.createProcessByWorkflowName("sample", actors_.simpleton);
   expect(process.id).toBeDefined();
@@ -59,7 +56,6 @@ test("Engine create process by workflow name", async () => {
 });
 
 test("Engine create process without permission by workflow name", async () => {
-  //const engine = new Engine(...settings.persist_options);
   await engine.saveWorkflow("sample", "sample", blueprints_.admin_identity_user_task);
   const process = await engine.createProcessByWorkflowName("sample", actors_.simpleton);
   expect(process.id).toBeUndefined();
@@ -67,7 +63,6 @@ test("Engine create process without permission by workflow name", async () => {
 });
 
 test("Engine create process with data", async () => {
-  //const engine = new Engine(...settings.persist_options);
   await engine.saveWorkflow("sample", "sample", blueprints_.start_with_data);
   const create_data = { number: 9999, name: "createName" };
   let process = await engine.createProcessByWorkflowName("sample", actors_.simpleton, create_data);
@@ -79,7 +74,6 @@ test("Engine create process with data", async () => {
 });
 
 test("Engine create process with missing data but run fails", async () => {
-  //const engine = new Engine(...settings.persist_options);
   await engine.saveWorkflow("sample", "sample", blueprints_.start_with_data);
   const create_data = {};
   let process = await engine.createProcessByWorkflowName("sample", actors_.simpleton, create_data);
@@ -94,8 +88,6 @@ test("Engine create process with missing data but run fails", async () => {
 });
 
 describe("Run existing process", () => {
-  //const engine = new Engine(...settings.persist_options);
-
   async function createProcess(blueprint, actor_data) {
     const workflow = await engine.saveWorkflow("sample", "sample", blueprint);
     return await engine.createProcess(workflow.id, actor_data);
@@ -260,7 +252,6 @@ describe("Run existing process", () => {
 });
 
 test("process state notifier", async () => {
-  //const engine = new Engine(...settings.persist_options);
   try {
     const workflow = await engine.saveWorkflow("sample", "sample", blueprints_.minimal);
 
@@ -281,7 +272,6 @@ test("process state notifier", async () => {
 });
 
 test("activity manager notifier on run process", async () => {
-  //const engine = new Engine(...settings.persist_options);
   try {
     const workflow = await engine.saveWorkflow("sample", "sample", blueprints_.identity_user_task);
 
@@ -301,7 +291,6 @@ test("activity manager notifier on run process", async () => {
 });
 
 test("activity manager notifier on activity commit", async () => {
-  //const engine = new Engine(...settings.persist_options);
   try {
     const workflow = await engine.saveWorkflow("sample", "sample", blueprints_.identity_user_task);
 
@@ -332,7 +321,6 @@ test("run process using environment", async () => {
   const original_env_payload = process.env.PAYLOAD;
   const original_env_limit = process.env.LIMIT;
 
-  //const engine = new Engine(...settings.persist_options);
   try {
     process.env.ENVIRONMENT = "test";
     process.env.API_HOST = "https://koa-app:3000/test_api";
@@ -388,7 +376,6 @@ test("run process using environment", async () => {
 });
 
 test("run process that creaters another process", async () => {
-  //const engine = new Engine(...settings.persist_options);
   try {
     const minimal_workflow = await engine.saveWorkflow("minimal", "minimal", blueprints_.minimal);
     const create_process_workflow = await engine.saveWorkflow(
@@ -420,8 +407,6 @@ test("run process that creaters another process", async () => {
 });
 
 test("child process has restricted input schema", async () => {
-  const engine = new Engine(...settings.persist_options);
-
   const childWorkflow = await engine.saveWorkflow(
     "restricted_schema",
     "child process with restricted input schema",
@@ -447,31 +432,7 @@ test("child process has restricted input schema", async () => {
   expect(childState.state.status).not.toBe(ProcessStatus.ERROR);
 });
 
-// test("run process that abort another process", async () => {
-//   const engine = new Engine(...settings.persist_options);
-//
-//   const user_task_workflow = await engine.saveWorkflow("user_task", "user_task", blueprints_.identity_user_task);
-//   const abort_process_workflow = await engine.saveWorkflow("abort_process_minimal", "abort_process_minimal", blueprints_.abort_process_minimal);
-//
-//   let user_task_process = await engine.createProcess(user_task_workflow.id, actors_.simpleton);
-//   user_task_process = await engine.runProcess(user_task_process.id, actors_.simpleton);
-//   expect(user_task_process.state.status).toEqual(ProcessStatus.WAITING);
-//
-//   let abort_process = await engine.createProcess(abort_process_workflow.id, actors_.simpleton, {
-//     process_list: [
-//       user_task_process.id,
-//       uuid(),
-//     ]
-//   });
-//   abort_process = await engine.runProcess(abort_process.id, actors_.simpleton);
-//   expect(abort_process.state.status).toEqual(ProcessStatus.FINISHED);
-//
-//   user_task_process = await engine.fetchProcess(user_task_process.id);
-//   expect(user_task_process.state.status).toEqual(ProcessStatus.INTERRUPTED);
-// });
-
 describe("User task timeout", () => {
-  //const engine = new Engine(...settings.persist_options);
   let actualTimeout;
   function wait(ms = 2000) {
     return new Promise((resolve) => {
@@ -729,7 +690,6 @@ describe("User task timeout", () => {
 });
 
 test("Commit activity only on type 'commit' activity manager", async () => {
-  const engine = new Engine(...settings.persist_options);
   await engine.saveWorkflow("sample", "sample", blueprints_.notify_and_user_task);
 
   let process = await engine.createProcessByWorkflowName("sample", actors_.simpleton);
@@ -757,7 +717,6 @@ test("Commit activity only on type 'commit' activity manager", async () => {
 });
 
 test("Push activity only on type 'commit' activity manager", async () => {
-  //const engine = new Engine(...settings.persist_options);
   await engine.saveWorkflow("sample", "sample", blueprints_.notify_and_2_user_task);
 
   let process = await engine.createProcessByWorkflowName("sample", actors_.simpleton);
@@ -809,8 +768,6 @@ test("Push activity should return error to an non-existant activity manager", as
 
 test("Beat won't break despite orphan timer", async () => {
   const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
-
-  const engine = new Engine(...settings.persist_options);
   const workflow = await engine.saveWorkflow(
     "user_timeout_one_hour",
     "user_timeout_one_hour",

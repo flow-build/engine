@@ -3,6 +3,7 @@ const { minimal } = require("../examples/startProcess");
 const { StartProcessSystemTaskNode } = require("../startProcess");
 const process_manager = require("../../process_manager");
 const { ProcessStatus } = require("../../process_state");
+const { Workflow } = require("../../workflow");
 
 describe("static Schema", () => {
   test("Should merge Node and UserTaskNode schema", async () => {
@@ -76,6 +77,9 @@ describe("StartProcessSystemTaskNode", () => {
     let original_createProcessByWorkflowName = process_manager.createProcessByWorkflowName;
     let original_runProcess = process_manager.runProcess;
     try {
+      const mock = jest.fn().mockResolvedValue({ workflow: { id: "1234" } });
+      Workflow.fetchWorkflowByName = mock;
+
       const process_id = "9090";
       const mock_createProcessByWorkflowName = jest.fn().mockResolvedValue({
         id: process_id,
@@ -116,23 +120,37 @@ describe("StartProcessSystemTaskNode", () => {
       process_manager.runProcess = original_runProcess;
     }
   });
+
+  test("breaks if the workflow name does not exist", async () => {
+    const mock = jest.fn();
+    Workflow.fetchWorkflowByName = mock;
+
+    const spec = _.cloneDeep(minimal);
+    const node = new StartProcessSystemTaskNode(spec);
+    const result = await node.run({});
+    expect(result).toBeDefined();
+    expect(result.status).toEqual(ProcessStatus.ERROR);
+    expect(result.result.error).toEqual("workflow not found");
+  });
 });
 
 describe("preProcess workflow data", () => {
   let original_createProcessByWorkflowName = process_manager.createProcessByWorkflowName;
   let original_runProcess = process_manager.runProcess;
-  let mock_createProcessByWorkflowName = jest.fn().mockResolvedValue({
-    id: "1239",
-  });
+  let original_FetchWorkflowByName = Workflow.fetchWorkflowByName;
+  let mock_createProcessByWorkflowName = jest.fn().mockResolvedValue({ id: "1239" });
   let mock_runProcess = jest.fn();
+  let mock_FetchWorkflowByName = jest.fn().mockResolvedValue({ workflow: { id: "1234" } });
   let spec = minimal;
 
   beforeEach(() => {
     mock_createProcessByWorkflowName.mockClear();
     mock_runProcess.mockClear();
+    mock_FetchWorkflowByName.mockClear();
 
     process_manager.createProcessByWorkflowName = mock_createProcessByWorkflowName;
     process_manager.runProcess = mock_runProcess;
+    Workflow.fetchWorkflowByName = mock_FetchWorkflowByName;
 
     spec = _.cloneDeep(minimal);
   });
@@ -140,6 +158,7 @@ describe("preProcess workflow data", () => {
   afterEach(() => {
     process_manager.createProcessByWorkflowName = original_createProcessByWorkflowName;
     process_manager.runProcess = original_runProcess;
+    Workflow.fetchWorkflowByName = original_FetchWorkflowByName;
   });
 
   describe("workflow_name", () => {
