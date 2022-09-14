@@ -1,3 +1,16 @@
+### [2.16.1](https://github.com/flow-build/engine/compare/v2.16.0...v2.16.1) (2022-09-14)
+
+
+### Bug Fixes
+
+* **activityManager:** fix ajvValidator ([64f47a9](https://github.com/flow-build/engine/commit/64f47a9568f69a7c0b501aa1cb98b6efee88edaf))
+* **nodes:** validate workflow name before create ([077f6d3](https://github.com/flow-build/engine/commit/077f6d315343624e6f2e888801f9ca0c6479f65d))
+
+
+### Performance Improvements
+
+* disable duplicated engines ([f6aa232](https://github.com/flow-build/engine/commit/f6aa232b0629db1b060385b48bb9adfdd2a2076f))
+
 ## [2.16.0](https://github.com/flow-build/engine/compare/v2.15.0...v2.16.0) (2022-09-05)
 
 
