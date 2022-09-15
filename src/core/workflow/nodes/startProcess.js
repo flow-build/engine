@@ -103,7 +103,7 @@ class StartProcessSystemTaskNode extends SystemTaskNode {
   async _run(execution_data) {
     const { Workflow } = require("../workflow");
     const workflow = await Workflow.fetchWorkflowByName(execution_data.workflow_name);
-    if (!workflow) {
+    if (!workflow?._id) {
       emitter.emit("NODE.RESULT_ERROR", `WORKFLOW NAME ${execution_data.workflow_name} NOT FOUND`, {});
       return [{ process_id: "", error: "workflow not found" }, ProcessStatus.ERROR];
     }
