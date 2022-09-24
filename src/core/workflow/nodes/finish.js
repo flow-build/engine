@@ -11,6 +11,13 @@ class FinishNode extends Node {
       type: "object",
       properties: {
         next: { type: "null" },
+        triggers: {
+          type: "array",
+          uniqueItems: true,
+          items: {
+            enum: [null, "message", "error", "escalation", "cancel", "compensation", "signal", "terminate"],
+          },
+        },
       },
     });
     schema.required = ["id", "name", "next", "type", "lane_id"];
@@ -39,16 +46,22 @@ class FinishNode extends Node {
   }
 
   _preProcessing({ bag, input, actor_data, environment, parameters = {} }) {
+    let result = {
+      triggers: this._spec.triggers,
+    };
     if (this._spec.parameters && this._spec.parameters.input) {
-      return prepare(this._spec.parameters.input, {
-        bag,
-        result: input,
-        actor_data,
-        environment,
-        parameters,
-      });
+      result = _.merge(
+        result,
+        prepare(this._spec.parameters.input, {
+          bag,
+          result: input,
+          actor_data,
+          environment,
+          parameters,
+        })
+      );
     }
-    return {};
+    return result;
   }
 }
 
