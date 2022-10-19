@@ -18,6 +18,7 @@ let categories = {
   startprocess: nodes.StartProcessSystemTaskNode,
   abortprocess: nodes.AbortProcessSystemTaskNode,
   formrequest: nodes.FormRequestNode,
+  signalfinish: nodes.SignalFinishNode,
 };
 
 function getNodeTypes() {
@@ -49,6 +50,13 @@ function getNode(nodeSpec) {
 
     if (!nodeClass) {
       throw new Error(`Invalid service task, unknown category ${nodeCategory}`);
+    }
+  }
+
+  if (nodeClass === nodes.FinishNode) {
+    const nodeCategory = nodeSpec.category?.toLowerCase();
+    if (nodeCategory) {
+      nodeClass = categories[nodeCategory];
     }
   }
 

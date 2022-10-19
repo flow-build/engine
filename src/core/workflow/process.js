@@ -7,6 +7,7 @@ const { ProcessStatus } = require("./process_state");
 const { Blueprint } = require("../workflow/blueprint");
 const { Lane } = require("../workflow/lanes");
 const { Timer } = require("./timer");
+const { Signal } = require("./signal");
 const { getProcessStateNotifier, getActivityManagerNotifier } = require("../notifier_manager");
 const { getAllowedStartNodes } = require("../utils/blueprint");
 const { ActivityManager } = require("./activity_manager");
@@ -708,6 +709,16 @@ class Process extends PersistedEntity {
         await ActivityManager.interruptActivityManagerForProcess(this._id);
         break;
       case ProcessStatus.FINISHED:
+        const node = this._blueprint.fetchNode(this._state.node_id)
+        if(node._spec.category === 'signalfinish') {
+          const signal_params = {
+            next_workflow_name: this.state.result.parameters.next_workflow_name,
+            initial_bag: this.state.result.parameters,
+            actor_data: actor_data
+          }
+          const signal = new Signal(signal_params);
+          await signal.save();
+        }
       case ProcessStatus.FORBIDDEN:
         await ActivityManager.finishActivityManagerForProcess(this._id);
         break;

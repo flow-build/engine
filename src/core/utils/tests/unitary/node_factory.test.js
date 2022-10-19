@@ -27,7 +27,7 @@ describe("node factory", () => {
       const response = node_factory.getNodeCategories();
       expect(response).toBeDefined();
       const types = Object.keys(response);
-      expect(types.length).toBe(6);
+      expect(types.length).toBe(7);
       expect(response.http).toBeDefined();
       expect(response.settobag).toBeDefined();
       expect(response.timer).toBeDefined();
@@ -245,7 +245,7 @@ describe("node factory", () => {
       const response = node_factory.getNodeCategories();
       expect(response).toBeDefined();
       const types = Object.keys(response);
-      expect(types.length).toBe(8);
+      expect(types.length).toBe(9);
       expect(response.customcategory).toBeDefined();
       expect(response.custom).toBeDefined();
     });
