@@ -1,11 +1,10 @@
 const _ = require("lodash");
 const Ajv = require("ajv");
 const addFormats = require("ajv-formats");
-const { prepare } = require("../../utils/input");
 const { ProcessStatus } = require("../process_state");
 const { Node } = require("./node");
 
-class SignalFinishNode extends Node {
+class TriggerFinishNode extends Node {
   static get schema() {
     let schema = _.merge(super.schema, {
       type: "object",
@@ -13,9 +12,10 @@ class SignalFinishNode extends Node {
         next: { type: "null" },
         parameters: {
             type: "object",
-            required: ["next_workflow_name"],
+            required: ["signal"],
             properties: {
-                next_workflow_name: { type: "string" },
+                signal: { type: "string" },
+                input: { type: "object" },
             },
           },
       },
@@ -27,13 +27,13 @@ class SignalFinishNode extends Node {
   static validate(spec) {
     const ajv = new Ajv({ allErrors: true });
     addFormats(ajv);
-    const validate = ajv.compile(SignalFinishNode.schema);
+    const validate = ajv.compile(TriggerFinishNode.schema);
     const validation = validate(spec);
     return [validation, JSON.stringify(validate.errors)];
   }
 
   validate() {
-    return SignalFinishNode.validate(this._spec);
+    return TriggerFinishNode.validate(this._spec);
   }
 
   // eslint-disable-next-line no-unused-vars
@@ -47,5 +47,5 @@ class SignalFinishNode extends Node {
 }
 
 module.exports = {
-    SignalFinishNode,
+  TriggerFinishNode,
 };

@@ -12,7 +12,7 @@ const { SystemTaskNode } = require("./systemTask");
 const { TimerSystemTaskNode } = require("./timer");
 const { UserTaskNode } = require("./userTask");
 const { FormRequestNode } = require("./formRequest");
-const { SignalFinishNode } = require("./signalFinish")
+const { TriggerFinishNode } = require("./triggerFinish")
 
 module.exports = {
   AbortProcessSystemTaskNode: AbortProcessSystemTaskNode,
@@ -29,5 +29,5 @@ module.exports = {
   StartProcessSystemTaskNode: StartProcessSystemTaskNode,
   SubProcessNode: SubProcessNode,
   UserTaskNode: UserTaskNode,
-  SignalFinishNode: SignalFinishNode
+  TriggerFinishNode: TriggerFinishNode
 };
