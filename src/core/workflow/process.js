@@ -712,7 +712,7 @@ class Process extends PersistedEntity {
         const node = this._blueprint.fetchNode(this._state.node_id)
         if(node._spec.category === 'signal') {
           const signal_params = {
-            definition: this.state.result.parameters.definition,
+            signal: this.state.result.parameters.signal,
             input: this.state.result.parameters.input
           }
           const signal = new Trigger(signal_params);

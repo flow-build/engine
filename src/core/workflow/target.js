@@ -20,7 +20,8 @@ class Target extends PersistedEntity {
   static deserialize(serialized) {
     if (serialized) {
       const target = new Target({
-        signal: serialized.signal
+        signal: serialized.signal,
+        workflow_name: serialized.workflow_name
       });
 
       return target;
@@ -31,6 +32,7 @@ class Target extends PersistedEntity {
   constructor(params = {}) {
     super();
     this._signal = params.signal;
+    this._workflow_name = params.workflow_name;
   }
 
   get signal() {
