@@ -5,7 +5,7 @@ const { ENGINE_ID } = require("../core/workflow/process_state");
 const { Packages } = require("../core/workflow/packages");
 const { PersistorProvider } = require("../core/persist/provider");
 const { Timer } = require("../core/workflow/timer");
-const { Signal } = require("../core/workflow/signal");
+const { Trigger } = require("../core/workflow/trigger");
 const { ActivityManager } = require("../core/workflow/activity_manager");
 const { ActivityStatus } = require("../core/workflow/activity");
 const { setProcessStateNotifier, setActivityManagerNotifier } = require("../core/notifier_manager");
@@ -159,16 +159,16 @@ class Engine {
     });
     await Promise.all(continue_promises);
 
-    const signal_promises = await Process.getPersist()._db.transaction(async (trx) => {
+    await Process.getPersist()._db.transaction(async (trx) => {
       try {
         emitter.emit("ENGINE.SIGNAL_FETCHING", `FETCHING SIGNAL PROCESSES ON HEARTBEAT BATCH [${5}]`);
-        const signals = await trx("signal")
+        const signals = await trx("trigger")
           .select("*")
           .where("active", true)
           .limit(5);
-        return await Promise.all(signals.map((l_signal) => {
-          const signal = Signal.deserialize(l_signal);
-          return signal.run(trx)
+        return await Promise.all(signals.map((l_trigger) => {
+          const trigger = Trigger.deserialize(l_trigger);
+          return trigger.run(trx)
         }))
       } catch (e) {
         emitter.emit("ENGINE.SIGNAL.ERROR", "  ERROR FETCHING SIGNALS ON HEARTBEAT", { error: e });
