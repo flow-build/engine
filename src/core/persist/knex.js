@@ -2,7 +2,7 @@ const { Packages } = require("../workflow/packages");
 const { ActivityManager } = require("../workflow/activity_manager");
 const { Activity } = require("../workflow/activity");
 const { Timer } = require("../workflow/timer");
-const { Signal } = require("../workflow/signal");
+const { Trigger } = require("../workflow/trigger");
 
 class KnexPersist {
   constructor(db, class_, table) {
@@ -188,9 +188,15 @@ class TimerKnexPersist extends KnexPersist {
   }
 }
 
-class SignalKnexPersist extends KnexPersist {
+class TriggerKnexPersist extends KnexPersist {
   constructor(db) {
-    super(db, Signal, "signal");
+    super(db, Trigger, "trigger");
+  }
+}
+
+class TargetKnexPersist extends KnexPersist {
+  constructor(db) {
+    super(db, Trigger, "trigger");
   }
 }
 
@@ -200,5 +206,6 @@ module.exports = {
   ActivityManagerKnexPersist: ActivityManagerKnexPersist,
   ActivityKnexPersist: ActivityKnexPersist,
   TimerKnexPersist: TimerKnexPersist,
-  SignalKnexPersist: SignalKnexPersist
+  TriggerKnexPersist: TriggerKnexPersist,
+  TargetKnexPersist: TargetKnexPersist
 };
