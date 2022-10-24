@@ -58,6 +58,13 @@ class WorkflowKnexPersist extends KnexPersist {
     return { ...workflow, ...{ latest } };
   }
 
+  async getLatestVersionById(id) {
+    const { name: workflow_name } = await this.get(id)
+    
+    const workflow = await this._db.select("*").from(this._table).where({ name: workflow_name }).orderBy("version", "desc").first();
+    return { ...workflow, ...{ latest: true } };
+  }
+
   async getByHash(hash) {
     return this._db.select("*").from(this._table).where({ blueprint_hash: hash });
   }
