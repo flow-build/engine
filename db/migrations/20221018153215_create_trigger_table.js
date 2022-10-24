@@ -6,8 +6,9 @@ exports.up = function (knex, Promise) {
       table.boolean("active").notNullable().defaultTo(true);
       table.boolean("resolved").notNullable().defaultTo(false);
       table.varchar("signal").notNullable();
+      table.uuid("process_id").notNullable();
       table.jsonb("input");
-      table.timestamp("fired_at", (options = { useTz: false }));
+      table.jsonb("actor_data");
     });
   };
   

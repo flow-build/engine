@@ -4,7 +4,8 @@ exports.up = function (knex, Promise) {
       table.uuid("id").primary();
       table.timestamp("created_at").notNullable();
       table.varchar("signal").notNullable();
-      table.varchar("workflow_name").notNullable();
+      table.varchar("resource_type").notNullable().defaultTo('workflow');
+      table.uuid("resource_id").notNullable();
       table.boolean("active").notNullable().defaultTo(true);
     });
   };
