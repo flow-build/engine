@@ -16,7 +16,8 @@ class Trigger extends PersistedEntity {
       active: trigger._active,
       signal: trigger._signal,
       input: trigger._input,
-      fired_at: trigger._fired_at,
+      actor_data: trigger._actor_data,
+      process_id: trigger._process_id,
     };
   }
 
@@ -24,13 +25,16 @@ class Trigger extends PersistedEntity {
     if (serialized) {
       const trigger = new Trigger({
         signal: serialized.signal,
-        input: serialized.input
+        input: serialized.input,
+        actor_data: serialized.actor_data,
+        process_id: serialized.process_id
       });
 
       trigger._id = serialized.id;
       trigger._created_at = serialized.created_at;
       trigger._active = serialized.active;
-      trigger._fired_at = serialized.fired_at;
+      trigger._actor_data = serialized.actor_data;
+      trigger._process_id = serialized.process_id;
 
       return trigger;
     }
@@ -43,15 +47,12 @@ class Trigger extends PersistedEntity {
     this._active = true;
     this._input = params.input;
     this._signal = params.signal;
-    this._fired_at = null;
+    this._actor_data = params.actor_data;
+    this._process_id = params.process_id;
   }
 
   get active() {
     return this._active;
-  }
-
-  get fired_at() {
-    return this._fired_at;
   }
 
   get signal() {
@@ -62,34 +63,44 @@ class Trigger extends PersistedEntity {
     return this._input;
   }
 
+  get actor_data() {
+    return this._actor_data
+  }
+
+  get process_id() {
+    return this._process_id
+  }
+
   get expires_at() {
     return this._expires_at;
   }
 
-  async run(trx = false) {    
+  async run(trx = false) {
     this._active = false
     await this.save(trx);
-    
+
     try {
-      emitter.emit("ENGINE.TARGET_FETCHING", `FETCHING TARGET PROCESSES AS RESULT OF TRIGGER ${this.signal}`);
+      emitter.emit("ENGINE.TARGET_FETCHING", `FETCHING TARGET PROCESSES AS RESULT OF TRIGGER ${this.signal}`);  
       const targets = await trx("target")
         .select("*")
         .where("active", true)
         .where("signal", this.signal);
-      return await Promise.all(targets.map((l_target) => {
-        const target = Target.deserialize(l_target);
-        return target.run({
-          actor_data: this.input.actor_data,
-          initial_bag: this.input.initial_bag
-        })
+      return await Promise.all(targets.map(async (l_target) => {
+        const target = await Target.validate_deserialize(l_target);
+        if(target) {
+          return target.run({
+            actor_data: this.actor_data,
+            input: this.input,
+            process_id: this.process_id
+          })
+        }
       }))
     } catch (e) {
       emitter.emit("ENGINE.TRIGGER.ERROR", "  ERROR FETCHING TARGET ON HEARTBEAT", { error: e });
       throw new Error(e);
     }
 
-    // const process = await createProcessByWorkflowName(this.input.next_workflow_name, this.input.actor_data, this.input.initial_bag)
-    // runProcess(process.id, this.input.actor_data, {})
+    
   }
 }
 
