@@ -713,7 +713,9 @@ class Process extends PersistedEntity {
         if(node._spec.category === 'signal') {
           const signal_params = {
             signal: this.state.result.parameters.signal,
-            input: this.state.result.parameters.input
+            input: this.state.result.parameters.input,
+            actor_data: this.state.actor_data,
+            process_id: this.id
           }
           const signal = new Trigger(signal_params);
           await signal.save();
