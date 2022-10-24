@@ -23,6 +23,7 @@ let categories = {
 
 let signalCategoryTypes = {
   finish: nodes.TriggerFinishNode,
+  start: nodes.TargetStartNode,
 }
 
 function getNodeTypes() {
