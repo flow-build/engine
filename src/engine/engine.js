@@ -19,6 +19,7 @@ const { ProcessStatus } = require("./../core/workflow/process_state");
 const { validateTimeInterval } = require("../core/utils/ajvValidator");
 const { validate: uuidValidate } = require("uuid");
 const { isEmpty } = require("lodash");
+const { Target } = require("../core/workflow/target");
 
 function getActivityManagerFromData(activity_manager_data) {
   const activity_manager = ActivityManager.deserialize(activity_manager_data);
@@ -165,7 +166,9 @@ class Engine {
         const signals = await trx("trigger")
           .select("*")
           .where("active", true)
-          .limit(5);
+          .limit(5)
+          .forUpdate()
+          .skipLocked();
         return await Promise.all(signals.map((l_trigger) => {
           const trigger = Trigger.deserialize(l_trigger);
           return trigger.run(trx)
@@ -528,7 +531,14 @@ class Engine {
 
     Blueprint.assert_is_valid(blueprint_spec);
 
-    return await new Workflow(name, description, blueprint_spec, workflow_id).save();
+    const workflow = await new Workflow(name, description, blueprint_spec, workflow_id).save();
+
+    const target = Target.target_workflow_creation(workflow);
+    if(target) {
+      target.save()
+    }
+
+    return workflow
   }
 
   async fetchWorkflow(workflow_id) {
