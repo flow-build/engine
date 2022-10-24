@@ -196,7 +196,45 @@ class TriggerKnexPersist extends KnexPersist {
 
 class TargetKnexPersist extends KnexPersist {
   constructor(db) {
-    super(db, Trigger, "trigger");
+    super(db, Trigger, "target");
+  }
+
+  async getTargetedWorkflows(obj) {
+    return await this._db
+      .select(
+        "wf.id",
+        "wf.version"
+      )
+      .from("workflow AS wf")
+      .where("wf.name", "=", 
+        this._db
+            .select(
+              "wf.name"
+            )
+            .from("workflow AS wf")
+            .where("wf.id", obj.resource_id)
+      )
+      .orderBy("version", "desc");
+  }
+
+  async getByWorkflowAndSignal(signal) {
+    return await this._db
+      .select("*")
+      .from("target AS tg")
+      .where("tg.signal", "=", signal)
+      .first();
+  }
+
+  async save(obj, ...args) {
+    const [latestWorkflow] = await this.getTargetedWorkflows(obj);
+    const registered_target = await this.getByWorkflowAndSignal(obj.signal)
+    const is_update = registered_target && latestWorkflow.version > 1;
+    if (is_update) {
+      await this._update(registered_target.id, obj, ...args);
+      return "update";
+    }
+    await this._create(obj, ...args);
+    return "create";
   }
 }
 
