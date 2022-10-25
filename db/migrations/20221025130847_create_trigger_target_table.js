@@ -1,9 +1,8 @@
 /* eslint-disable no-unused-vars */
-const { v1: uuid } = require("uuid");
 
 exports.up = function (knex, Promise) {
     return knex.schema.createTable("trigger_target", (table) => {
-      table.uuid("id").primary().defaultTo(uuid());
+      table.uuid("id").primary();
       table.uuid("trigger_id").notNullable();
       table.foreign("trigger_id").references("trigger.id");
       table.uuid("target_id").notNullable();

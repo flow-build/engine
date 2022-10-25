@@ -4,6 +4,7 @@ const { Activity } = require("../workflow/activity");
 const { Timer } = require("../workflow/timer");
 const { Trigger } = require("../workflow/trigger");
 const { Target } = require("../workflow/target");
+const { v1: uuid } = require("uuid");
 
 class KnexPersist {
   constructor(db, class_, table) {
@@ -232,6 +233,7 @@ class TargetKnexPersist extends KnexPersist {
     const registered_target = await this.getByWorkflowAndSignal(obj.signal)
     const is_update = registered_target && latestWorkflow.version > 1;
     if (is_update) {
+      obj.id = registered_target.id
       await this._update(registered_target.id, obj, ...args);
       return "update";
     }
@@ -241,9 +243,15 @@ class TargetKnexPersist extends KnexPersist {
 
   async saveSignalRelation(trx, obj) {
     if (trx) {
-      return await this._db(this._trigger_target_table).transacting(trx).insert({...obj});
+      return await this._db(this._trigger_target_table).transacting(trx).insert({
+        ...obj,
+        id: uuid()
+      });
     } else {
-      return await this._db(this._trigger_target_table).insert({...obj});
+      return await this._db(this._trigger_target_table).insert({
+        ...obj,
+        id: uuid()
+      });
     }
   }
 }
