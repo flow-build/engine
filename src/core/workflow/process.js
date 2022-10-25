@@ -712,8 +712,8 @@ class Process extends PersistedEntity {
         const node = this._blueprint.fetchNode(this._state.node_id)
         if(node._spec.category === 'signal') {
           const signal_params = {
-            signal: this.state.result.parameters.signal,
-            input: this.state.result.parameters.input,
+            signal: this.state.result.signal,
+            input: this.state.result.trigger_payload,
             actor_data: this.state.actor_data,
             process_id: this.id
           }

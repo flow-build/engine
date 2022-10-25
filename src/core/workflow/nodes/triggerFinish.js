@@ -1,10 +1,8 @@
 const _ = require("lodash");
-const Ajv = require("ajv");
-const addFormats = require("ajv-formats");
-const { ProcessStatus } = require("../process_state");
-const { Node } = require("./node");
+const { prepare } = require("../../utils/input");
+const { FinishNode } = require("./finish");
 
-class TriggerFinishNode extends Node {
+class TriggerFinishNode extends FinishNode {
   static get schema() {
     let schema = _.merge(super.schema, {
       type: "object",
@@ -24,25 +22,21 @@ class TriggerFinishNode extends Node {
     return schema;
   }
 
-  static validate(spec) {
-    const ajv = new Ajv({ allErrors: true });
-    addFormats(ajv);
-    const validate = ajv.compile(TriggerFinishNode.schema);
-    const validation = validate(spec);
-    return [validation, JSON.stringify(validate.errors)];
-  }
-
-  validate() {
-    return TriggerFinishNode.validate(this._spec);
-  }
-
-  // eslint-disable-next-line no-unused-vars
-  _run(execution_data, lisp) {
-    return [execution_data, ProcessStatus.FINISHED];
-  }
-
-  next() {
-    return null;
+  _preProcessing({ bag, input, actor_data, environment, parameters = {} }) {
+    if (this._spec.parameters && this._spec.parameters.input) {
+      const preparedInput = prepare(this._spec.parameters.input, {
+        bag,
+        result: input,
+        actor_data,
+        environment,
+        parameters,
+      });
+      return {
+        trigger_payload: { ...preparedInput },
+        signal: parameters.signal
+      }
+    }
+    return {};
   }
 }
 
