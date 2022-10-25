@@ -27,6 +27,10 @@ class Target extends PersistedEntity {
         resource_id: serialized.resource_id
       });
 
+      target._id = serialized.id;
+      target._created_at = serialized.created_at;
+      target._active = serialized.active;
+
       return target;
     }
     return undefined;
@@ -44,7 +48,7 @@ class Target extends PersistedEntity {
   static target_workflow_creation(workflow) {
     const [start_node] = workflow.blueprint_spec.nodes
     if(start_node.category === 'signal') {
-      return Target.deserialize({
+      return new Target({
         signal: start_node.parameters.signal,
         resource_type: 'workflow',
         resource_id: workflow.id
@@ -76,14 +80,33 @@ class Target extends PersistedEntity {
     return this._active;
   }
 
-  async run(params = {}) {
+  async run(trx = false, params = {}) {
     switch(this.resource_type) {
       case 'workflow':
-        const process = await createProcessByWorkflowId(this.resource_id, params.actor_data, {...params.input, trigger_process_id: params.process_id});
+        let process;
+        try {
+          process = await createProcessByWorkflowId(this.resource_id, params.actor_data, {...params.input, trigger_process_id: params.process_id});
+        } catch (e) {
+          await this.getPersist().saveSignalRelation(trx, {
+            target_id: this.id, 
+            trigger_id: params.trigger_id,
+            resolved: false
+          })
+          throw new Error('Error creating targeted process')
+        }
+        
+        await this.getPersist().saveSignalRelation(trx, {
+          target_id: this.id, 
+          trigger_id: params.trigger_id, 
+          target_process_id: process.id,
+          resolved: true
+        })
         return process.run(params.actor_data, {});
+
       // 'process' case has to be reviewed
       case 'process':
         return continueProcess(this.resource_id, {...params.input, trigger_process_id: params.process_id}, undefined, params.actor_data);
+      
       default:
         throw new Error('Invalid resource for Target')
     }

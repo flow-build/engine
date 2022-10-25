@@ -3,6 +3,7 @@ const { ActivityManager } = require("../workflow/activity_manager");
 const { Activity } = require("../workflow/activity");
 const { Timer } = require("../workflow/timer");
 const { Trigger } = require("../workflow/trigger");
+const { Target } = require("../workflow/target");
 
 class KnexPersist {
   constructor(db, class_, table) {
@@ -196,7 +197,8 @@ class TriggerKnexPersist extends KnexPersist {
 
 class TargetKnexPersist extends KnexPersist {
   constructor(db) {
-    super(db, Trigger, "target");
+    super(db, Target, "target");
+    this._trigger_target_table = "trigger_target";
   }
 
   async getTargetedWorkflows(obj) {
@@ -235,6 +237,14 @@ class TargetKnexPersist extends KnexPersist {
     }
     await this._create(obj, ...args);
     return "create";
+  }
+
+  async saveSignalRelation(trx, obj) {
+    if (trx) {
+      return await this._db(this._trigger_target_table).transacting(trx).insert({...obj});
+    } else {
+      return await this._db(this._trigger_target_table).insert({...obj});
+    }
   }
 }
 

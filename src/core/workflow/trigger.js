@@ -88,10 +88,11 @@ class Trigger extends PersistedEntity {
       return await Promise.all(targets.map(async (l_target) => {
         const target = await Target.validate_deserialize(l_target);
         if(target) {
-          return target.run({
+          return target.run(trx, {
             actor_data: this.actor_data,
             input: this.input,
-            process_id: this.process_id
+            process_id: this.process_id,
+            trigger_id: this.id
           })
         }
       }))
