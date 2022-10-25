@@ -4,7 +4,6 @@ exports.up = function (knex, Promise) {
       table.uuid("id").primary();
       table.timestamp("created_at").notNullable();
       table.boolean("active").notNullable().defaultTo(true);
-      table.boolean("resolved").notNullable().defaultTo(false);
       table.varchar("signal").notNullable();
       table.uuid("process_id").notNullable();
       table.jsonb("input");
