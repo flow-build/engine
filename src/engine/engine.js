@@ -175,7 +175,6 @@ class Engine {
         }))
       } catch (e) {
         emitter.emit("ENGINE.SIGNAL.ERROR", "  ERROR FETCHING SIGNALS ON HEARTBEAT", { error: e });
-        throw new Error(e);
       }
     });
   }

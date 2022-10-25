@@ -95,14 +95,23 @@ class Target extends PersistedEntity {
           throw new Error('Error creating targeted process')
         }
         
+        if(process.id) {
+          await this.getPersist().saveSignalRelation(trx, {
+            target_id: this.id, 
+            trigger_id: params.trigger_id, 
+            target_process_id: process.id,
+            resolved: true
+          })
+          return process.run(params.actor_data, {});
+        }
+        
         await this.getPersist().saveSignalRelation(trx, {
           target_id: this.id, 
-          trigger_id: params.trigger_id, 
-          target_process_id: process.id,
-          resolved: true
+          trigger_id: params.trigger_id,
+          resolved: false
         })
-        return process.run(params.actor_data, {});
 
+        return process
       // 'process' case has to be reviewed
       case 'process':
         return continueProcess(this.resource_id, {...params.input, trigger_process_id: params.process_id}, undefined, params.actor_data);

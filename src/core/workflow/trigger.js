@@ -100,8 +100,6 @@ class Trigger extends PersistedEntity {
       emitter.emit("ENGINE.TRIGGER.ERROR", "  ERROR FETCHING TARGET ON HEARTBEAT", { error: e });
       throw new Error(e);
     }
-
-    
   }
 }
 
