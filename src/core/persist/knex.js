@@ -194,6 +194,10 @@ class TriggerKnexPersist extends KnexPersist {
   constructor(db) {
     super(db, Trigger, "trigger");
   }
+
+  async getByProcessId(id) {
+    return await this._db.select("*").from(this._table).where("process_id", id);
+  }
 }
 
 class TargetKnexPersist extends KnexPersist {
@@ -254,6 +258,26 @@ class TargetKnexPersist extends KnexPersist {
       });
     }
   }
+
+  async getSignalRelation(trx, target_id) {
+    if (trx) {
+      return await this._db.transacting(trx)
+        .select("*")
+        .from(this._trigger_target_table)
+        .where("target_id", target_id);
+    } else {
+      return await this._db
+        .select("*")
+        .from(this._trigger_target_table)
+        .where("target_id", target_id);
+    }
+  }
+}
+
+class TriggerTargetKnexPersist extends KnexPersist {
+  constructor(db) {
+    super(db, Target, "trigger_target");
+  }
 }
 
 module.exports = {
@@ -263,5 +287,6 @@ module.exports = {
   ActivityKnexPersist: ActivityKnexPersist,
   TimerKnexPersist: TimerKnexPersist,
   TriggerKnexPersist: TriggerKnexPersist,
-  TargetKnexPersist: TargetKnexPersist
+  TargetKnexPersist: TargetKnexPersist,
+  TriggerTargetKnexPersist: TriggerTargetKnexPersist
 };
