@@ -852,7 +852,6 @@ const _clean = async () => {
   const activity_manager_persist = persistor.getPersistInstance("ActivityManager");
   const process_state_persist = persistor.getPersistInstance("ProcessState");
   const process_persist = persistor.getPersistInstance("Process");
-  const process_state_persist = persistor.getPersistInstance("ProcessState");
   const workflow_persist = persistor.getPersistInstance("Workflow");
   const timer_persist = persistor.getPersistInstance("Timer");
 
