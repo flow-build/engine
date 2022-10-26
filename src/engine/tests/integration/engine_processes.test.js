@@ -848,9 +848,6 @@ test("Beat won't break despite orphan timer", async () => {
 
 const _clean = async () => {
   const persistor = PersistorProvider.getPersistor(...settings.persist_options);
-  const trigger_target_persist = persistor.getPersistInstance("TriggerTarget");
-  const target_persist = persistor.getPersistInstance("Target");
-  const trigger_persist = persistor.getPersistInstance("Trigger");
   const activity_persist = persistor.getPersistInstance("Activity");
   const activity_manager_persist = persistor.getPersistInstance("ActivityManager");
   const process_persist = persistor.getPersistInstance("Process");
@@ -858,9 +855,6 @@ const _clean = async () => {
   const workflow_persist = persistor.getPersistInstance("Workflow");
   const timer_persist = persistor.getPersistInstance("Timer");
 
-  await trigger_target_persist.deleteAll();
-  await target_persist.deleteAll();
-  await trigger_persist.deleteAll();
   await activity_persist.deleteAll();
   await activity_manager_persist.deleteAll();
   await process_state_persist.deleteAll();
