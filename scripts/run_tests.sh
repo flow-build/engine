@@ -1,2 +1,2 @@
 ./scripts/start_dev.sh
-npm run tests
+su -c "npm run tests" node
