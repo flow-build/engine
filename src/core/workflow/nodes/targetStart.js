@@ -9,7 +9,7 @@ class TargetStartNode extends StartNode {
         next: { type: "string" },
         parameters: {
           type: "object",
-          required: ["signal", "input_schema"],
+          required: ["input_schema", "signal"],
           properties: {
             signal: { type: "string"},
             input_schema: { type: "object" },

@@ -235,6 +235,37 @@ describe("Process test", () => {
       const process_history = await engine.fetchProcessStateHistory(process_id);
       expect(process_history).toHaveLength(3);
     });
+
+    test("create trigger", async () => {
+      process.env.engine_id = uuid();
+      const engine = new Engine(...settings.persist_options);
+      const workflow = await engine.saveWorkflow("sample", "sample", blueprints_.trigger_finish);
+      let workflow_process = await engine.createProcess(workflow.id, actors_.simpleton);
+      const process_id = workflow_process.id;
+
+      const persistor = PersistorProvider.getPersistor(...settings.persist_options);
+      const process_persist = persistor.getPersistInstance("Process");
+      await process_persist._db.transaction(async (trx) => {
+        await workflow_process.__inerLoop(workflow_process._current_state_id, { actor_data: actors_.simpleton }, trx);
+      });
+
+      const alternate_workflow_process = await engine.fetchProcess(process_id);
+      await alternate_workflow_process.continue({}, actors_.simpleton);
+
+      const transaction = process_persist._db.transaction(async (trx) => {
+        await workflow_process.__inerLoop(workflow_process._current_state_id, { actor_data: actors_.simpleton }, trx);
+      });
+      await expect(transaction).rejects.toThrowError();
+
+      const process_history = await engine.fetchProcessStateHistory(process_id);
+      expect(process_history).toHaveLength(3);
+
+      const trigger_persist = persistor.getPersistInstance("Trigger");
+      const trigger = await trigger_persist.getByProcessId(process_id);
+      expect(trigger).toBeDefined()
+      expect(trigger).toHaveLength(1)
+      expect(trigger[0].signal).toBe('test_signal')
+    });
   });
 
   describe("IsJsonString", () => {

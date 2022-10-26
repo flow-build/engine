@@ -38,6 +38,7 @@ const user_action_with_system_task = require("../examples/userTaskAndScript");
 const user_encrypt = require("../examples/userTaskWithEncrypt");
 const user_timeout = require("../examples/userTaskWithTimeout");
 const user_timeout_one_hour = require("../examples/userTaskWithTimeoutLong");
+const trigger_finish = require("../examples/triggerFinish");
 
 const blueprints_ = {
   abort_process_minimal,
@@ -81,6 +82,7 @@ const blueprints_ = {
   timer_long,
   sub_process,
   start_with_timeout,
+  trigger_finish,
 };
 
 const actors_ = {
