@@ -12,6 +12,7 @@ services:
 
   app:
     image: node:16.15.0
+    user: root
     container_name: flowbuild_app
     restart: on-failure:10 # necessary due to possibility of postgres not being ready when service runs
     env_file:
@@ -28,4 +29,4 @@ services:
       - /usr/app/node_modules
     working_dir: /usr/app
     #command: ./scripts/run_tests.sh
-    command: bash -c " npm install && npm install knex -g && npm audit fix && npm run migrations && npm run seeds && npm run tests "
+    command: bash -c "npm install && npm install knex -g && npm audit fix && npm run migrations && npm run seeds && su -c 'npm run tests' node"
