@@ -5,11 +5,13 @@ const { ProcessStatus } = require("../../../core/workflow/process_state");
 const { Process } = require("../../../core/workflow/process");
 const { blueprints_, actors_ } = require("../../../core/workflow/tests/unitary/blueprint_samples");
 const { Timer } = require("../../../core/workflow/timer");
+const { Trigger } = require("../../../core/workflow/trigger");
 const { v1: uuid } = require("uuid");
 
 let engine;
 
-beforeAll(() => {
+beforeAll(async () => {
+  await _clean();
   engine = new Engine(...settings.persist_options);
   jest.setTimeout(60000);
 });
@@ -86,6 +88,50 @@ test("Engine create process with missing data but run fails", async () => {
   expect(process.state.result).toStrictEqual({ step_number: 2 });
   expect(process.state.bag).toStrictEqual(create_data);
 });
+
+describe('Trigger and Target on heartbeat', () => {
+  test('target should be executed properly', async () => {
+    const workflow = await engine.saveWorkflow(
+      "target_workflow",
+      "target_workflow",
+      blueprints_.target_start
+    );
+
+    expect(workflow).toBeDefined()
+
+    const trigger_process_id = uuid()
+    const trigger = new Trigger({
+        input: {testKey: 'testValue'},
+        signal: 'test_signal',
+        actor_data: {actor: 'test_actor'},
+        process_id: trigger_process_id
+    });
+    await trigger.save();
+
+    await Engine._beat();
+
+    const persistor = PersistorProvider.getPersistor(...settings.persist_options);
+    const trigger_target_persist = persistor.getPersistInstance("TriggerTarget");
+    const target_persist = persistor.getPersistInstance("Target");
+    
+    const target = await target_persist.getByWorkflowAndSignal('test_signal')
+    expect(target).toBeDefined()
+    expect(target.signal).toBe('test_signal')
+
+    const trigger_target_list = await trigger_target_persist.getByTriggerId(trigger.id)
+    expect(trigger_target_list).toHaveLength(1)
+    
+    const [trigger_target] = trigger_target_list
+
+    expect(trigger_target.trigger_id).toBe(trigger.id)
+    expect(trigger_target.target_id).toBe(target.id)
+    expect(trigger_target.resolved).toBe(true)
+
+    const process = await engine.fetchProcess(trigger_target.target_process_id);
+    expect(process).toBeDefined()
+    expect(process._workflow_id).toBe(workflow.id)
+  })
+})
 
 describe("Run existing process", () => {
   async function createProcess(blueprint, actor_data) {
@@ -745,7 +791,7 @@ test("Push activity only on type 'commit' activity manager", async () => {
   expect(commit_activity_manager.activity_status).toEqual("completed");
 });
 
-test("Push activity should return error to an non-existant activity manager", async () => {
+test.skip("Push activity should return error to an non-existant activity manager", async () => {
   await engine.saveWorkflow("sample", "sample", blueprints_.notify_and_2_user_task);
 
   let process = await engine.createProcessByWorkflowName("sample", actors_.simpleton);
@@ -802,14 +848,22 @@ test("Beat won't break despite orphan timer", async () => {
 
 const _clean = async () => {
   const persistor = PersistorProvider.getPersistor(...settings.persist_options);
+  const trigger_target_persist = persistor.getPersistInstance("TriggerTarget");
+  const target_persist = persistor.getPersistInstance("Target");
+  const trigger_persist = persistor.getPersistInstance("Trigger");
   const activity_persist = persistor.getPersistInstance("Activity");
   const activity_manager_persist = persistor.getPersistInstance("ActivityManager");
   const process_persist = persistor.getPersistInstance("Process");
+  const process_state_persist = persistor.getPersistInstance("ProcessState");
   const workflow_persist = persistor.getPersistInstance("Workflow");
   const timer_persist = persistor.getPersistInstance("Timer");
 
+  await trigger_target_persist.deleteAll();
+  await target_persist.deleteAll();
+  await trigger_persist.deleteAll();
   await activity_persist.deleteAll();
   await activity_manager_persist.deleteAll();
+  await process_state_persist.deleteAll();
   await process_persist.deleteAll();
   await workflow_persist.deleteAll();
   await timer_persist.deleteAll();

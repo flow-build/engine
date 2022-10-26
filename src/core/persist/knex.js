@@ -278,6 +278,10 @@ class TriggerTargetKnexPersist extends KnexPersist {
   constructor(db) {
     super(db, Target, "trigger_target");
   }
+
+  async getByTriggerId(id) {
+    return await this._db.select("*").from(this._table).where("trigger_id", id);
+  }
 }
 
 module.exports = {
