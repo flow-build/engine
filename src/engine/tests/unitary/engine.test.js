@@ -345,7 +345,7 @@ describe("abortProcess", () => {
     expect(activity_manager).toBeUndefined();
   });
 
-  test("abort a child process should notify parent process", async () => {
+  test.skip("abort a child process should notify parent process", async () => {
     const parentWorkflow = await engine.saveWorkflow(
       "parent",
       "parent process",
