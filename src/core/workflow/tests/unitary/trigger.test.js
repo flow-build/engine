@@ -48,6 +48,8 @@ test("getByProcessId works", async () => {
 
 const _clean = async () => {
   const persistor = PersistorProvider.getPersistor(...settings.persist_options);
+  const trigger_target_persist = persistor.getPersistInstance("TriggerTarget");
   const trigger_persist = persistor.getPersistInstance("Trigger");
+  await trigger_target_persist.deleteAll();
   await trigger_persist.deleteAll();
 };
