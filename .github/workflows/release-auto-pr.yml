@@ -5,20 +5,23 @@ on:
     branches:
       - master
       - development
+      - alpha
+      - beta
+      - next
 
 jobs:
   release:
-    name: 'Release NPM, GitHub'
+    name: "Release NPM, GitHub"
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repo
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
         with:
           persist-credentials: false
       - name: Setup Node.js
         uses: actions/setup-node@v1
         with:
-          node-version: 14.18
+          node-version: 16.15
       - name: Install dependencies
         run: npm ci
       - name: Get version from package.json before release step
@@ -43,9 +46,9 @@ jobs:
         uses: peter-evans/create-pull-request@v3
         with:
           token: ${{ secrets.GH_TOKEN }}
-          commit-message: 'chore(release): ${{ steps.extractver.outputs.version }}'
+          commit-message: "chore(release): ${{ steps.extractver.outputs.version }}"
           committer: bot-flowbuilld <bot.flowbuild@gmail.com>
           author: bot-flowbuilld <bot.flowbuild@gmail.com>
-          title: 'chore(release): ${{ steps.extractver.outputs.version }}'
-          body: 'Version bump in package.json and package-lock.json for release [${{ steps.extractver.outputs.version }}](https://github.com/${{github.repository}}/releases/tag/v${{ steps.extractver.outputs.version }})'
+          title: "chore(release): ${{ steps.extractver.outputs.version }}"
+          body: "Version bump in package.json and package-lock.json for release [${{ steps.extractver.outputs.version }}](https://github.com/${{github.repository}}/releases/tag/v${{ steps.extractver.outputs.version }})"
           branch: version-bump/${{ steps.extractver.outputs.version }}
