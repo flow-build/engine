@@ -18,7 +18,13 @@ let categories = {
   startprocess: nodes.StartProcessSystemTaskNode,
   abortprocess: nodes.AbortProcessSystemTaskNode,
   formrequest: nodes.FormRequestNode,
+  signal: nodes.Node
 };
+
+let signalCategoryTypes = {
+  finish: nodes.TriggerFinishNode,
+  start: nodes.TargetStartNode,
+}
 
 function getNodeTypes() {
   return types;
@@ -40,8 +46,13 @@ function getNode(nodeSpec) {
     throw new Error(`Invalid node, unknow type ${nodeType}`);
   }
 
-  if (nodeClass === nodes.SystemTaskNode) {
-    const nodeCategory = nodeSpec.category?.toLowerCase();
+  const nodeCategory = nodeSpec.category?.toLowerCase();
+
+  if(nodeCategory==='signal') {
+    nodeClass = signalCategoryTypes[nodeType]
+  }
+
+  if (nodeClass === nodes.SystemTaskNode) {    
     if (!nodeCategory) {
       throw new Error("Invalid service task, missing category on spec");
     }

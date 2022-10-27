@@ -2,6 +2,9 @@ const { Packages } = require("../workflow/packages");
 const { ActivityManager } = require("../workflow/activity_manager");
 const { Activity } = require("../workflow/activity");
 const { Timer } = require("../workflow/timer");
+const { Trigger } = require("../workflow/trigger");
+const { Target } = require("../workflow/target");
+const { v1: uuid } = require("uuid");
 
 class KnexPersist {
   constructor(db, class_, table) {
@@ -187,10 +190,107 @@ class TimerKnexPersist extends KnexPersist {
   }
 }
 
+class TriggerKnexPersist extends KnexPersist {
+  constructor(db) {
+    super(db, Trigger, "trigger");
+  }
+
+  async getByProcessId(id) {
+    return await this._db.select("*").from(this._table).where("process_id", id);
+  }
+}
+
+class TargetKnexPersist extends KnexPersist {
+  constructor(db) {
+    super(db, Target, "target");
+    this._trigger_target_table = "trigger_target";
+  }
+
+  async getTargetedWorkflows(obj) {
+    return await this._db
+      .select(
+        "wf.id",
+        "wf.version"
+      )
+      .from("workflow AS wf")
+      .where("wf.name", "=", 
+        this._db
+            .select(
+              "wf.name"
+            )
+            .from("workflow AS wf")
+            .where("wf.id", obj.resource_id)
+      )
+      .orderBy("version", "desc");
+  }
+
+  async getByWorkflowAndSignal(signal) {
+    return await this._db
+      .select("*")
+      .from("target AS tg")
+      .where("tg.signal", "=", signal)
+      .first();
+  }
+
+  async save(obj, ...args) {
+    const [latestWorkflow] = await this.getTargetedWorkflows(obj);
+    const registered_target = await this.getByWorkflowAndSignal(obj.signal)
+    const is_update = registered_target && latestWorkflow.version > 1;
+    if (is_update) {
+      obj.id = registered_target.id
+      await this._update(registered_target.id, obj, ...args);
+      return "update";
+    }
+    await this._create(obj, ...args);
+    return "create";
+  }
+
+  async saveSignalRelation(trx, obj) {
+    if (trx) {
+      return await this._db(this._trigger_target_table).transacting(trx).insert({
+        ...obj,
+        id: uuid()
+      });
+    } else {
+      return await this._db(this._trigger_target_table).insert({
+        ...obj,
+        id: uuid()
+      });
+    }
+  }
+
+  async getSignalRelation(trx, target_id) {
+    if (trx) {
+      return await this._db.transacting(trx)
+        .select("*")
+        .from(this._trigger_target_table)
+        .where("target_id", target_id);
+    } else {
+      return await this._db
+        .select("*")
+        .from(this._trigger_target_table)
+        .where("target_id", target_id);
+    }
+  }
+}
+
+class TriggerTargetKnexPersist extends KnexPersist {
+  constructor(db) {
+    super(db, Target, "trigger_target");
+  }
+
+  async getByTriggerId(id) {
+    return await this._db.select("*").from(this._table).where("trigger_id", id);
+  }
+}
+
 module.exports = {
   KnexPersist: KnexPersist,
   PackagesKnexPersist: PackagesKnexPersist,
   ActivityManagerKnexPersist: ActivityManagerKnexPersist,
   ActivityKnexPersist: ActivityKnexPersist,
   TimerKnexPersist: TimerKnexPersist,
+  TriggerKnexPersist: TriggerKnexPersist,
+  TargetKnexPersist: TargetKnexPersist,
+  TriggerTargetKnexPersist: TriggerTargetKnexPersist
 };

@@ -45,6 +45,11 @@ class Workflow extends PersistedEntity {
     return Workflow.deserialize(workflow);
   }
 
+  static async fetchLatestWorkflowVersionById(workflow_id) {
+    const workflow = await this.getPersist().getLatestVersionById(workflow_id);
+    return Workflow.deserialize(workflow);
+  }
+
   static async findWorkflowByBlueprintHash(blueprint_hash) {
     const workflow = await this.getPersist().getByHash(blueprint_hash);
     return workflow;
