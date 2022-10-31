@@ -29,7 +29,7 @@ class HttpSystemTaskNode extends SystemTaskNode {
             },
             valid_response_codes: {
               type: "array",
-              items: { type: "integer" },
+              items: { type: ["integer","string"] },
             },
           },
         },
@@ -89,6 +89,11 @@ class HttpSystemTaskNode extends SystemTaskNode {
         result = {
           status: err.response.status,
           data: err.response.data,
+        };
+      } else if(err.code === 'ECONNABORTED') {
+        result = {
+          status: err.code,
+          data: {},
         };
       } else {
         throw new Error(`Got no response from request to ${verb} ${endpoint}, ${err.message}`);
