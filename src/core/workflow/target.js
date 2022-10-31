@@ -16,6 +16,7 @@ class Target extends PersistedEntity {
       signal: target._signal,
       resource_type: target._resource_type,
       resource_id: target._resource_id,
+      process_state_id: target._process_state_id,
     };
   }
 
@@ -24,7 +25,8 @@ class Target extends PersistedEntity {
       const target = new Target({
         signal: serialized.signal,
         resource_type: serialized.resource_type,
-        resource_id: serialized.resource_id
+        resource_id: serialized.resource_id,
+        process_state_id: serialized.process_state_id,
       });
 
       target._id = serialized.id;
@@ -62,6 +64,7 @@ class Target extends PersistedEntity {
     this._signal = params.signal;
     this._resource_type = params.resource_type;
     this._resource_id = params.resource_id;
+    this._process_state_id = params.process_state_id;
   }
 
   get signal() {
@@ -74,6 +77,10 @@ class Target extends PersistedEntity {
 
   get resource_id() {
     return this._resource_id;
+  }
+
+  get process_state_id() {
+    return this._process_state_id;
   }
 
   get active() {

@@ -18,6 +18,7 @@ class Trigger extends PersistedEntity {
       input: trigger._input,
       actor_data: trigger._actor_data,
       process_id: trigger._process_id,
+      target_process_id: trigger._target_process_id,
     };
   }
 
@@ -27,7 +28,8 @@ class Trigger extends PersistedEntity {
         signal: serialized.signal,
         input: serialized.input,
         actor_data: serialized.actor_data,
-        process_id: serialized.process_id
+        process_id: serialized.process_id,
+        target_process_id: serialized.target_process_id
       });
 
       trigger._id = serialized.id;
@@ -49,6 +51,7 @@ class Trigger extends PersistedEntity {
     this._signal = params.signal;
     this._actor_data = params.actor_data;
     this._process_id = params.process_id;
+    this._target_process_id = params.target_process_id;
   }
 
   get active() {
@@ -69,6 +72,10 @@ class Trigger extends PersistedEntity {
 
   get process_id() {
     return this._process_id
+  }
+
+  get target_process_id() {
+    return this._target_process_id
   }
 
   get expires_at() {
