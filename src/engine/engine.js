@@ -534,7 +534,7 @@ class Engine {
 
     const target = Target.target_workflow_creation(workflow);
     if(target) {
-      target.save()
+      target.saveByWorkflow()
     }
 
     return workflow
