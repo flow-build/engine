@@ -24,6 +24,7 @@ let categories = {
 let signalCategoryTypes = {
   finish: nodes.TriggerFinishNode,
   start: nodes.TargetStartNode,
+  systemtask: nodes.SignalSystemTaskNode,
 }
 
 function getNodeTypes() {
