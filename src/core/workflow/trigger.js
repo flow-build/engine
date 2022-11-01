@@ -101,10 +101,8 @@ class Trigger extends PersistedEntity {
 
   async fetchTargets(trx) {
     if(this.target_process_id) {
-      console.log('_fetchProcessTargets')
       return await this._fetchProcessTargets(trx)
     }
-    console.log('_fetchWorkflowTargets')
     return await this._fetchWorkflowTargets(trx)
   }
 
