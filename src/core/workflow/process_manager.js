@@ -32,6 +32,19 @@ async function fetchLatestWorkflowVersionById(workflow_id) {
   return await workflowDependency.Workflow.fetchLatestWorkflowVersionById(workflow_id);
 }
 
+async function fetchProcess(process_id) {
+  return await processDependency.Process.fetch(process_id);
+}
+
+async function fetchWorkflowByProcessId(process_id) {
+  const process = await processDependency.Process.fetch(process_id);
+  return  await workflowDependency.Workflow.fetch(process._workflow_id);
+}
+
+async function fetchStateHistory(process_id) {
+  return await processDependency.Process.fetchStateHistory(process_id)
+}
+
 async function createProcessByWorkflowId(workflow_id, actor_data, initial_bag = {}) {
   const workflow = await workflowDependency.Workflow.fetchLatestWorkflowVersionById(workflow_id);
   if (workflow) {
@@ -94,6 +107,9 @@ module.exports = {
   abortProcess,
   continueProcess,
   fetchLatestWorkflowVersionById,
+  fetchProcess,
+  fetchWorkflowByProcessId,
+  fetchStateHistory,
   createProcessByWorkflowId,
   createProcessByWorkflowName,
   notifyCompletedActivityManager,

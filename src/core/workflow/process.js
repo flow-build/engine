@@ -620,32 +620,38 @@ class Process extends PersistedEntity {
 
   async _manageSignalCreation() {
     const node = this._blueprint.fetchNode(this._state.node_id)
-    if(
-      node._spec.category === 'signal' && 
-      (node._spec.signal_category === 'trigger' || node._spec.type.toLowerCase() === 'finish')
-    ) {
-      const signal_params = {
-        signal: this.state.result.signal,
-        input: this.state.result.trigger_payload,
-        actor_data: this.state.actor_data,
-        process_id: this.id,
-        target_process_id: ''
-      }
-      const trigger = new Trigger(signal_params);
-      await trigger.save();
+    const trigger_params = {
+      signal: this.state.result.signal,
+      input: this.state.result.trigger_payload,
+      actor_data: this.state.actor_data,
+      process_id: this.id
     }
     if(
       node._spec.category === 'signal' && 
-      (node._spec.signal_category === 'target')
+      node._spec.type.toLowerCase() === 'finish'
     ) {
-      const signal_params = {
+      const trigger_process_id = this.state.bag.trigger_process_id
+      if(trigger_process_id) {
+        trigger_params.target_process_id = trigger_process_id
+      }
+      const trigger = new Trigger(trigger_params);
+      await trigger.save();
+    }
+    if(
+      node._spec.category === 'signal' &&
+      node._spec.type.toLowerCase() === 'systemtask' &&
+      this._current_status === 'waiting'
+    ) {
+      const target_params = {
         signal: this.state.result.signal,
         resource_type: 'process',
         resource_id: this.id,
         process_state_id: this._current_state_id
       }
-      const target = new Target(signal_params);
+      const target = new Target(target_params);
       await target.save();
+      const trigger = new Trigger(trigger_params);
+      await trigger.save();
     }
   }
 
@@ -742,9 +748,7 @@ class Process extends PersistedEntity {
         await ActivityManager.interruptActivityManagerForProcess(this._id);
         break;
       case ProcessStatus.FINISHED:
-      //   await this._manageTriggerCreation()
       case ProcessStatus.WAITING:
-      //   await this._manageTriggerCreation()
       case ProcessStatus.FORBIDDEN:
         await ActivityManager.finishActivityManagerForProcess(this._id);
         break;
