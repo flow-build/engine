@@ -82,27 +82,53 @@ class Trigger extends PersistedEntity {
     return this._expires_at;
   }
 
+  async _fetchWorkflowTargets(trx = false) {
+    return await trx("target")
+                  .select("*")
+                  .where("active", true)
+                  .where("signal", this.signal)
+                  .where("resource_type", "workflow");
+  }
+
+  async _fetchProcessTargets(trx = false) {
+    return await trx("target")
+                  .select("*")
+                  .where("active", true)
+                  .where("signal", this.signal)
+                  .where("resource_type", "process")
+                  .where("resource_id", this.target_process_id);
+  }
+
+  async fetchTargets(trx) {
+    if(this.target_process_id) {
+      console.log('_fetchProcessTargets')
+      return await this._fetchProcessTargets(trx)
+    }
+    console.log('_fetchWorkflowTargets')
+    return await this._fetchWorkflowTargets(trx)
+  }
+
   async run(trx = false) {
     this._active = false
     await this.save(trx);
 
     try {
       emitter.emit("ENGINE.TARGET_FETCHING", `FETCHING TARGET PROCESSES AS RESULT OF TRIGGER ${this.signal}`);  
-      const targets = await trx("target")
-        .select("*")
-        .where("active", true)
-        .where("signal", this.signal);
-      return await Promise.all(targets.map(async (l_target) => {
-        const target = await Target.validate_deserialize(l_target);
-        if(target) {
-          return target.run(trx, {
-            actor_data: this.actor_data,
-            input: this.input,
-            process_id: this.process_id,
-            trigger_id: this.id
-          })
-        }
-      }))
+      const targets = await this.fetchTargets(trx)
+      if(targets.length) {
+        return await Promise.all(targets.map(async (l_target) => {
+          const target = await Target.validate_deserialize(l_target);
+          if(target) {
+            return target.run(trx, {
+              actor_data: this.actor_data,
+              input: this.input,
+              process_id: this.process_id,
+              trigger_id: this.id
+            })
+          }
+        }))
+      }
+      return []
     } catch (e) {
       emitter.emit("ENGINE.TRIGGER.ERROR", "  ERROR FETCHING TARGET ON HEARTBEAT", { error: e });
       throw new Error(e);

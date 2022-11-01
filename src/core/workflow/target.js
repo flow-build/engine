@@ -1,7 +1,7 @@
 /* eslint-disable indent */
 const { PersistedEntity } = require("./base");
 const _ = require("lodash");
-const { fetchLatestWorkflowVersionById, createProcessByWorkflowId, continueProcess } = require("./process_manager");
+const { fetchProcess, fetchLatestWorkflowVersionById, fetchWorkflowByProcessId, fetchStateHistory, createProcessByWorkflowId, continueProcess } = require("./process_manager");
 
 class Target extends PersistedEntity {
   static getEntityClass() {
@@ -39,9 +39,19 @@ class Target extends PersistedEntity {
   }
 
   static async validate_deserialize(serialized) {
-    const workflow = await fetchLatestWorkflowVersionById(serialized.resource_id);
-    const [start_node] = workflow.blueprint_spec.nodes
-    if (start_node.category === 'signal') {
+    let workflow, target_node;
+    if(serialized.resource_type === 'workflow') {
+      workflow = await fetchLatestWorkflowVersionById(serialized.resource_id);
+      ([target_node] = workflow.blueprint_spec.nodes);
+    } else {
+      const process_id = serialized.resource_id;
+      workflow = await fetchWorkflowByProcessId(process_id);
+      const state_history = await fetchStateHistory(process_id);
+      const process_state = state_history.find(state => state.id === serialized.process_state_id)
+      target_node = workflow.blueprint_spec.nodes.find(node => node.id === process_state.node_id)
+    }
+    
+    if (target_node.category === 'signal') {
       return Target.deserialize(serialized)
     }
     return undefined;
@@ -87,10 +97,15 @@ class Target extends PersistedEntity {
     return this._active;
   }
 
+  async saveByWorkflow(...args) {
+    await this.getPersist().saveByWorkflow(this.serialize(), ...args);
+    return this;
+  }
+
   async run(trx = false, params = {}) {
+    let process;
     switch(this.resource_type) {
       case 'workflow':
-        let process;
         try {
           process = await createProcessByWorkflowId(this.resource_id, params.actor_data, {...params.input, trigger_process_id: params.process_id});
         } catch (e) {
@@ -121,8 +136,10 @@ class Target extends PersistedEntity {
         return process
       // 'process' case has to be reviewed
       case 'process':
-        return continueProcess(this.resource_id, {...params.input, trigger_process_id: params.process_id}, undefined, params.actor_data);
-      
+        process = await fetchProcess(this.resource_id);
+        this._active = false
+        await this.save();
+        return process.continue({...params.input, trigger_process_id: params.process_id}, params.actor_data, trx);
       default:
         throw new Error('Invalid resource for Target')
     }
