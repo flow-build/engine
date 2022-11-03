@@ -171,7 +171,7 @@ class Engine {
           .skipLocked();
         return await Promise.all(signals.map((l_trigger) => {
           const trigger = Trigger.deserialize(l_trigger);
-          return trigger.run(trx)
+          return trigger.run(trx, this)
         }))
       } catch (e) {
         emitter.emit("ENGINE.SIGNAL.ERROR", "  ERROR FETCHING SIGNALS ON HEARTBEAT", { error: e });

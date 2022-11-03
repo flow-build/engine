@@ -106,7 +106,7 @@ class Trigger extends PersistedEntity {
     return await this._fetchWorkflowTargets(trx)
   }
 
-  async run(trx = false) {
+  async run(trx = false, engine = false) {
     this._active = false
     await this.save(trx);
 
@@ -117,7 +117,7 @@ class Trigger extends PersistedEntity {
         return await Promise.all(targets.map(async (l_target) => {
           const target = await Target.validate_deserialize(l_target);
           if(target) {
-            return target.run(trx, {
+            return target.run(trx, engine, {
               actor_data: this.actor_data,
               input: this.input,
               process_id: this.process_id,
