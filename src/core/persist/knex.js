@@ -272,6 +272,14 @@ class TargetKnexPersist extends KnexPersist {
         .where("target_id", target_id);
     }
   }
+
+  async getActivityManagerByProcessStateId(process_state_id) {
+    return await this._db
+      .select("*")
+      .from("activity_manager AS am")
+      .where("am.process_state_id", "=", process_state_id)
+      .first();
+  }
 }
 
 class TriggerTargetKnexPersist extends KnexPersist {
