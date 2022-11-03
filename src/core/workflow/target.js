@@ -102,9 +102,14 @@ class Target extends PersistedEntity {
     return this;
   }
 
-  async run(trx = false, params = {}) {
+  async getActivityManagerByProcessStateId() {
+    return await this.getPersist().getActivityManagerByProcessStateId(this.process_state_id)
+  }
+
+  async run(trx = false, engine = false, params = {}) {
     let process;
     switch(this.resource_type) {
+
       case 'workflow':
         try {
           process = await createProcessByWorkflowId(this.resource_id, params.actor_data, {...params.input, trigger_process_id: params.process_id});
@@ -113,10 +118,9 @@ class Target extends PersistedEntity {
             target_id: this.id, 
             trigger_id: params.trigger_id,
             resolved: false
-          })
-          throw new Error('Error creating targeted process')
-        }
-        
+          });
+          throw new Error('Error creating targeted process');
+        };
         if(process.id) {
           await this.getPersist().saveSignalRelation(trx, {
             target_id: this.id, 
@@ -125,21 +129,27 @@ class Target extends PersistedEntity {
             resolved: true
           })
           return process.run(params.actor_data, {});
-        }
-        
+        };
         await this.getPersist().saveSignalRelation(trx, {
           target_id: this.id, 
           trigger_id: params.trigger_id,
           resolved: false
-        })
-
-        return process
-      // 'process' case has to be reviewed
+        });
+        return process;
+        
       case 'process':
         process = await fetchProcess(this.resource_id);
-        this._active = false
+        const state_history = await fetchStateHistory(process.id);
+        this._active = false;
         await this.save();
-        return process.continue({...params.input, trigger_process_id: params.process_id}, params.actor_data, trx);
+        const state = state_history.find(st => st._id === this.process_state_id);
+        const node = process._blueprint.fetchNode(state.node_id);
+        if(node._spec.type.toLowerCase() === 'systemtask') {
+          return process.continue({...params.input, trigger_process_id: params.process_id}, params.actor_data, trx);
+        } else if(node._spec.type.toLowerCase() === 'usertask') {
+          const activity_manager = await this.getActivityManagerByProcessStateId();
+          return engine._instance.submitActivity(activity_manager.id, params.actor_data, {...params.input, trigger_process_id: params.process_id});
+        }
       default:
         throw new Error('Invalid resource for Target')
     }
