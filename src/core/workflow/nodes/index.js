@@ -12,9 +12,10 @@ const { SystemTaskNode } = require("./systemTask");
 const { TimerSystemTaskNode } = require("./timer");
 const { UserTaskNode } = require("./userTask");
 const { FormRequestNode } = require("./formRequest");
-const { TriggerFinishNode } = require("./triggerFinish")
-const { TargetStartNode } = require("./targetStart")
-const { SignalSystemTaskNode } = require("./signalSystemTask")
+const { TriggerFinishNode } = require("./triggerFinish");
+const { TargetStartNode } = require("./targetStart");
+const { SignalSystemTaskNode } = require("./signalSystemTask");
+const { SignalUserTaskNode } = require("./signalUserTask");
 
 module.exports = {
   AbortProcessSystemTaskNode: AbortProcessSystemTaskNode,
@@ -33,5 +34,6 @@ module.exports = {
   UserTaskNode: UserTaskNode,
   TriggerFinishNode: TriggerFinishNode,
   TargetStartNode: TargetStartNode,
-  SignalSystemTaskNode: SignalSystemTaskNode
+  SignalSystemTaskNode: SignalSystemTaskNode,
+  SignalUserTaskNode: SignalUserTaskNode,
 };

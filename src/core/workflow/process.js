@@ -639,7 +639,7 @@ class Process extends PersistedEntity {
     }
     if(
       node._spec.category === 'signal' &&
-      node._spec.type.toLowerCase() === 'systemtask' &&
+      (node._spec.type.toLowerCase() === 'systemtask' || node._spec.type.toLowerCase() === 'usertask') &&
       this._current_status === 'waiting'
     ) {
       const target_params = {
