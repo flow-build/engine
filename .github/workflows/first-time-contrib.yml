@@ -2,7 +2,7 @@ name: Welcome first time contributors
 
 on:
   pull_request:
-    types: 
+    types:
       - opened
   issues:
     types:
@@ -12,14 +12,14 @@ jobs:
   welcome:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/first-interaction@v1.0.0
-      with:
-        repo-token: ${{ secrets.GH_TOKEN }}
-        issue-message: |
-          Welcome to FlowBuild. Thanks a lot for reporting your first issue.
+      - uses: actions/first-interaction@v1.1.1
+        with:
+          repo-token: ${{ secrets.GH_TOKEN }}
+          issue-message: |
+            Welcome to FlowBuild. Thanks a lot for reporting your first issue.
 
-          Keep in mind there are also other channels you can use to interact with FlowBuild community.
-        pr-message: |
-          Welcome to FlowBuild. Thanks a lot for creating your first pull request.
+            Keep in mind there are also other channels you can use to interact with FlowBuild community.
+          pr-message: |
+            Welcome to FlowBuild. Thanks a lot for creating your first pull request.
 
-          Keep in mind there are also other channels you can use to interact with FlowBuild community.
+            Keep in mind there are also other channels you can use to interact with FlowBuild community.

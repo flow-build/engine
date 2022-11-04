@@ -89,6 +89,57 @@ test("Engine create process with missing data but run fails", async () => {
   expect(process.state.bag).toStrictEqual(create_data);
 });
 
+describe('Trigger and Target on heartbeat', () => {
+  test('target should be executed properly', async () => {
+    const target_workflow = await engine.saveWorkflow(
+      "target_workflow",
+      "target_workflow",
+      blueprints_.target_start
+    );
+
+    expect(target_workflow).toBeDefined()
+
+    const trigger_workflow = await engine.saveWorkflow(
+      "trigger_workflow",
+      "trigger_workflow",
+      blueprints_.trigger_finish
+    );
+
+    expect(trigger_workflow).toBeDefined()
+
+    let trigger_process = await engine.createProcessByWorkflowName("trigger_workflow", actors_.simpleton, {});
+    trigger_process = await engine.runProcess(trigger_process.id);
+
+    await Engine._beat();
+
+    const persistor = PersistorProvider.getPersistor(...settings.persist_options);
+    const trigger_target_persist = persistor.getPersistInstance("TriggerTarget");
+    const trigger_persist = persistor.getPersistInstance("Trigger");
+    const target_persist = persistor.getPersistInstance("Target");
+    
+    const [trigger] = await trigger_persist.getByProcessId(trigger_process.id);
+    expect(trigger).toBeDefined()
+    expect(trigger.signal).toBe('test_signal')
+
+    const target = await target_persist.getByWorkflowAndSignal('test_signal')
+    expect(target).toBeDefined()
+    expect(target.signal).toBe('test_signal')
+
+    const trigger_target_list = await trigger_target_persist.getByTriggerId(trigger.id)
+    expect(trigger_target_list).toHaveLength(1)
+    
+    const [trigger_target] = trigger_target_list
+
+    expect(trigger_target.trigger_id).toBe(trigger.id)
+    expect(trigger_target.target_id).toBe(target.id)
+    expect(trigger_target.resolved).toBe(true)
+
+    const process = await engine.fetchProcess(trigger_target.target_process_id);
+    expect(process).toBeDefined()
+    expect(process._workflow_id).toBe(target_workflow.id)
+  })
+})
+
 describe("Run existing process", () => {
   async function createProcess(blueprint, actor_data) {
     const workflow = await engine.saveWorkflow("sample", "sample", blueprint);
