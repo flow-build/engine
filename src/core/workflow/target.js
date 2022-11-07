@@ -1,7 +1,13 @@
 /* eslint-disable indent */
 const { PersistedEntity } = require("./base");
 const _ = require("lodash");
-const { fetchProcess, fetchLatestWorkflowVersionById, fetchWorkflowByProcessId, fetchStateHistory, createProcessByWorkflowId, continueProcess } = require("./process_manager");
+const { 
+  fetchProcess, 
+  fetchLatestWorkflowVersionById, 
+  fetchWorkflowByProcessId, 
+  fetchStateHistory, 
+  createProcessByWorkflowId 
+} = require("./process_manager");
 
 class Target extends PersistedEntity {
   static getEntityClass() {
@@ -51,7 +57,7 @@ class Target extends PersistedEntity {
       target_node = workflow.blueprint_spec.nodes.find(node => node.id === process_state.node_id)
     }
     
-    if (target_node.category === 'signal') {
+    if (target_node.category === 'signal' || target_node.type.toLowerCase() === 'event') {
       return Target.deserialize(serialized)
     }
     return undefined;
@@ -67,6 +73,11 @@ class Target extends PersistedEntity {
       })
     }
     return undefined
+  }
+
+  static async fetchTargetByProcessStateId(process_state_id) {
+    const serialized = await this.getPersist().getByProcessStateId(process_state_id);
+    return this.deserialize(serialized);
   }
 
   constructor(params = {}) {
@@ -144,11 +155,18 @@ class Target extends PersistedEntity {
         await this.save();
         const state = state_history.find(st => st._id === this.process_state_id);
         const node = process._blueprint.fetchNode(state.node_id);
-        if(node._spec.type.toLowerCase() === 'systemtask') {
-          return process.continue({...params.input, trigger_process_id: params.process_id}, params.actor_data, trx);
+        const continue_payload = {
+          target_data: {
+            ...(params.input || {}), 
+            trigger_process_id: params.process_id,
+            target_id: this.id,
+          }
+        };
+        if(node._spec.type.toLowerCase() === 'event') {
+          return process.continue(continue_payload, params.actor_data, trx);
         } else if(node._spec.type.toLowerCase() === 'usertask') {
           const activity_manager = await this.getActivityManagerByProcessStateId();
-          return engine._instance.submitActivity(activity_manager.id, params.actor_data, {...params.input, trigger_process_id: params.process_id});
+          return engine._instance.submitActivity(activity_manager.id, params.actor_data, continue_payload, false);
         }
       default:
         throw new Error('Invalid resource for Target')
