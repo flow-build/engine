@@ -9,6 +9,7 @@ const types = {
   usertask: nodes.UserTaskNode,
   systemtask: nodes.SystemTaskNode,
   subprocess: nodes.SubProcessNode,
+  event: nodes.EventNode,
 };
 
 let categories = {
@@ -24,7 +25,6 @@ let categories = {
 let signalCategoryTypes = {
   finish: nodes.TriggerFinishNode,
   start: nodes.TargetStartNode,
-  systemtask: nodes.SignalSystemTaskNode,
   usertask: nodes.SignalUserTaskNode,
 }
 

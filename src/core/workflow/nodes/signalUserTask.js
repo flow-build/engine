@@ -16,10 +16,21 @@ class SignalUserTaskNode extends ParameterizedNode {
         next: { type: "string" },
         parameters: {
           type: "object",
-          required: ["action", "input", "signal"],
+          required: ["action", "input", "events"],
           properties: {
             action: { type: "string" },
-            signal: { type: "string" },
+            events: { 
+              type: "array",
+              items: {
+                type: "object",
+                required: ["definition", "family", "category"],
+                properties: {
+                  definition: { type: "string" },
+                  family: { type: "string" },
+                  category: { type: "string" },
+                }
+              } 
+            },
             input: { type: "object" },
             timeout: {
               oneOf: [{ type: "number" }, { type: "object" }],
@@ -128,7 +139,7 @@ class SignalUserTaskNode extends ParameterizedNode {
       });
       return {
         trigger_payload: { ...preparedInput },
-        signal: parameters.signal
+        events: parameters.events
       }
     }
     return {};
@@ -139,11 +150,19 @@ class SignalUserTaskNode extends ParameterizedNode {
   }
 
   async _postRun(bag, input, external_input) {
+    let node_result = external_input
+    const [activity] = external_input?.activities;
+    const target_data = activity?.data?.target_data;
+    if(target_data) {
+      node_result = {
+        target_data: target_data
+      }
+    }
     return {
       node_id: this.id,
       bag: bag,
       external_input: external_input,
-      result: external_input,
+      result: node_result,
       error: null,
       status: ProcessStatus.RUNNING,
       next_node_id: this.next(external_input),

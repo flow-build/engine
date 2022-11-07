@@ -14,7 +14,7 @@ const { UserTaskNode } = require("./userTask");
 const { FormRequestNode } = require("./formRequest");
 const { TriggerFinishNode } = require("./triggerFinish");
 const { TargetStartNode } = require("./targetStart");
-const { SignalSystemTaskNode } = require("./signalSystemTask");
+const { EventNode } = require("./event");
 const { SignalUserTaskNode } = require("./signalUserTask");
 
 module.exports = {
@@ -34,6 +34,6 @@ module.exports = {
   UserTaskNode: UserTaskNode,
   TriggerFinishNode: TriggerFinishNode,
   TargetStartNode: TargetStartNode,
-  SignalSystemTaskNode: SignalSystemTaskNode,
+  EventNode: EventNode,
   SignalUserTaskNode: SignalUserTaskNode,
 };
