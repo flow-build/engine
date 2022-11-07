@@ -637,21 +637,36 @@ class Process extends PersistedEntity {
       const trigger = new Trigger(trigger_params);
       await trigger.save();
     }
+
     if(
-      node._spec.category === 'signal' &&
-      (node._spec.type.toLowerCase() === 'systemtask' || node._spec.type.toLowerCase() === 'usertask') &&
+      (node._spec.type.toLowerCase() === 'event' || 
+      (node._spec.type.toLowerCase() === 'usertask' && node._spec.category === 'signal')) &&
       this._current_status === 'waiting'
     ) {
-      const target_params = {
-        signal: this.state.result.signal,
-        resource_type: 'process',
-        resource_id: this.id,
-        process_state_id: this._current_state_id
-      }
-      const target = new Target(target_params);
-      await target.save();
-      const trigger = new Trigger(trigger_params);
-      await trigger.save();
+      const events = this.state.result.events;
+      await Promise.all(events.map((event) => {
+        if(event.family==="trigger") {
+          const tr_params = {
+            signal: event.definition,
+            input: this.state.result.trigger_payload,
+            actor_data: this.state.actor_data,
+            process_id: this.id
+          }
+          const trigger = new Trigger(tr_params);
+          return trigger.save();
+        }
+        if(event.family==='target') {
+          const target_params = {
+            signal: event.definition,
+            resource_type: 'process',
+            resource_id: this.id,
+            process_state_id: this._current_state_id
+          }
+          const target = new Target(target_params);
+          return target.save();
+        }
+      })
+      );
     }
   }
 
