@@ -33,7 +33,7 @@ class TriggerFinishNode extends FinishNode {
       });
       return {
         trigger_payload: { ...preparedInput },
-        signal: parameters.signal
+        signal: this._spec.parameters.signal
       }
     }
     return {};
