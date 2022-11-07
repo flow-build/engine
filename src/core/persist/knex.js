@@ -280,6 +280,13 @@ class TargetKnexPersist extends KnexPersist {
       .where("am.process_state_id", "=", process_state_id)
       .first();
   }
+
+  async getByProcessStateId(process_state_id) {
+    return await this._db(this._table)
+      .select("*")
+      .where("process_state_id", "=", process_state_id)
+      .first();
+  }
 }
 
 class TriggerTargetKnexPersist extends KnexPersist {
