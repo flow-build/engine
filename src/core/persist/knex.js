@@ -232,10 +232,10 @@ class TargetKnexPersist extends KnexPersist {
       .first();
   }
 
-  async save(obj, ...args) {
+  async saveByWorkflow(obj, ...args) {
     const [latestWorkflow] = await this.getTargetedWorkflows(obj);
     const registered_target = await this.getByWorkflowAndSignal(obj.signal)
-    const is_update = registered_target && latestWorkflow.version > 1;
+    const is_update = registered_target && latestWorkflow && latestWorkflow.version > 1;
     if (is_update) {
       obj.id = registered_target.id
       await this._update(registered_target.id, obj, ...args);
@@ -271,6 +271,21 @@ class TargetKnexPersist extends KnexPersist {
         .from(this._trigger_target_table)
         .where("target_id", target_id);
     }
+  }
+
+  async getActivityManagerByProcessStateId(process_state_id) {
+    return await this._db
+      .select("*")
+      .from("activity_manager AS am")
+      .where("am.process_state_id", "=", process_state_id)
+      .first();
+  }
+
+  async getByProcessStateId(process_state_id) {
+    return await this._db(this._table)
+      .select("*")
+      .where("process_state_id", "=", process_state_id)
+      .first();
   }
 }
 

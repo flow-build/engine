@@ -91,29 +91,36 @@ test("Engine create process with missing data but run fails", async () => {
 
 describe('Trigger and Target on heartbeat', () => {
   test('target should be executed properly', async () => {
-    const workflow = await engine.saveWorkflow(
+    const target_workflow = await engine.saveWorkflow(
       "target_workflow",
       "target_workflow",
       blueprints_.target_start
     );
 
-    expect(workflow).toBeDefined()
+    expect(target_workflow).toBeDefined()
 
-    const trigger_process_id = uuid()
-    const trigger = new Trigger({
-        input: {testKey: 'testValue'},
-        signal: 'test_signal',
-        actor_data: {actor: 'test_actor'},
-        process_id: trigger_process_id
-    });
-    await trigger.save();
+    const trigger_workflow = await engine.saveWorkflow(
+      "trigger_workflow",
+      "trigger_workflow",
+      blueprints_.trigger_finish
+    );
+
+    expect(trigger_workflow).toBeDefined()
+
+    let trigger_process = await engine.createProcessByWorkflowName("trigger_workflow", actors_.simpleton, {});
+    trigger_process = await engine.runProcess(trigger_process.id);
 
     await Engine._beat();
 
     const persistor = PersistorProvider.getPersistor(...settings.persist_options);
     const trigger_target_persist = persistor.getPersistInstance("TriggerTarget");
+    const trigger_persist = persistor.getPersistInstance("Trigger");
     const target_persist = persistor.getPersistInstance("Target");
     
+    const [trigger] = await trigger_persist.getByProcessId(trigger_process.id);
+    expect(trigger).toBeDefined()
+    expect(trigger.signal).toBe('test_signal')
+
     const target = await target_persist.getByWorkflowAndSignal('test_signal')
     expect(target).toBeDefined()
     expect(target.signal).toBe('test_signal')
@@ -129,7 +136,7 @@ describe('Trigger and Target on heartbeat', () => {
 
     const process = await engine.fetchProcess(trigger_target.target_process_id);
     expect(process).toBeDefined()
-    expect(process._workflow_id).toBe(workflow.id)
+    expect(process._workflow_id).toBe(target_workflow.id)
   })
 })
 
@@ -848,12 +855,21 @@ test("Beat won't break despite orphan timer", async () => {
 
 const _clean = async () => {
   const persistor = PersistorProvider.getPersistor(...settings.persist_options);
+  
+  const trigger_target_persist = persistor.getPersistInstance("TriggerTarget");
+  const trigger_persist = persistor.getPersistInstance("Trigger");
+  const target_persist = persistor.getPersistInstance("Target");
+  
   const activity_persist = persistor.getPersistInstance("Activity");
   const activity_manager_persist = persistor.getPersistInstance("ActivityManager");
   const process_state_persist = persistor.getPersistInstance("ProcessState");
   const process_persist = persistor.getPersistInstance("Process");
   const workflow_persist = persistor.getPersistInstance("Workflow");
   const timer_persist = persistor.getPersistInstance("Timer");
+
+  await trigger_target_persist.deleteAll();
+  await trigger_persist.deleteAll();
+  await target_persist.deleteAll();
 
   await activity_persist.deleteAll();
   await activity_manager_persist.deleteAll();

@@ -1,7 +1,13 @@
 /* eslint-disable indent */
 const { PersistedEntity } = require("./base");
 const _ = require("lodash");
-const { fetchLatestWorkflowVersionById, createProcessByWorkflowId, continueProcess } = require("./process_manager");
+const { 
+  fetchProcess, 
+  fetchLatestWorkflowVersionById, 
+  fetchWorkflowByProcessId, 
+  fetchStateHistory, 
+  createProcessByWorkflowId 
+} = require("./process_manager");
 
 class Target extends PersistedEntity {
   static getEntityClass() {
@@ -16,6 +22,7 @@ class Target extends PersistedEntity {
       signal: target._signal,
       resource_type: target._resource_type,
       resource_id: target._resource_id,
+      process_state_id: target._process_state_id,
     };
   }
 
@@ -24,7 +31,8 @@ class Target extends PersistedEntity {
       const target = new Target({
         signal: serialized.signal,
         resource_type: serialized.resource_type,
-        resource_id: serialized.resource_id
+        resource_id: serialized.resource_id,
+        process_state_id: serialized.process_state_id,
       });
 
       target._id = serialized.id;
@@ -37,9 +45,19 @@ class Target extends PersistedEntity {
   }
 
   static async validate_deserialize(serialized) {
-    const workflow = await fetchLatestWorkflowVersionById(serialized.resource_id);
-    const [start_node] = workflow.blueprint_spec.nodes
-    if (start_node.category === 'signal') {
+    let workflow, target_node;
+    if(serialized.resource_type === 'workflow') {
+      workflow = await fetchLatestWorkflowVersionById(serialized.resource_id);
+      ([target_node] = workflow.blueprint_spec.nodes);
+    } else {
+      const process_id = serialized.resource_id;
+      workflow = await fetchWorkflowByProcessId(process_id);
+      const state_history = await fetchStateHistory(process_id);
+      const process_state = state_history.find(state => state.id === serialized.process_state_id)
+      target_node = workflow.blueprint_spec.nodes.find(node => node.id === process_state.node_id)
+    }
+    
+    if (target_node.category === 'signal' || target_node.type.toLowerCase() === 'event') {
       return Target.deserialize(serialized)
     }
     return undefined;
@@ -57,11 +75,17 @@ class Target extends PersistedEntity {
     return undefined
   }
 
+  static async fetchTargetByProcessStateId(process_state_id) {
+    const serialized = await this.getPersist().getByProcessStateId(process_state_id);
+    return this.deserialize(serialized);
+  }
+
   constructor(params = {}) {
     super();
     this._signal = params.signal;
     this._resource_type = params.resource_type;
     this._resource_id = params.resource_id;
+    this._process_state_id = params.process_state_id;
   }
 
   get signal() {
@@ -76,14 +100,28 @@ class Target extends PersistedEntity {
     return this._resource_id;
   }
 
+  get process_state_id() {
+    return this._process_state_id;
+  }
+
   get active() {
     return this._active;
   }
 
-  async run(trx = false, params = {}) {
+  async saveByWorkflow(...args) {
+    await this.getPersist().saveByWorkflow(this.serialize(), ...args);
+    return this;
+  }
+
+  async getActivityManagerByProcessStateId() {
+    return await this.getPersist().getActivityManagerByProcessStateId(this.process_state_id)
+  }
+
+  async run(trx = false, engine = false, params = {}) {
+    let process;
     switch(this.resource_type) {
+
       case 'workflow':
-        let process;
         try {
           process = await createProcessByWorkflowId(this.resource_id, params.actor_data, {...params.input, trigger_process_id: params.process_id});
         } catch (e) {
@@ -91,10 +129,9 @@ class Target extends PersistedEntity {
             target_id: this.id, 
             trigger_id: params.trigger_id,
             resolved: false
-          })
-          throw new Error('Error creating targeted process')
-        }
-        
+          });
+          throw new Error('Error creating targeted process');
+        };
         if(process.id) {
           await this.getPersist().saveSignalRelation(trx, {
             target_id: this.id, 
@@ -103,19 +140,34 @@ class Target extends PersistedEntity {
             resolved: true
           })
           return process.run(params.actor_data, {});
-        }
-        
+        };
         await this.getPersist().saveSignalRelation(trx, {
           target_id: this.id, 
           trigger_id: params.trigger_id,
           resolved: false
-        })
-
-        return process
-      // 'process' case has to be reviewed
+        });
+        return process;
+        
       case 'process':
-        return continueProcess(this.resource_id, {...params.input, trigger_process_id: params.process_id}, undefined, params.actor_data);
-      
+        process = await fetchProcess(this.resource_id);
+        const state_history = await fetchStateHistory(process.id);
+        this._active = false;
+        await this.save();
+        const state = state_history.find(st => st._id === this.process_state_id);
+        const node = process._blueprint.fetchNode(state.node_id);
+        const continue_payload = {
+          target_data: {
+            ...(params.input || {}), 
+            trigger_process_id: params.process_id,
+            target_id: this.id,
+          }
+        };
+        if(node._spec.type.toLowerCase() === 'event') {
+          return process.continue(continue_payload, params.actor_data, trx);
+        } else if(node._spec.type.toLowerCase() === 'usertask') {
+          const activity_manager = await this.getActivityManagerByProcessStateId();
+          return engine._instance.submitActivity(activity_manager.id, params.actor_data, continue_payload, false);
+        }
       default:
         throw new Error('Invalid resource for Target')
     }

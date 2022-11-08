@@ -171,7 +171,7 @@ class Engine {
           .skipLocked();
         return await Promise.all(signals.map((l_trigger) => {
           const trigger = Trigger.deserialize(l_trigger);
-          return trigger.run(trx)
+          return trigger.run(trx, this)
         }))
       } catch (e) {
         emitter.emit("ENGINE.SIGNAL.ERROR", "  ERROR FETCHING SIGNALS ON HEARTBEAT", { error: e });
@@ -388,7 +388,7 @@ class Engine {
     }
   }
 
-  async submitActivity(activity_manager_id, actor_data, external_input) {
+  async submitActivity(activity_manager_id, actor_data, external_input, disable_target = true) {
     try {
       let activity_manager_data = await ActivityManager.get(activity_manager_id, actor_data);
       if (activity_manager_data) {
@@ -410,6 +410,15 @@ class Engine {
             };
           }
           const [is_completed, activities] = await activity_manager.pushActivity(activity_manager_data.process_id);
+          
+          if(disable_target) {
+            const target = await Target.fetchTargetByProcessStateId(activity_manager_data.process_state_id);
+            if(target && target.active) {
+              target._active = false;
+              await target.save()
+            }
+          }
+          
           let process_promise;
           if (is_completed && activity_manager_data.type !== "notify") {
             const result = await process_manager.notifyCompletedActivityManager(
@@ -534,7 +543,7 @@ class Engine {
 
     const target = Target.target_workflow_creation(workflow);
     if(target) {
-      target.save()
+      target.saveByWorkflow()
     }
 
     return workflow
