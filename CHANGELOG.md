@@ -1,3 +1,16 @@
+## [2.17.0-beta.1](https://github.com/flow-build/engine/compare/v2.16.2...v2.17.0-beta.1) (2022-11-08)
+
+
+### Features
+
+* FLOW 26 task ([3a51e4e](https://github.com/flow-build/engine/commit/3a51e4ee08450b1de95a32aeb3733200e03f1bf5))
+
+
+### Bug Fixes
+
+* fix preProcessing on trigger finish node ([a67ff1e](https://github.com/flow-build/engine/commit/a67ff1e76495511f12ee9b95bd88b8b31792ed04))
+* **packages:** :memo: update deps ([b70966c](https://github.com/flow-build/engine/commit/b70966cbace80528b105dacdb0284347581d6f60))
+
 ## [2.17.0-rc.1](https://github.com/flow-build/engine/compare/v2.16.2...v2.17.0-rc.1) (2022-11-08)
 
 
