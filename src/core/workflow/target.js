@@ -153,6 +153,14 @@ class Target extends PersistedEntity {
         const state_history = await fetchStateHistory(process.id);
         this._active = false;
         await this.save();
+        
+        await this.getPersist().saveSignalRelation(trx, {
+          target_id: this.id, 
+          trigger_id: params.trigger_id, 
+          target_process_id: process.id,
+          resolved: true
+        });
+
         const state = state_history.find(st => st._id === this.process_state_id);
         const node = process._blueprint.fetchNode(state.node_id);
         const continue_payload = {

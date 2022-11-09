@@ -43,6 +43,10 @@ class Trigger extends PersistedEntity {
     return undefined;
   }
 
+  static async fetchEventDataByProcessId(process_id, filters) {
+    return await this.getPersist().getEventDataByProcessId(process_id, filters);
+  }
+
   constructor(params = {}) {
     super();
 
