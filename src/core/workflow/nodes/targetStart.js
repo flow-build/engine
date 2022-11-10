@@ -1,4 +1,6 @@
 const _ = require("lodash");
+const Ajv = require("ajv");
+const addFormats = require("ajv-formats");
 const { StartNode } = require("./start");
 
 class TargetStartNode extends StartNode {
@@ -17,6 +19,14 @@ class TargetStartNode extends StartNode {
         },
       },
     });
+  }
+
+  static validate(spec) {
+    const ajv = new Ajv({ allErrors: true });
+    addFormats(ajv);
+    const validate = ajv.compile(TargetStartNode.schema);
+    const validation = validate(spec);
+    return [validation, JSON.stringify(validate.errors)];
   }
 }
 

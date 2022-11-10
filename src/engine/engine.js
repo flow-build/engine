@@ -581,6 +581,10 @@ class Engine {
     return await Packages.delete(package_id);
   }
 
+  async fetchEventsByProcess(process_id, filters = {}) {
+    return await Trigger.fetchEventDataByProcessId(process_id, filters);
+  }
+
   async continueProcess(process_id, actor_data, result = {}) {
     if (!uuidValidate(process_id)) {
       const error = {

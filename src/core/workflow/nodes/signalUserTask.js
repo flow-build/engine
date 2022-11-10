@@ -139,7 +139,7 @@ class SignalUserTaskNode extends ParameterizedNode {
       });
       return {
         trigger_payload: { ...preparedInput },
-        events: parameters.events
+        events: this._spec.parameters.events
       }
     }
     return {};

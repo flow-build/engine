@@ -1,4 +1,6 @@
 const _ = require("lodash");
+const Ajv = require("ajv");
+const addFormats = require("ajv-formats");
 const { prepare } = require("../../utils/input");
 const { FinishNode } = require("./finish");
 
@@ -20,6 +22,18 @@ class TriggerFinishNode extends FinishNode {
     });
     schema.required = ["id", "name", "next", "type", "lane_id", "parameters"];
     return schema;
+  }
+
+  static validate(spec) {
+    const ajv = new Ajv({ allErrors: true });
+    addFormats(ajv);
+    const validate = ajv.compile(TriggerFinishNode.schema);
+    const validation = validate(spec);
+    return [validation, JSON.stringify(validate.errors)];
+  }
+
+  validate() {
+    return TriggerFinishNode.validate(this._spec);
   }
 
   _preProcessing({ bag, input, actor_data, environment, parameters = {} }) {
