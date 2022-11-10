@@ -7,7 +7,8 @@ const { ProcessStatus } = require("./process_state");
 const { Blueprint } = require("../workflow/blueprint");
 const { Lane } = require("../workflow/lanes");
 const { Timer } = require("./timer");
-const { Signal, Trigger } = require("./trigger");
+const { Trigger } = require("./trigger");
+const { Target } = require("./target");
 const { getProcessStateNotifier, getActivityManagerNotifier } = require("../notifier_manager");
 const { getAllowedStartNodes } = require("../utils/blueprint");
 const { ActivityManager } = require("./activity_manager");
@@ -617,6 +618,58 @@ class Process extends PersistedEntity {
     }
   }
 
+  async _manageSignalCreation() {
+    const node = this._blueprint.fetchNode(this._state.node_id)
+    const trigger_params = {
+      signal: this.state.result.signal,
+      input: this.state.result.trigger_payload,
+      actor_data: this.state.actor_data,
+      process_id: this.id
+    }
+    if(
+      node._spec.category === 'signal' && 
+      node._spec.type.toLowerCase() === 'finish'
+    ) {
+      const trigger_process_id = this.state.bag.trigger_process_id
+      if(trigger_process_id) {
+        trigger_params.target_process_id = trigger_process_id
+      }
+      const trigger = new Trigger(trigger_params);
+      await trigger.save();
+    }
+
+    if(
+      (node._spec.type.toLowerCase() === 'event' && !this.state.result.target_data) || 
+      (node._spec.type.toLowerCase() === 'usertask' && node._spec.category === 'signal' && 
+      this._current_status === 'waiting')
+    ) {
+      const events = this.state.result.events;
+      await Promise.all(events.map((event) => {
+        if(event.family==="trigger") {
+          const tr_params = {
+            signal: event.definition,
+            input: this.state.result.trigger_payload,
+            actor_data: this.state.actor_data,
+            process_id: this.id
+          }
+          const trigger = new Trigger(tr_params);
+          return trigger.save();
+        }
+        if(event.family==='target') {
+          const target_params = {
+            signal: event.definition,
+            resource_type: 'process',
+            resource_id: this.id,
+            process_state_id: this._current_state_id
+          }
+          const target = new Target(target_params);
+          return target.save();
+        }
+      })
+      );
+    }
+  }
+
   // eslint-disable-next-line no-unused-vars
   async _executionLoop(custom_lisp, actor_data, trx = false) {
     emitter.emit("EXECUTION_LOOP.START", `CALLED EXECUTION LOOP PID [${this.id}] STATUS [${this.status}]`, {
@@ -692,6 +745,7 @@ class Process extends PersistedEntity {
         });
         await this._notifyActivityManager(activity_manager);
       }
+      await this._manageSignalCreation()
     }
 
     if (activity_manager) {
@@ -709,17 +763,6 @@ class Process extends PersistedEntity {
         await ActivityManager.interruptActivityManagerForProcess(this._id);
         break;
       case ProcessStatus.FINISHED:
-        const node = this._blueprint.fetchNode(this._state.node_id)
-        if(node._spec.category === 'signal') {
-          const signal_params = {
-            signal: this.state.result.signal,
-            input: this.state.result.trigger_payload,
-            actor_data: this.state.actor_data,
-            process_id: this.id
-          }
-          const signal = new Trigger(signal_params);
-          await signal.save();
-        }
       case ProcessStatus.FORBIDDEN:
         await ActivityManager.finishActivityManagerForProcess(this._id);
         break;

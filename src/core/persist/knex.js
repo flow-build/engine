@@ -198,6 +198,133 @@ class TriggerKnexPersist extends KnexPersist {
   async getByProcessId(id) {
     return await this._db.select("*").from(this._table).where("process_id", id);
   }
+
+  async getTriggerEvents(process_id, family) {
+    if(family.includes('trigger')) {
+      return this._db
+      .select(
+        "tr.id",
+        "tr.created_at",
+        "tr.signal",
+        "tr.process_id",
+        "tr.active",
+        "tr.input",
+        "tr.actor_data",
+        "tt.resolved",
+        "tt.target_process_id",
+        "ta.id as target_id",
+        "ta.created_at as target_created_at",
+        "ta.signal as target_signal",
+        "ta.resource_type as target_resource_type",
+        "ta.resource_id as target_resource_id",
+        "ta.active as target_active"
+      )
+      .from("trigger as tr")
+      .join("trigger_target as tt", "tr.id", "tt.trigger_id")
+      .join("target as ta", "tt.target_id", "ta.id")
+      .where("tr.process_id", process_id)
+      .then((resp) => {
+        return resp.reduce((acc, item) => {
+          const item_target = {
+            id: item.target_id,
+            created_at: item.target_created_at,
+            resolved: item.resolved,
+            process_id: item.target_process_id,
+            signal: item.target_signal,
+            resource_type: item.target_resource_type,
+            resource_id: item.target_resource_id,
+            active: item.target_active,
+          };
+          const found_trigger = acc.find((tr) => tr.id === item.id)
+          if(found_trigger) {
+            found_trigger.targets.push(item_target);
+            return acc;
+          }
+          acc.push({
+            id: item.id,
+            created_at: item.created_at,
+            signal: item.signal,
+            process_id: item.process_id,
+            active: item.active,
+            input: item.input,
+            actor_data: item.actor_data,
+            targets: [item_target],
+          })
+          return acc;
+        }, [])
+      });
+    };
+    return [];
+  }
+
+  async getTargetEvents(process_id, family) {
+    if(family.includes('target')) {
+      return this._db
+      .select(
+        "ta.id",
+        "ta.created_at",
+        "ta.signal",
+        "ta.resource_type",
+        "ta.resource_id",
+        "ta.active",
+        "tt.resolved",
+        "tr.id as trigger_id",
+        "tr.created_at as trigger_created_at",
+        "tr.signal as trigger_signal",
+        "tr.process_id as trigger_process_id",
+        "tr.active as trigger_active",
+        "tr.input as trigger_input",
+        "tr.actor_data as trigger_actor_data",
+      )
+      .from("target as ta")
+      .join("trigger_target as tt", "ta.id", "tt.target_id")
+      .join("trigger as tr", "tt.trigger_id", "tr.id")
+      .where("tt.target_process_id", process_id)
+      .then((resp) => {
+        return resp.reduce((acc, item) => {
+          const item_trigger = {
+            id: item.trigger_id,
+            created_at: item.trigger_created_at,
+            process_id: item.trigger_process_id,
+            signal: item.trigger_signal,
+            active: item.trigger_active,
+            input: item.trigger_input,
+            actor_data: item.trigger_actor_data,
+          };
+          const found_target = acc.find((ta) => ta.id === item.id)
+          if(found_target) {
+            found_target.triggers.push(item_trigger);
+            return acc;
+          }
+          acc.push({
+            id: item.id,
+            created_at: item.created_at,
+            signal: item.signal,
+            resource_type: item.resource_type,
+            resource_id: item.resource_id,
+            active: item.active,
+            triggers: [item_trigger],
+          })
+          return acc;
+        }, [])
+      });
+    };
+    return [];
+  }
+
+  async getEventDataByProcessId(process_id, filters = {}) {
+    const family = filters?.family || [];
+
+    const [triggers, targets] = await Promise.all([
+      this.getTriggerEvents(process_id, family),
+      this.getTargetEvents(process_id, family)
+    ]);
+
+    return {
+      triggers,
+      targets,
+    };
+  }
 }
 
 class TargetKnexPersist extends KnexPersist {
@@ -232,10 +359,10 @@ class TargetKnexPersist extends KnexPersist {
       .first();
   }
 
-  async save(obj, ...args) {
+  async saveByWorkflow(obj, ...args) {
     const [latestWorkflow] = await this.getTargetedWorkflows(obj);
     const registered_target = await this.getByWorkflowAndSignal(obj.signal)
-    const is_update = registered_target && latestWorkflow.version > 1;
+    const is_update = registered_target && latestWorkflow && latestWorkflow.version > 1;
     if (is_update) {
       obj.id = registered_target.id
       await this._update(registered_target.id, obj, ...args);
@@ -271,6 +398,21 @@ class TargetKnexPersist extends KnexPersist {
         .from(this._trigger_target_table)
         .where("target_id", target_id);
     }
+  }
+
+  async getActivityManagerByProcessStateId(process_state_id) {
+    return await this._db
+      .select("*")
+      .from("activity_manager AS am")
+      .where("am.process_state_id", "=", process_state_id)
+      .first();
+  }
+
+  async getByProcessStateId(process_state_id) {
+    return await this._db(this._table)
+      .select("*")
+      .where("process_state_id", "=", process_state_id)
+      .first();
   }
 }
 

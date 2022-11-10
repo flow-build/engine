@@ -2,20 +2,32 @@ const _ = require("lodash");
 const Ajv = require("ajv");
 const addFormats = require("ajv-formats");
 const { prepare } = require("../../utils/input");
-const { FinishNode } = require("./finish");
+const { ProcessStatus } = require("../process_state");
+const { ParameterizedNode } = require("./parameterized");
 
-class TriggerFinishNode extends FinishNode {
+class EventNode extends ParameterizedNode {
   static get schema() {
     let schema = _.merge(super.schema, {
       type: "object",
       properties: {
-        next: { type: "null" },
+        next: { type: "string" },
         parameters: {
             type: "object",
-            required: ["signal"],
+            required: ["events"],
             properties: {
-                signal: { type: "string" },
-                input: { type: "object" },
+                events: { 
+                  type: "array",
+                  maxItems: 1,
+                  items: {
+                    type: "object",
+                    required: ["definition", "family", "category"],
+                    properties: {
+                      definition: { type: "string" },
+                      family: { type: "string" },
+                      category: { type: "string" },
+                    }
+                  } 
+                },
             },
           },
       },
@@ -27,13 +39,21 @@ class TriggerFinishNode extends FinishNode {
   static validate(spec) {
     const ajv = new Ajv({ allErrors: true });
     addFormats(ajv);
-    const validate = ajv.compile(TriggerFinishNode.schema);
+    const validate = ajv.compile(EventNode.schema);
     const validation = validate(spec);
     return [validation, JSON.stringify(validate.errors)];
   }
 
   validate() {
-    return TriggerFinishNode.validate(this._spec);
+    return EventNode.validate(this._spec);
+  }
+
+  _run(execution_data, lisp) {
+    const [event] = this._spec.parameters.events;
+    if(event.category === 'signal' && event.family === 'target') {
+      return [execution_data, ProcessStatus.WAITING];  
+    }
+    return [execution_data, ProcessStatus.RUNNING];
   }
 
   _preProcessing({ bag, input, actor_data, environment, parameters = {} }) {
@@ -47,7 +67,7 @@ class TriggerFinishNode extends FinishNode {
       });
       return {
         trigger_payload: { ...preparedInput },
-        signal: this._spec.parameters.signal
+        events: this._spec.parameters.events
       }
     }
     return {};
@@ -55,5 +75,5 @@ class TriggerFinishNode extends FinishNode {
 }
 
 module.exports = {
-  TriggerFinishNode,
+  EventNode,
 };
