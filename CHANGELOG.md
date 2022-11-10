@@ -1,3 +1,58 @@
+## [2.17.0-rc.1](https://github.com/flow-build/engine/compare/v2.16.2...v2.17.0-rc.1) (2022-11-10)
+
+
+### Features
+
+* (wip) intermediary signals ([b7c7419](https://github.com/flow-build/engine/commit/b7c7419d11a88fe57f9d3be38bf44620359c25c3))
+* adds 'fetchEventsByProcess' functionality to engine and cockpit ([d6d6571](https://github.com/flow-build/engine/commit/d6d657115c6c5164b62b21f693b4992cd9b4ece0))
+* adds 'fetchEventsByProcess' functiononality to engine and cockpit ([9cb60e5](https://github.com/flow-build/engine/commit/9cb60e51a4769de4fb2d8f2a927c392ede297fef))
+* adds actor_data and process_id to Trigger creation ([1f6b24a](https://github.com/flow-build/engine/commit/1f6b24aae78c82f83b19e4d61b30f994631b6381))
+* adds extra methods for Target Persistance Class ([7cc26d2](https://github.com/flow-build/engine/commit/7cc26d2bbd326a2b198ee4320075b011e189fc85))
+* adds Finish Signal Node ([7e6c505](https://github.com/flow-build/engine/commit/7e6c5050b2ce73ef0c06b051deb94b52e4e9710a))
+* adds foreign relation to trigger table ([373dd7a](https://github.com/flow-build/engine/commit/373dd7ac1bac4636e93d20e21186ed3ee4dfab21))
+* adds functions for trigger usage ([dda26d4](https://github.com/flow-build/engine/commit/dda26d468226d2abeb4721a2e14e875ac8003cce))
+* adds getByProcessStateId method to Target persistance class ([0acf565](https://github.com/flow-build/engine/commit/0acf565289cb44a79d58120f88dc037f746fff40))
+* adds logic for target creation ([03e4ea7](https://github.com/flow-build/engine/commit/03e4ea70958b5cb4d0e09f2209dfc7da40d433c7))
+* adds logic for Target to run process targets ([5af42bf](https://github.com/flow-build/engine/commit/5af42bfe85dafbc26cbd981a9497a91471225bcb))
+* adds method to fetch activity manager by process state id on Target ([a03f120](https://github.com/flow-build/engine/commit/a03f120664e709f0f87a423ef041bf447710b97d))
+* adds migrations for trigger and target and  target seed example ([2f66b95](https://github.com/flow-build/engine/commit/2f66b95ab4963b0456811a748860f2dbcfb4f868))
+* adds new persistance entities for trigger and target ([83e0a62](https://github.com/flow-build/engine/commit/83e0a62e50568d5450c035a74f26568df1320f30))
+* adds process logic to handle system task signals ([8690792](https://github.com/flow-build/engine/commit/86907921bce07299075399dd43a9f139b47c17c6))
+* adds signal system task node ([8d5ddbc](https://github.com/flow-build/engine/commit/8d5ddbccc8cfb685d352bd4facaeab7ac8d60e1c))
+* adds SignalUserTaskNode as UserTaskNode signal category ([f549ccc](https://github.com/flow-build/engine/commit/f549cccc66c4ac120993b7382de987cd1ffde9e6))
+* adds target and trigger classes and makes change to process logic on finish node ([fa991be](https://github.com/flow-build/engine/commit/fa991be944bdbcd1075ff05ce463f3472d497a62))
+* adds target logic to run latest version of specified workflow ([4c93231](https://github.com/flow-build/engine/commit/4c93231bb77cd0f6559fa9a817e8239877eabf96))
+* adds TargetStartNode ([736f624](https://github.com/flow-build/engine/commit/736f624035411f36423b3a35783d028ff002490a))
+* adds trigger target relation ([dbe2341](https://github.com/flow-build/engine/commit/dbe2341ebb4a10287ee1a0b02cc24102c3997875))
+* adds trigger_target migration ([3dfd560](https://github.com/flow-build/engine/commit/3dfd5600dd8ec31b8485ef316b3cc063ffa53ffc))
+* adds TriggerTarget persistance entity ([918e6d0](https://github.com/flow-build/engine/commit/918e6d03e85d0e99d9e2e630e297527428963897))
+* adjust trigger 'run' to use latest workflow from specified target ([1309e99](https://github.com/flow-build/engine/commit/1309e9992dd0bd037e3a21d2e0eb59231ed21f03))
+* adjust TriggerFinishNode validations ([dc118c4](https://github.com/flow-build/engine/commit/dc118c47a98d24f12be8091ceb22dae5e4ac9340))
+* changes engine heartbeat to listen from trigger table ([8adec27](https://github.com/flow-build/engine/commit/8adec275fac35695315e94eaf37f48a0b63631f9))
+* changes SignalSystemTaskNode to be 'Event' node type ([0df7037](https://github.com/flow-build/engine/commit/0df7037a0059d375940cb04e6a2721c476e1a93c))
+* FLOW 26 task ([3a51e4e](https://github.com/flow-build/engine/commit/3a51e4ee08450b1de95a32aeb3733200e03f1bf5))
+* injects engine to trigger and target to continue process ([9461f93](https://github.com/flow-build/engine/commit/9461f93bb2d0d15c3113fe988a2d1ccd32debef3))
+* intermediary node events ([8b1751b](https://github.com/flow-build/engine/commit/8b1751b7f76605634e2239aa05d4e0ba6a5a227e))
+* sets max limit for events on Event node ([f962231](https://github.com/flow-build/engine/commit/f962231922beac98812966120da5f7d4a12f6aa9))
+* sets resolved as false in case of failed lane validation ([3e6ae70](https://github.com/flow-build/engine/commit/3e6ae70a1a879f3ebb86ba3710d74aa7251b2521))
+* updates engine to disable Target when submiting task ([73817b7](https://github.com/flow-build/engine/commit/73817b735f0bcb59d12cd1297d78153e86c76f20))
+* updates migrations ([0d450d2](https://github.com/flow-build/engine/commit/0d450d27dc9ea798f3480f685952c1ad1c95ac79))
+* updates process logic to comply with new node specs from event node ([8d974bb](https://github.com/flow-build/engine/commit/8d974bbebadc10068ba1a8eecc662c77e2b4b182))
+* updates target and trigger runs to execute process signals ([ff7e4f9](https://github.com/flow-build/engine/commit/ff7e4f9338b48c9ea6088a9ff0361a1535837cbd))
+* updates target to run process targett with different parameters ([e09ceb1](https://github.com/flow-build/engine/commit/e09ceb1534b3bdf6037417f139ff9080a5fb3c8b))
+
+
+### Bug Fixes
+
+* adjust preProcessing on intermediary event nodes ([ba20d97](https://github.com/flow-build/engine/commit/ba20d97c68a0a23beeb29a45ef2fa33698f23c2e))
+* adjust schema validation on start and finish signal nodes ([a40205a](https://github.com/flow-build/engine/commit/a40205a62793292dba52e34c139365796f867675))
+* adjust target and process ([4c85ffe](https://github.com/flow-build/engine/commit/4c85ffe1ff03c8026993957747224c42bc972795))
+* adjust target update and trigger_target creations ([e9c9cc6](https://github.com/flow-build/engine/commit/e9c9cc64dfd9a336f4c38449da81a65bb546ba4f))
+* adjust WAITING status treatment on process execution ([37e4a6c](https://github.com/flow-build/engine/commit/37e4a6cff0fe621befb3f899d83f34c635309f0e))
+* changes SignalNode to run tests ([5b33596](https://github.com/flow-build/engine/commit/5b335968b6e11f10db9fde17a4c42b35248cc903))
+* fix preProcessing on trigger finish node ([a67ff1e](https://github.com/flow-build/engine/commit/a67ff1e76495511f12ee9b95bd88b8b31792ed04))
+* temporarily skips 'broken' tests ([a24ed56](https://github.com/flow-build/engine/commit/a24ed5645cfaac5c214ae03976251f1edea29c3c))
+
 ## [2.17.0-rc.1](https://github.com/flow-build/engine/compare/v2.16.2...v2.17.0-rc.1) (2022-11-08)
 
 
