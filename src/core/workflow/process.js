@@ -639,9 +639,9 @@ class Process extends PersistedEntity {
     }
 
     if(
-      (node._spec.type.toLowerCase() === 'event' || 
-      (node._spec.type.toLowerCase() === 'usertask' && node._spec.category === 'signal')) &&
-      this._current_status === 'waiting'
+      (node._spec.type.toLowerCase() === 'event' && !this.state.result.target_data) || 
+      (node._spec.type.toLowerCase() === 'usertask' && node._spec.category === 'signal' && 
+      this._current_status === 'waiting')
     ) {
       const events = this.state.result.events;
       await Promise.all(events.map((event) => {

@@ -17,6 +17,7 @@ class EventNode extends ParameterizedNode {
             properties: {
                 events: { 
                   type: "array",
+                  maxItems: 1,
                   items: {
                     type: "object",
                     required: ["definition", "family", "category"],
@@ -48,7 +49,11 @@ class EventNode extends ParameterizedNode {
   }
 
   _run(execution_data, lisp) {
-    return [execution_data, ProcessStatus.WAITING];
+    const [event] = this._spec.parameters.events;
+    if(event.category === 'signal' && event.family === 'target') {
+      return [execution_data, ProcessStatus.WAITING];  
+    }
+    return [execution_data, ProcessStatus.RUNNING];
   }
 
   _preProcessing({ bag, input, actor_data, environment, parameters = {} }) {
