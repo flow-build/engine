@@ -29,4 +29,4 @@ services:
       - /usr/app/node_modules
     working_dir: /usr/app
     #command: ./scripts/run_tests.sh
-    command: bash -c "npm install && npm install knex -g && npm audit fix && npm run migrations && npm run seeds && su -c 'npm run tests' node"
+    # command: bash -c "npm install && npm install knex -g && npm audit fix && npm run migrations && npm run seeds && su -c 'npm run tests' node"

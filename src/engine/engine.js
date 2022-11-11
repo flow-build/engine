@@ -5,6 +5,7 @@ const { ENGINE_ID } = require("../core/workflow/process_state");
 const { Packages } = require("../core/workflow/packages");
 const { PersistorProvider } = require("../core/persist/provider");
 const { Timer } = require("../core/workflow/timer");
+const { Trigger } = require("../core/workflow/trigger");
 const { ActivityManager } = require("../core/workflow/activity_manager");
 const { ActivityStatus } = require("../core/workflow/activity");
 const { setProcessStateNotifier, setActivityManagerNotifier } = require("../core/notifier_manager");
@@ -18,6 +19,7 @@ const { ProcessStatus } = require("./../core/workflow/process_state");
 const { validateTimeInterval } = require("../core/utils/ajvValidator");
 const { validate: uuidValidate } = require("uuid");
 const { isEmpty } = require("lodash");
+const { Target } = require("../core/workflow/target");
 
 function getActivityManagerFromData(activity_manager_data) {
   const activity_manager = ActivityManager.deserialize(activity_manager_data);
@@ -157,6 +159,24 @@ class Engine {
       }
     });
     await Promise.all(continue_promises);
+
+    await Process.getPersist()._db.transaction(async (trx) => {
+      try {
+        emitter.emit("ENGINE.SIGNAL_FETCHING", `FETCHING SIGNAL PROCESSES ON HEARTBEAT BATCH [${5}]`);
+        const signals = await trx("trigger")
+          .select("*")
+          .where("active", true)
+          .limit(5)
+          .forUpdate()
+          .skipLocked();
+        return await Promise.all(signals.map((l_trigger) => {
+          const trigger = Trigger.deserialize(l_trigger);
+          return trigger.run(trx, this)
+        }))
+      } catch (e) {
+        emitter.emit("ENGINE.SIGNAL.ERROR", "  ERROR FETCHING SIGNALS ON HEARTBEAT", { error: e });
+      }
+    });
   }
 
   static setNextHeartBeat() {
@@ -368,7 +388,7 @@ class Engine {
     }
   }
 
-  async submitActivity(activity_manager_id, actor_data, external_input) {
+  async submitActivity(activity_manager_id, actor_data, external_input, disable_target = true) {
     try {
       let activity_manager_data = await ActivityManager.get(activity_manager_id, actor_data);
       if (activity_manager_data) {
@@ -390,6 +410,15 @@ class Engine {
             };
           }
           const [is_completed, activities] = await activity_manager.pushActivity(activity_manager_data.process_id);
+          
+          if(disable_target) {
+            const target = await Target.fetchTargetByProcessStateId(activity_manager_data.process_state_id);
+            if(target && target.active) {
+              target._active = false;
+              await target.save()
+            }
+          }
+          
           let process_promise;
           if (is_completed && activity_manager_data.type !== "notify") {
             const result = await process_manager.notifyCompletedActivityManager(
@@ -510,7 +539,14 @@ class Engine {
 
     Blueprint.assert_is_valid(blueprint_spec);
 
-    return await new Workflow(name, description, blueprint_spec, workflow_id).save();
+    const workflow = await new Workflow(name, description, blueprint_spec, workflow_id).save();
+
+    const target = Target.target_workflow_creation(workflow);
+    if(target) {
+      target.saveByWorkflow()
+    }
+
+    return workflow
   }
 
   async fetchWorkflow(workflow_id) {
@@ -543,6 +579,10 @@ class Engine {
 
   async deletePackage(package_id) {
     return await Packages.delete(package_id);
+  }
+
+  async fetchEventsByProcess(process_id, filters = {}) {
+    return await Trigger.fetchEventDataByProcessId(process_id, filters);
   }
 
   async continueProcess(process_id, actor_data, result = {}) {
