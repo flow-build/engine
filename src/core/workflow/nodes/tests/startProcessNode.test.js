@@ -77,7 +77,7 @@ describe("StartProcessSystemTaskNode", () => {
     let original_createProcessByWorkflowName = process_manager.createProcessByWorkflowName;
     let original_runProcess = process_manager.runProcess;
     try {
-      const mock = jest.fn().mockResolvedValue({ workflow: { id: "1234" } });
+      const mock = jest.fn().mockResolvedValue({ _id: "1234" });
       Workflow.fetchWorkflowByName = mock;
 
       const process_id = "9090";
@@ -140,7 +140,7 @@ describe("preProcess workflow data", () => {
   let original_FetchWorkflowByName = Workflow.fetchWorkflowByName;
   let mock_createProcessByWorkflowName = jest.fn().mockResolvedValue({ id: "1239" });
   let mock_runProcess = jest.fn();
-  let mock_FetchWorkflowByName = jest.fn().mockResolvedValue({ workflow: { id: "1234" } });
+  let mock_FetchWorkflowByName = jest.fn().mockResolvedValue({ _id: "1234" });
   let spec = minimal;
 
   beforeEach(() => {
