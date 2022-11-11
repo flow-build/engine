@@ -18,11 +18,11 @@ async function abortProcess(processIds) {
   return Promise.allSettled(abort_promises);
 }
 
-async function continueProcess(process_id, result_data, expected_step_number) {
+async function continueProcess(process_id, result_data, expected_step_number, trx = false) {
   const process = await processDependency.Process.fetch(process_id);
   const next_step_number = processDependency.Process.calculateNextStep(process.state.step_number);
   if (process && next_step_number === expected_step_number) {
-    return await process.continue(result_data, process.state.actor_data);
+    return await process.continue(result_data, process.state.actor_data, trx);
   } else {
     return undefined;
   }
