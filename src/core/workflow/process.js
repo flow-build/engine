@@ -283,7 +283,7 @@ class Process extends PersistedEntity {
           actor_data,
           null
         );
-        await this.save(trx);
+        await this.save();
         await this._notifyProcessState({});
       }
 
@@ -520,7 +520,10 @@ class Process extends PersistedEntity {
 
       await this._notifyProcessState(actor_data);
 
-      if (result_state.status === ProcessStatus.PENDING && result_state.result.timeout) {
+      if (
+        (result_state.status === ProcessStatus.PENDING || result_state.status === ProcessStatus.WAITING) 
+          && result_state.result.timeout) 
+          {
         emitter.emit("PROCESS.TIMER.CREATING", `      CREATING NEW TIMER ON PID [${p_lock.id}]`, {
           process_id: p_lock.id,
         });
@@ -773,6 +776,8 @@ class Process extends PersistedEntity {
         await ActivityManager.interruptActivityManagerForProcess(this._id);
         break;
       case ProcessStatus.FINISHED:
+        await ActivityManager.finishActivityManagerForProcess(this._id, input_trx);  
+        break;
       case ProcessStatus.FORBIDDEN:
         await ActivityManager.finishActivityManagerForProcess(this._id);
         break;

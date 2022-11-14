@@ -79,8 +79,8 @@ class ActivityManagerKnexPersist extends KnexPersist {
     this._activity_table = "activity";
   }
 
-  async getActivityDataFromStatus(status, filters) {
-    return await this._db
+  getActivityDataFromStatusQuery(status, filters) {
+    return this._db
       .select(
         "am.id",
         "am.created_at",
@@ -132,6 +132,14 @@ class ActivityManagerKnexPersist extends KnexPersist {
         }
       })
       .orderBy("am.created_at", "asc");
+  }
+
+  async getActivityDataFromStatus(status, filters, trx) {
+    if(trx) {
+      return await this.getActivityDataFromStatusQuery(status, filters)
+      .transacting(trx);
+    }
+    return await this.getActivityDataFromStatusQuery(status, filters)
   }
 
   async getActivityDataFromId(obj_id) {

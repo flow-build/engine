@@ -8,6 +8,9 @@ const { Timer } = require("../../../core/workflow/timer");
 const { Trigger } = require("../../../core/workflow/trigger");
 const { v1: uuid } = require("uuid");
 
+const { promisify } = require("util");
+const sleep = promisify(setTimeout);
+
 let engine;
 
 beforeAll(async () => {
@@ -150,9 +153,11 @@ describe("Run existing process", () => {
     const process = await createProcess(blueprints_.timer, actors_.simpleton);
     await engine.runProcess(process.id, actors_.simpleton);
 
+    const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+    await delay(2000);
+
     await Engine._beat();
 
-    const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
     await delay(2000);
 
     const result_process = await engine.fetchProcess(process.id);
@@ -488,33 +493,20 @@ test("child process has restricted input schema", async () => {
   expect(childState.state.status).not.toBe(ProcessStatus.ERROR);
 });
 
-describe.skip("User task timeout", () => {
-  let actualTimeout;
-  function wait(ms = 2000) {
-    return new Promise((resolve) => {
-      actualTimeout(resolve, ms);
-    });
-  }
+describe("User task timeout", () => {
 
   beforeEach(async () => {
     await engine.saveWorkflow("user_timeout", "user_timeout", blueprints_.user_timeout);
-    actualTimeout = setTimeout;
-    jest.useFakeTimers();
-  });
-
-  afterEach(() => {
-    jest.useRealTimers();
   });
 
   test("finish after timeout", async () => {
-    jest.setTimeout(30000);
+    jest.setTimeout(10000);
     const process = await engine.createProcessByWorkflowName("user_timeout", actors_.simpleton);
     await engine.runProcess(process.id);
 
-    jest.runAllTimers();
-    await wait();
-    await Engine._beat();
-    await wait();
+    await sleep(2000);
+    await engine.constructor._beat();
+    await sleep(2000);
 
     const process_state_history = await engine.fetchProcessStateHistory(process.id);
 
@@ -536,7 +528,7 @@ describe.skip("User task timeout", () => {
       result: { is_continue: true },
     });
 
-    //even when the userTask have expired, the actor_data should be preserved
+    // even when the userTask have expired, the actor_data should be preserved
     expect(process_state.actor_data).toBeDefined();
 
     process_state = process_state_history[2];
@@ -548,21 +540,17 @@ describe.skip("User task timeout", () => {
       result: {},
     });
 
-    await Engine._beat();
     const activity_managers = await engine.fetchAvailableActivitiesForActor(actors_.simpleton);
     expect(activity_managers).toHaveLength(0);
   });
 
   test("commit reset timeout", async () => {
-    jest.setTimeout(14000);
     const process = await engine.createProcessByWorkflowName("user_timeout", actors_.simpleton);
     await engine.runProcess(process.id);
 
-    await wait();
-
     await engine.commitActivity(process.id, actors_.simpleton, { activity_data: "example_activity_data" });
 
-    await wait();
+    await sleep(2000);
 
     let process_state_history = await engine.fetchProcessStateHistory(process.id);
     expect(process_state_history).toHaveLength(3);
@@ -575,8 +563,7 @@ describe.skip("User task timeout", () => {
       result: {},
     });
 
-    jest.runAllTimers();
-    await wait(2000);
+    await sleep(2000);
 
     process_state_history = await engine.fetchProcessStateHistory(process.id);
     expect(process_state_history).toHaveLength(5);
@@ -661,8 +648,7 @@ describe.skip("User task timeout", () => {
     let activity_managers = await engine.fetchAvailableActivitiesForActor(actors_.simpleton);
     expect(activity_managers).toHaveLength(0);
 
-    jest.runAllTimers();
-    await wait();
+    await sleep(2000);
 
     process_state_history = await engine.fetchProcessStateHistory(process.id);
     validateProcessStateHistory(process_state_history);
@@ -715,8 +701,7 @@ describe.skip("User task timeout", () => {
     let activity_managers = await engine.fetchAvailableActivitiesForActor(actors_.simpleton);
     expect(activity_managers).toHaveLength(0);
 
-    jest.runAllTimers();
-    await wait(3000);
+    await sleep(3000);
     await Engine._beat();
 
     process_state_history = await engine.fetchProcessStateHistory(process.id);
@@ -737,8 +722,7 @@ describe.skip("User task timeout", () => {
     let process_state_history = await engine.fetchProcessStateHistory(process_id);
     expect(process_state_history).toHaveLength(5);
 
-    jest.runAllTimers();
-    await wait();
+    await sleep(2000);
 
     process_state_history = await engine.fetchProcessStateHistory(process_id);
     expect(process_state_history).toHaveLength(5);
@@ -823,6 +807,7 @@ test.skip("Push activity should return error to an non-existant activity manager
 });
 
 test("Beat won't break despite orphan timer", async () => {
+  jest.setTimeout(60000);
   const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
   const workflow = await engine.saveWorkflow(
     "user_timeout_one_hour",
