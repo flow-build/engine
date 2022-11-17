@@ -139,7 +139,7 @@ class Target extends PersistedEntity {
             target_process_id: process.id,
             resolved: true
           })
-          return process.run(params.actor_data, {});
+          return process.continue({}, params.actor_data, trx);
         };
         await this.getPersist().saveSignalRelation(trx, {
           target_id: this.id, 

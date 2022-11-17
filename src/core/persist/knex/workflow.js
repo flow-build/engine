@@ -6,12 +6,18 @@ class WorkflowKnexPersist extends KnexPersist {
     super(db, Workflow, "workflow");
   }
 
-  async get(id) {
-    const workflow = await this._db.select("*").from(this._table).where("id", id).first();
+  async get(id, trx) {
+    const query = this._db.select("*").from(this._table).where("id", id).first();
+    let workflow;
+    if(trx) {
+      workflow = await query.transacting(trx);
+    } else {
+      workflow = await query
+    };
     if (!workflow) {
       return undefined;
     }
-    const latest = await this._checkWhetherIsLatest(workflow);
+    const latest = await this._checkWhetherIsLatest(workflow, trx);
     return { ...workflow, ...{ latest } };
   }
 
@@ -69,8 +75,14 @@ class WorkflowKnexPersist extends KnexPersist {
     return this._db.select("*").from(this._table).where({ blueprint_hash: hash });
   }
 
-  async _checkWhetherIsLatest(workflow) {
-    const latestVersion = await this._db.max("version").from(this._table).where("name", workflow.name).first();
+  async _checkWhetherIsLatest(workflow, trx) {
+    const query = this._db.max("version").from(this._table).where("name", workflow.name).first();
+    let latestVersion;
+    if(trx) {
+      latestVersion = await query.transacting(trx);
+    } else {
+      latestVersion = await query;
+    }    
     return workflow.version === latestVersion.max;
   }
 }
