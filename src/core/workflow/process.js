@@ -650,7 +650,7 @@ class Process extends PersistedEntity {
     return inner_loop_result;
   }
   
-  async _manageSignalCreation() {
+  async _manageSignalCreation(input_trx) {
     const node = this._blueprint.fetchNode(this._state.node_id)
     const trigger_params = {
       signal: this.state.result.signal,
@@ -667,7 +667,7 @@ class Process extends PersistedEntity {
         trigger_params.target_process_id = trigger_process_id
       }
       const trigger = new Trigger(trigger_params);
-      await trigger.save();
+      await trigger.save(input_trx);
     }
 
     if(
@@ -685,7 +685,7 @@ class Process extends PersistedEntity {
             process_id: this.id
           }
           const trigger = new Trigger(tr_params);
-          return trigger.save();
+          return trigger.save(input_trx);
         }
         if(event.family==='target') {
           const target_params = {
@@ -695,7 +695,7 @@ class Process extends PersistedEntity {
             process_state_id: this._current_state_id
           }
           const target = new Target(target_params);
-          return target.save();
+          return target.save(input_trx);
         }
       })
       );
@@ -726,6 +726,8 @@ class Process extends PersistedEntity {
         }
 
         ps && emitter.emit("PROCESS.STEP_CREATED", "", {});
+
+        await this._manageSignalCreation(input_trx);
       } catch (e) {
         execution_success = false;
         emitter.emit(
@@ -758,7 +760,6 @@ class Process extends PersistedEntity {
         });
         await this._notifyActivityManager(activity_manager);
       }
-      await this._manageSignalCreation()
     }
 
     if (activity_manager) {
