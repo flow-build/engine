@@ -180,10 +180,10 @@ class ActivityManager extends PersistedEntity {
     }
   }
 
-  static async finishActivityManagerForProcess(process_id) {
+  static async finishActivityManagerForProcess(process_id, trx = false) {
     const full_activity_manager_data = await this.getPersist().getActivityDataFromStatus(ActivityStatus.STARTED, {
       process_id: process_id,
-    });
+    }, trx);
     for (const activity_manager_data of full_activity_manager_data) {
       const activity_manager = ActivityManager.deserialize(activity_manager_data);
       activity_manager.activities = activity_manager_data.activities;
@@ -371,7 +371,9 @@ class ActivityManager extends PersistedEntity {
             is_continue: true,
             activities: activity_manager_data.activities,
           },
-          timer.params.next_step_number
+          timer.params.next_step_number,
+          undefined,
+          trx
         );
       }
     }

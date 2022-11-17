@@ -283,7 +283,7 @@ class Process extends PersistedEntity {
           actor_data,
           null
         );
-        await this.save(trx);
+        await this.save();
         await this._notifyProcessState({});
       }
 
@@ -520,7 +520,10 @@ class Process extends PersistedEntity {
 
       await this._notifyProcessState(actor_data);
 
-      if (result_state.status === ProcessStatus.PENDING && result_state.result.timeout) {
+      if (
+        (result_state.status === ProcessStatus.PENDING || result_state.status === ProcessStatus.WAITING) 
+          && result_state.result.timeout) 
+          {
         emitter.emit("PROCESS.TIMER.CREATING", `      CREATING NEW TIMER ON PID [${p_lock.id}]`, {
           process_id: p_lock.id,
         });
@@ -618,6 +621,35 @@ class Process extends PersistedEntity {
     }
   }
 
+  async _intermediaryLoop(custom_lisp, actor_data, trx) {
+    emitter.emit(
+      "EXECUTION_LOOP.TRANSACTION",
+      `    BEGIN TRANSACTION FOR PID [${this.id}] - ENGINE_ID [${ENGINE_ID}]`,
+      {
+        process_id: this.id,
+        engine_id: ENGINE_ID,
+      }
+    );
+
+    const inner_loop_result = await this.__inerLoop.call(
+      this,
+      this._current_state_id,
+      { custom_lisp, actor_data },
+      trx
+    );
+
+    emitter.emit(
+      "EXECUTION_LOOP.COMMIT",
+      `      COMMIT ON EXEC PID [${this.id}] ON INNER LOOP - ENGINE_ID [${ENGINE_ID}]`,
+      {
+        process_id: this.id,
+        engine_id: ENGINE_ID,
+      }
+    );
+
+    return inner_loop_result;
+  }
+  
   async _manageSignalCreation() {
     const node = this._blueprint.fetchNode(this._state.node_id)
     const trigger_params = {
@@ -671,7 +703,7 @@ class Process extends PersistedEntity {
   }
 
   // eslint-disable-next-line no-unused-vars
-  async _executionLoop(custom_lisp, actor_data, trx = false) {
+  async _executionLoop(custom_lisp, actor_data, input_trx = false) {
     emitter.emit("EXECUTION_LOOP.START", `CALLED EXECUTION LOOP PID [${this.id}] STATUS [${this.status}]`, {
       process_id: this.id,
       engine_id: ENGINE_ID,
@@ -685,32 +717,13 @@ class Process extends PersistedEntity {
 
       let ps = null;
       try {
-        await db.transaction(async (trx) => {
-          emitter.emit(
-            "EXECUTION_LOOP.TRANSACTION",
-            `    BEGIN TRANSACTION FOR PID [${this.id}] - ENGINE_ID [${ENGINE_ID}]`,
-            {
-              process_id: this.id,
-              engine_id: ENGINE_ID,
-            }
-          );
-
-          [ps, activity_manager, timer] = await this.__inerLoop.call(
-            this,
-            this._current_state_id,
-            { custom_lisp, actor_data },
-            trx
-          );
-
-          emitter.emit(
-            "EXECUTION_LOOP.COMMIT",
-            `      COMMIT ON EXEC PID [${this.id}] ON INNER LOOP - ENGINE_ID [${ENGINE_ID}]`,
-            {
-              process_id: this.id,
-              engine_id: ENGINE_ID,
-            }
-          );
-        });
+        if(input_trx) {
+          [ps, activity_manager, timer] = await this._intermediaryLoop(custom_lisp, actor_data, input_trx);
+        } else {
+          await db.transaction(async (trx) => {
+            [ps, activity_manager, timer] = await this._intermediaryLoop(custom_lisp, actor_data, trx);
+          });
+        }
 
         ps && emitter.emit("PROCESS.STEP_CREATED", "", {});
       } catch (e) {
@@ -763,6 +776,8 @@ class Process extends PersistedEntity {
         await ActivityManager.interruptActivityManagerForProcess(this._id);
         break;
       case ProcessStatus.FINISHED:
+        await ActivityManager.finishActivityManagerForProcess(this._id, input_trx);  
+        break;
       case ProcessStatus.FORBIDDEN:
         await ActivityManager.finishActivityManagerForProcess(this._id);
         break;
@@ -789,7 +804,7 @@ class Process extends PersistedEntity {
       case ProcessStatus.EXPIRED:
         break;
       case ProcessStatus.PENDING:
-        await this.runPendingProcess(timer.params.actor_data);
+        await this.runPendingProcess(timer.params.actor_data, trx);
         break;
       case ProcessStatus.RUNNING:
         //TODO: Avaliar como expirar um processo running.
