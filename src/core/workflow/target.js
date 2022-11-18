@@ -120,33 +120,44 @@ class Target extends PersistedEntity {
   async run(trx = false, engine = false, params = {}) {
     let process;
     switch(this.resource_type) {
-
       case 'workflow':
-        try {
-          process = await createProcessByWorkflowId(this.resource_id, params.actor_data, {...params.input, trigger_process_id: params.process_id});
-        } catch (e) {
+        const db = Target.getPersist()._db;
+        await db.transaction(async (inner_trx) => {
+          try {
+            process = await createProcessByWorkflowId(
+              this.resource_id, 
+              params.actor_data, 
+              {
+                ...params.input, 
+                trigger_process_id: params.process_id
+              },
+              inner_trx
+            );
+          } catch (e) {
+            await this.getPersist().saveSignalRelation(trx, {
+              target_id: this.id, 
+              trigger_id: params.trigger_id,
+              resolved: false
+            });
+            throw new Error('Error creating targeted process');
+          };
+          if(process._id) {
+            await this.getPersist().saveSignalRelation(trx, {
+              target_id: this.id, 
+              trigger_id: params.trigger_id, 
+              target_process_id: process.id,
+              resolved: true
+            })
+            return process.continue({}, params.actor_data, inner_trx);
+          };
           await this.getPersist().saveSignalRelation(trx, {
             target_id: this.id, 
             trigger_id: params.trigger_id,
             resolved: false
           });
-          throw new Error('Error creating targeted process');
-        };
-        if(process.id) {
-          await this.getPersist().saveSignalRelation(trx, {
-            target_id: this.id, 
-            trigger_id: params.trigger_id, 
-            target_process_id: process.id,
-            resolved: true
-          })
-          return process.continue({}, params.actor_data, trx);
-        };
-        await this.getPersist().saveSignalRelation(trx, {
-          target_id: this.id, 
-          trigger_id: params.trigger_id,
-          resolved: false
-        });
-        return process;
+          return process;
+        })
+        break;
         
       case 'process':
         process = await fetchProcess(this.resource_id);
@@ -176,6 +187,8 @@ class Target extends PersistedEntity {
           const activity_manager = await this.getActivityManagerByProcessStateId();
           return engine._instance.submitActivity(activity_manager.id, params.actor_data, continue_payload, false);
         }
+        break;
+
       default:
         throw new Error('Invalid resource for Target')
     }

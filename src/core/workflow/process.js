@@ -147,7 +147,7 @@ class Process extends PersistedEntity {
     return this._blueprint.fetchNode(this._state.next_node_id);
   }
 
-  async create(actor_data, initial_bag) {
+  async create(actor_data, initial_bag, trx) {
     Blueprint.assert_is_valid(this._blueprint_spec);
 
     const custom_lisp = await Packages._fetchPackages(this._blueprint_spec.requirements, this._blueprint_spec.prepare);
@@ -173,7 +173,7 @@ class Process extends PersistedEntity {
         actor_data,
         null
       );
-      await this.save();
+      await this.save(trx);
       await this._notifyProcessState(actor_data);
 
       return this;

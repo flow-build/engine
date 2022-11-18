@@ -64,10 +64,18 @@ class WorkflowKnexPersist extends KnexPersist {
     return { ...workflow, ...{ latest } };
   }
 
-  async getLatestVersionById(id) {
-    const { name: workflow_name } = await this.get(id)
+  async getLatestVersionById(id, trx = false) {
+    const { name: workflow_name } = await this.get(id, trx);
     
-    const workflow = await this._db.select("*").from(this._table).where({ name: workflow_name }).orderBy("version", "desc").first();
+    const query = this._db.select("*").from(this._table).where({ name: workflow_name }).orderBy("version", "desc").first();
+
+    let workflow;
+    if(trx) {
+      workflow = await query.transacting(trx);
+    } else {
+      workflow = await query;
+    }
+
     return { ...workflow, ...{ latest: true } };
   }
 

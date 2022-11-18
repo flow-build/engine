@@ -45,8 +45,8 @@ class Workflow extends PersistedEntity {
     return Workflow.deserialize(workflow);
   }
 
-  static async fetchLatestWorkflowVersionById(workflow_id) {
-    const workflow = await this.getPersist().getLatestVersionById(workflow_id);
+  static async fetchLatestWorkflowVersionById(workflow_id, trx) {
+    const workflow = await this.getPersist().getLatestVersionById(workflow_id, trx);
     return Workflow.deserialize(workflow);
   }
 
@@ -81,10 +81,11 @@ class Workflow extends PersistedEntity {
     return this._blueprint_spec;
   }
 
-  async createProcess(actor_data, initial_bag = {}) {
+  async createProcess(actor_data, initial_bag = {}, trx = false) {
     return await new Process({ id: this._id, name: this._name }, Blueprint.parseSpec(this._blueprint_spec)).create(
       actor_data,
-      initial_bag
+      initial_bag,
+      trx
     );
   }
 }

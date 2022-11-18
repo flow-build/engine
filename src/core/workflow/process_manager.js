@@ -45,10 +45,10 @@ async function fetchStateHistory(process_id) {
   return await processDependency.Process.fetchStateHistory(process_id)
 }
 
-async function createProcessByWorkflowId(workflow_id, actor_data, initial_bag = {}) {
-  const workflow = await workflowDependency.Workflow.fetchLatestWorkflowVersionById(workflow_id);
+async function createProcessByWorkflowId(workflow_id, actor_data, initial_bag = {}, trx = false) {
+  const workflow = await workflowDependency.Workflow.fetchLatestWorkflowVersionById(workflow_id, trx);
   if (workflow) {
-    return await workflow.createProcess(actor_data, initial_bag);
+    return await workflow.createProcess(actor_data, initial_bag, trx);
   }
   return undefined;
 }
