@@ -719,15 +719,15 @@ class Process extends PersistedEntity {
       try {
         if(input_trx) {
           [ps, activity_manager, timer] = await this._intermediaryLoop(custom_lisp, actor_data, input_trx);
+          await this._manageSignalCreation(input_trx);
         } else {
           await db.transaction(async (trx) => {
             [ps, activity_manager, timer] = await this._intermediaryLoop(custom_lisp, actor_data, trx);
+            await this._manageSignalCreation(trx);
           });
         }
 
         ps && emitter.emit("PROCESS.STEP_CREATED", "", {});
-
-        await this._manageSignalCreation(input_trx);
       } catch (e) {
         execution_success = false;
         emitter.emit(
