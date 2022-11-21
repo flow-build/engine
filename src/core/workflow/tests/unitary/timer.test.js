@@ -84,9 +84,9 @@ test("run works on mock", async () => {
   await timer.save();
   await timer.run();
   const fetched_timer = await Timer.fetch(timer.id);
-  expect(fetched_timer).toBeUndefined();
-  // expect(fetched_timer.id).toBe(saved_timer.id);
-  // expect(fetched_timer.active).toBeFalsy();
+  // expect(fetched_timer).toBeUndefined();
+  expect(fetched_timer.id).toBe(timer.id);
+  expect(fetched_timer.active).toBeFalsy();
 });
 
 test("fetch resource don't work on other resource types", async () => {

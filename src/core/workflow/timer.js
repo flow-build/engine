@@ -97,9 +97,9 @@ class Timer extends PersistedEntity {
   }
 
   async run(trx = false) {
-    // this._active = false;
+    this._active = false;
     // this._fired_at = new Date();
-    await this.delete(trx);
+    await this.save(trx);
 
     const resource = await this.fetchResource();
     if(resource) {
