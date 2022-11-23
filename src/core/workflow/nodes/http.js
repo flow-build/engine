@@ -4,6 +4,7 @@ const { ProcessStatus } = require("../process_state");
 const { Validator } = require("../../validators");
 const { request } = require("../../utils/requests");
 const { SystemTaskNode } = require("./systemTask");
+const emitter = require("../../utils/emitter");
 
 class HttpSystemTaskNode extends SystemTaskNode {
   static get rules() {
@@ -63,6 +64,20 @@ class HttpSystemTaskNode extends SystemTaskNode {
     const { verb, url: endpoint, headers } = this.request;
     const http_timeout = this._formatHttpTimeout(this.request.timeout);
     const max_content_length = this._formatMaxContentLength(this.request.max_content_length);
+    
+    const request_id = crypto.randomBytes(16).toString("hex");
+
+    emitter.emit("HTTP.NODE.REQUEST", {
+      verb,
+      endpoint,
+      payload: execution_data,
+      headers,
+      configs: {
+        http_timeout,
+        max_content_length
+      }
+    }, { request_id: request_id })
+
     let result;
     try {
       result = await request[verb](endpoint, execution_data, headers, { http_timeout, max_content_length });
@@ -78,9 +93,11 @@ class HttpSystemTaskNode extends SystemTaskNode {
     }
     if (this._spec.parameters.valid_response_codes) {
       if (!this._spec.parameters.valid_response_codes.includes(result.status)) {
+        emitter.emit("HTTP.NODE.RESPONSE", result, { error: true, request_id: request_id });
         throw new Error(`Invalid response status: ${result.status}`);
       }
     }
+    emitter.emit("HTTP.NODE.RESPONSE", result, { error: false, request_id: request_id })
     return [result, ProcessStatus.RUNNING];
   }
 

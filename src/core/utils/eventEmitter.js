@@ -251,6 +251,18 @@ module.exports = function startEventListener(em) {
     logUtil.printMessage(obj);
   });
 
+  em.on("HTTP.NODE.*", (message, variable) => {
+    if(process.env.LOG_HTTP === "true") {
+      const obj = {
+        level: variable?.error ? "error" : "info",
+        message: message,
+        variable: variable,
+        section: `HTTP-${variable.request_id}`
+      };
+      logUtil.printMessage(obj);
+    }
+  });
+
   em.on("verbose", (messageLevel, messageInfo, variable) => {
     const obj = {
       level: "verbose",
