@@ -1,3 +1,38 @@
+## [2.17.0-beta.4](https://github.com/flow-build/engine/compare/v2.17.0-beta.3...v2.17.0-beta.4) (2022-11-24)
+
+
+### Features
+
+* (wip) intermediary signals ([b7c7419](https://github.com/flow-build/engine/commit/b7c7419d11a88fe57f9d3be38bf44620359c25c3))
+* adds 'fetchEventsByProcess' functionality to engine and cockpit ([d6d6571](https://github.com/flow-build/engine/commit/d6d657115c6c5164b62b21f693b4992cd9b4ece0))
+* adds 'fetchEventsByProcess' functiononality to engine and cockpit ([9cb60e5](https://github.com/flow-build/engine/commit/9cb60e51a4769de4fb2d8f2a927c392ede297fef))
+* adds foreign relation to trigger table ([373dd7a](https://github.com/flow-build/engine/commit/373dd7ac1bac4636e93d20e21186ed3ee4dfab21))
+* adds getByProcessStateId method to Target persistance class ([0acf565](https://github.com/flow-build/engine/commit/0acf565289cb44a79d58120f88dc037f746fff40))
+* adds logic for Target to run process targets ([5af42bf](https://github.com/flow-build/engine/commit/5af42bfe85dafbc26cbd981a9497a91471225bcb))
+* adds method to fetch activity manager by process state id on Target ([a03f120](https://github.com/flow-build/engine/commit/a03f120664e709f0f87a423ef041bf447710b97d))
+* adds process logic to handle system task signals ([8690792](https://github.com/flow-build/engine/commit/86907921bce07299075399dd43a9f139b47c17c6))
+* adds signal system task node ([8d5ddbc](https://github.com/flow-build/engine/commit/8d5ddbccc8cfb685d352bd4facaeab7ac8d60e1c))
+* adds SignalUserTaskNode as UserTaskNode signal category ([f549ccc](https://github.com/flow-build/engine/commit/f549cccc66c4ac120993b7382de987cd1ffde9e6))
+* changes SignalSystemTaskNode to be 'Event' node type ([0df7037](https://github.com/flow-build/engine/commit/0df7037a0059d375940cb04e6a2721c476e1a93c))
+* injects engine to trigger and target to continue process ([9461f93](https://github.com/flow-build/engine/commit/9461f93bb2d0d15c3113fe988a2d1ccd32debef3))
+* intermediary node events ([8b1751b](https://github.com/flow-build/engine/commit/8b1751b7f76605634e2239aa05d4e0ba6a5a227e))
+* sets max limit for events on Event node ([f962231](https://github.com/flow-build/engine/commit/f962231922beac98812966120da5f7d4a12f6aa9))
+* updates engine to disable Target when submiting task ([73817b7](https://github.com/flow-build/engine/commit/73817b735f0bcb59d12cd1297d78153e86c76f20))
+* updates process logic to comply with new node specs from event node ([8d974bb](https://github.com/flow-build/engine/commit/8d974bbebadc10068ba1a8eecc662c77e2b4b182))
+* updates target and trigger runs to execute process signals ([ff7e4f9](https://github.com/flow-build/engine/commit/ff7e4f9338b48c9ea6088a9ff0361a1535837cbd))
+* updates target to run process targett with different parameters ([e09ceb1](https://github.com/flow-build/engine/commit/e09ceb1534b3bdf6037417f139ff9080a5fb3c8b))
+
+
+### Bug Fixes
+
+* adjust am timeout processing ([b5063cf](https://github.com/flow-build/engine/commit/b5063cf9e7fc3803bf06626b1c43306374a8338b))
+* adjust preProcessing on intermediary event nodes ([ba20d97](https://github.com/flow-build/engine/commit/ba20d97c68a0a23beeb29a45ef2fa33698f23c2e))
+* adjust schema validation on start and finish signal nodes ([a40205a](https://github.com/flow-build/engine/commit/a40205a62793292dba52e34c139365796f867675))
+* adjust WAITING status treatment on process execution ([37e4a6c](https://github.com/flow-build/engine/commit/37e4a6cff0fe621befb3f899d83f34c635309f0e))
+* changes SignalNode to run tests ([5b33596](https://github.com/flow-build/engine/commit/5b335968b6e11f10db9fde17a4c42b35248cc903))
+* removes duplicate code from knex file query ([8268c9c](https://github.com/flow-build/engine/commit/8268c9cf34bfa7362cef1e4ae5a500c35b9d53fd))
+* uncomment docker-compose command ([4dc9492](https://github.com/flow-build/engine/commit/4dc949247328a5c24d61117582cfe62bc1ed9f0f))
+
 ## [2.17.0-beta.3](https://github.com/flow-build/engine/compare/v2.17.0-beta.2...v2.17.0-beta.3) (2022-11-24)
 
 ### Features
