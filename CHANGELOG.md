@@ -1,3 +1,12 @@
+## [2.17.0-beta.2](https://github.com/flow-build/engine/compare/v2.17.0-beta.1...v2.17.0-beta.2) (2022-11-24)
+
+
+### Bug Fixes
+
+* adjust timer behavior for User Tasks ([f540c8d](https://github.com/flow-build/engine/commit/f540c8d2b46e4030bfdaf0ceb16302ae1d5b754e))
+* adjust transaction injection on heartbeat ([b4c2568](https://github.com/flow-build/engine/commit/b4c256864afc38e2a3d7f38fbece68364b482f86))
+* temporarily skips 'broken' tests ([a24ed56](https://github.com/flow-build/engine/commit/a24ed5645cfaac5c214ae03976251f1edea29c3c))
+
 ### [2.16.3](https://github.com/flow-build/engine/compare/v2.16.2...v2.16.3) (2022-11-16)
 
 ### Bug Fixes
