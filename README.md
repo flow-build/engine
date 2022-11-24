@@ -64,4 +64,4 @@ node examples/<example_name>.js
 
 ## Contributing
 
-Read [CONTRIBUTING](.github/CONTRIBUTING.md) guide.  
+Read [CONTRIBUTING](.github/CONTRIBUTING.md) guide.
