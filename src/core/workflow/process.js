@@ -147,7 +147,7 @@ class Process extends PersistedEntity {
     return this._blueprint.fetchNode(this._state.next_node_id);
   }
 
-  async create(actor_data, initial_bag) {
+  async create(actor_data, initial_bag, trx) {
     Blueprint.assert_is_valid(this._blueprint_spec);
 
     const custom_lisp = await Packages._fetchPackages(this._blueprint_spec.requirements, this._blueprint_spec.prepare);
@@ -173,7 +173,7 @@ class Process extends PersistedEntity {
         actor_data,
         null
       );
-      await this.save();
+      await this.save(trx);
       await this._notifyProcessState(actor_data);
 
       return this;
@@ -649,9 +649,8 @@ class Process extends PersistedEntity {
 
     return inner_loop_result;
   }
-
-  async _manageSignalCreation() {
-    const node = this._blueprint.fetchNode(this._state.node_id);
+  async _manageSignalCreation(input_trx) {
+    const node = this._blueprint.fetchNode(this._state.node_id)
     const trigger_params = {
       signal: this.state.result.signal,
       input: this.state.result.trigger_payload,
@@ -664,7 +663,7 @@ class Process extends PersistedEntity {
         trigger_params.target_process_id = trigger_process_id;
       }
       const trigger = new Trigger(trigger_params);
-      await trigger.save();
+      await trigger.save(input_trx);
     }
 
     if (
@@ -686,17 +685,20 @@ class Process extends PersistedEntity {
             const trigger = new Trigger(tr_params);
             return trigger.save();
           }
-          if (event.family === "target") {
-            const target_params = {
-              signal: event.definition,
-              resource_type: "process",
-              resource_id: this.id,
-              process_state_id: this._current_state_id,
-            };
-            const target = new Target(target_params);
-            return target.save();
+          const trigger = new Trigger(tr_params);
+          return trigger.save(input_trx);
+        }
+        if(event.family==='target') {
+          const target_params = {
+            signal: event.definition,
+            resource_type: 'process',
+            resource_id: this.id,
+            process_state_id: this._current_state_id
           }
-        })
+          const target = new Target(target_params);
+          return target.save(input_trx);
+        }
+      })
       );
     }
   }
@@ -718,9 +720,11 @@ class Process extends PersistedEntity {
       try {
         if (input_trx) {
           [ps, activity_manager, timer] = await this._intermediaryLoop(custom_lisp, actor_data, input_trx);
+          await this._manageSignalCreation(input_trx);
         } else {
           await db.transaction(async (trx) => {
             [ps, activity_manager, timer] = await this._intermediaryLoop(custom_lisp, actor_data, trx);
+            await this._manageSignalCreation(trx);
           });
         }
 
@@ -757,7 +761,6 @@ class Process extends PersistedEntity {
         });
         await this._notifyActivityManager(activity_manager);
       }
-      await this._manageSignalCreation();
     }
 
     if (activity_manager) {
