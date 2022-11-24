@@ -11,7 +11,7 @@ describe("node factory", () => {
       const response = node_factory.getNodeTypes();
       expect(response).toBeDefined();
       const types = Object.keys(response);
-      expect(types.length).toBe(7);
+      expect(types.length).toBe(8);
       expect(response.start).toBeDefined();
       expect(response.finish).toBeDefined();
       expect(response.flow).toBeDefined();

@@ -18,7 +18,13 @@ async function abortProcess(processIds) {
   return Promise.allSettled(abort_promises);
 }
 
-async function continueProcess(process_id, result_data, expected_step_number = undefined, trx = false = undefined, actor_data = {}) {
+async function continueProcess(
+  process_id,
+  result_data,
+  expected_step_number = undefined,
+  actor_data = {},
+  trx = false
+) {
   const process = await processDependency.Process.fetch(process_id);
   const next_step_number = processDependency.Process.calculateNextStep(process.state.step_number);
   if (process && expected_step_number && next_step_number === expected_step_number) {
@@ -30,6 +36,19 @@ async function continueProcess(process_id, result_data, expected_step_number = u
 
 async function fetchLatestWorkflowVersionById(workflow_id) {
   return await workflowDependency.Workflow.fetchLatestWorkflowVersionById(workflow_id);
+}
+
+async function fetchProcess(process_id) {
+  return await processDependency.Process.fetch(process_id);
+}
+
+async function fetchWorkflowByProcessId(process_id) {
+  const process = await processDependency.Process.fetch(process_id);
+  return await workflowDependency.Workflow.fetch(process._workflow_id);
+}
+
+async function fetchStateHistory(process_id) {
+  return await processDependency.Process.fetchStateHistory(process_id);
 }
 
 async function createProcessByWorkflowId(workflow_id, actor_data, initial_bag = {}) {
@@ -94,6 +113,9 @@ module.exports = {
   abortProcess,
   continueProcess,
   fetchLatestWorkflowVersionById,
+  fetchProcess,
+  fetchWorkflowByProcessId,
+  fetchStateHistory,
   createProcessByWorkflowId,
   createProcessByWorkflowName,
   notifyCompletedActivityManager,
