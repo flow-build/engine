@@ -64,8 +64,9 @@ class HttpSystemTaskNode extends SystemTaskNode {
     const { verb, url: endpoint, headers } = this.request;
     const http_timeout = this._formatHttpTimeout(this.request.timeout);
     const max_content_length = this._formatMaxContentLength(this.request.max_content_length);
-    
+
     const request_id = crypto.randomBytes(16).toString("hex");
+    const process_id = execution_data.parameters?.process_id || 'unknown';
 
     emitter.emit("HTTP.NODE.REQUEST", {
       verb,
@@ -76,7 +77,7 @@ class HttpSystemTaskNode extends SystemTaskNode {
         http_timeout,
         max_content_length
       }
-    }, { request_id: request_id })
+    }, { request_id: request_id, process_id: process_id })
 
     let result;
     try {
@@ -93,17 +94,18 @@ class HttpSystemTaskNode extends SystemTaskNode {
     }
     if (this._spec.parameters.valid_response_codes) {
       if (!this._spec.parameters.valid_response_codes.includes(result.status)) {
-        emitter.emit("HTTP.NODE.RESPONSE", result, { error: true, request_id: request_id });
+        emitter.emit("HTTP.NODE.RESPONSE", result, { error: true, request_id: request_id, process_id: process_id });
         throw new Error(`Invalid response status: ${result.status}`);
       }
     }
-    emitter.emit("HTTP.NODE.RESPONSE", result, { error: false, request_id: request_id })
+    emitter.emit("HTTP.NODE.RESPONSE", result, { error: false, request_id: request_id, process_id: process_id })
     return [result, ProcessStatus.RUNNING];
   }
 
   _preProcessing({ bag, input, actor_data, environment, parameters }) {
     this.request = prepare(this._spec.parameters.request, { bag, result: input, actor_data, environment, parameters });
-    return super._preProcessing({ bag, input, actor_data, environment, parameters });
+    const pre_processed = super._preProcessing({ bag, input, actor_data, environment, parameters });
+    return { ...pre_processed, parameters };
   }
 }
 
