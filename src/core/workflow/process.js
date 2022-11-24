@@ -521,9 +521,9 @@ class Process extends PersistedEntity {
       await this._notifyProcessState(actor_data);
 
       if (
-        (result_state.status === ProcessStatus.PENDING || result_state.status === ProcessStatus.WAITING) 
-          && result_state.result.timeout) 
-          {
+        (result_state.status === ProcessStatus.PENDING || result_state.status === ProcessStatus.WAITING) &&
+        result_state.result.timeout
+      ) {
         emitter.emit("PROCESS.TIMER.CREATING", `      CREATING NEW TIMER ON PID [${p_lock.id}]`, {
           process_id: p_lock.id,
         });
@@ -649,55 +649,54 @@ class Process extends PersistedEntity {
 
     return inner_loop_result;
   }
-  
+
   async _manageSignalCreation() {
-    const node = this._blueprint.fetchNode(this._state.node_id)
+    const node = this._blueprint.fetchNode(this._state.node_id);
     const trigger_params = {
       signal: this.state.result.signal,
       input: this.state.result.trigger_payload,
       actor_data: this.state.actor_data,
-      process_id: this.id
-    }
-    if(
-      node._spec.category === 'signal' && 
-      node._spec.type.toLowerCase() === 'finish'
-    ) {
-      const trigger_process_id = this.state.bag.trigger_process_id
-      if(trigger_process_id) {
-        trigger_params.target_process_id = trigger_process_id
+      process_id: this.id,
+    };
+    if (node._spec.category === "signal" && node._spec.type.toLowerCase() === "finish") {
+      const trigger_process_id = this.state.bag.trigger_process_id;
+      if (trigger_process_id) {
+        trigger_params.target_process_id = trigger_process_id;
       }
       const trigger = new Trigger(trigger_params);
       await trigger.save();
     }
 
-    if(
-      (node._spec.type.toLowerCase() === 'event' && !this.state.result.target_data) || 
-      (node._spec.type.toLowerCase() === 'usertask' && node._spec.category === 'signal' && 
-      this._current_status === 'waiting')
+    if (
+      (node._spec.type.toLowerCase() === "event" && !this.state.result.target_data) ||
+      (node._spec.type.toLowerCase() === "usertask" &&
+        node._spec.category === "signal" &&
+        this._current_status === "waiting")
     ) {
       const events = this.state.result.events;
-      await Promise.all(events.map((event) => {
-        if(event.family==="trigger") {
-          const tr_params = {
-            signal: event.definition,
-            input: this.state.result.trigger_payload,
-            actor_data: this.state.actor_data,
-            process_id: this.id
+      await Promise.all(
+        events.map((event) => {
+          if (event.family === "trigger") {
+            const tr_params = {
+              signal: event.definition,
+              input: this.state.result.trigger_payload,
+              actor_data: this.state.actor_data,
+              process_id: this.id,
+            };
+            const trigger = new Trigger(tr_params);
+            return trigger.save();
           }
-          const trigger = new Trigger(tr_params);
-          return trigger.save();
-        }
-        if(event.family==='target') {
-          const target_params = {
-            signal: event.definition,
-            resource_type: 'process',
-            resource_id: this.id,
-            process_state_id: this._current_state_id
+          if (event.family === "target") {
+            const target_params = {
+              signal: event.definition,
+              resource_type: "process",
+              resource_id: this.id,
+              process_state_id: this._current_state_id,
+            };
+            const target = new Target(target_params);
+            return target.save();
           }
-          const target = new Target(target_params);
-          return target.save();
-        }
-      })
+        })
       );
     }
   }
@@ -717,7 +716,7 @@ class Process extends PersistedEntity {
 
       let ps = null;
       try {
-        if(input_trx) {
+        if (input_trx) {
           [ps, activity_manager, timer] = await this._intermediaryLoop(custom_lisp, actor_data, input_trx);
         } else {
           await db.transaction(async (trx) => {
@@ -758,7 +757,7 @@ class Process extends PersistedEntity {
         });
         await this._notifyActivityManager(activity_manager);
       }
-      await this._manageSignalCreation()
+      await this._manageSignalCreation();
     }
 
     if (activity_manager) {
@@ -776,7 +775,18 @@ class Process extends PersistedEntity {
         await ActivityManager.interruptActivityManagerForProcess(this._id);
         break;
       case ProcessStatus.FINISHED:
-        await ActivityManager.finishActivityManagerForProcess(this._id, input_trx);  
+        const node = this._blueprint.fetchNode(this._state.node_id);
+        if (node._spec.category === "signal") {
+          const signal_params = {
+            signal: this.state.result.signal,
+            input: this.state.result.trigger_payload,
+            actor_data: this.state.actor_data,
+            process_id: this.id,
+          };
+          const signal = new Trigger(signal_params);
+          await signal.save();
+        }
+        await ActivityManager.finishActivityManagerForProcess(this._id, input_trx);
         break;
       case ProcessStatus.FORBIDDEN:
         await ActivityManager.finishActivityManagerForProcess(this._id);
