@@ -103,7 +103,7 @@ class Timer extends PersistedEntity {
 
     const resource = await this.fetchResource();
     if(resource) {
-      resource.timeout(this);
+      return resource.timeout(this, trx);
     }
   }
 
