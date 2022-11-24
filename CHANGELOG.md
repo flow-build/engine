@@ -1,3 +1,13 @@
+## [2.17.0-beta.5](https://github.com/flow-build/engine/compare/v2.17.0-beta.4...v2.17.0-beta.5) (2022-11-24)
+
+
+### Bug Fixes
+
+* adjust manageSignalCreation calling on executionLoop ([8bc30d5](https://github.com/flow-build/engine/commit/8bc30d5dab03c10418400f04ac90b0f9cc5d468a))
+* adjust signal creation logic and transaction handling ([dd3abe1](https://github.com/flow-build/engine/commit/dd3abe15de2a1fe9b0a2ec923affc9319a0a69be))
+* adjust transaction handling on target execution ([eae6504](https://github.com/flow-build/engine/commit/eae650497245cd2f519e21b44a29a964e5e867c5))
+* adjust transaction injection on workflow persist ([db1a483](https://github.com/flow-build/engine/commit/db1a4838b2e0ac932db796a8f4a92358453a0af8))
+
 ## [2.17.0-beta.4](https://github.com/flow-build/engine/compare/v2.17.0-beta.3...v2.17.0-beta.4) (2022-11-24)
 
 
