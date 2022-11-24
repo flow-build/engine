@@ -85,7 +85,7 @@ class HttpSystemTaskNode extends SystemTaskNode {
     const max_content_length = this._formatMaxContentLength(this.request.max_content_length);
 
     const request_id = crypto.randomBytes(16).toString("hex");
-    const process_id = execution_data.parameters?.process_id || 'unknown';
+    const process_id = execution_data.process_id;
 
     emitter.emit("HTTP.NODE.REQUEST", {
       verb,
@@ -124,7 +124,7 @@ class HttpSystemTaskNode extends SystemTaskNode {
   _preProcessing({ bag, input, actor_data, environment, parameters }) {
     this.request = prepare(this._spec.parameters.request, { bag, result: input, actor_data, environment, parameters });
     const pre_processed = super._preProcessing({ bag, input, actor_data, environment, parameters });
-    return { ...pre_processed, parameters };
+    return { process_id: parameters.process_id || "unknown", ...pre_processed };
   }
 }
 
