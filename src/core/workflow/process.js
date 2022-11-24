@@ -521,9 +521,9 @@ class Process extends PersistedEntity {
       await this._notifyProcessState(actor_data);
 
       if (
-        (result_state.status === ProcessStatus.PENDING || result_state.status === ProcessStatus.WAITING) 
-          && result_state.result.timeout) 
-          {
+        (result_state.status === ProcessStatus.PENDING || result_state.status === ProcessStatus.WAITING) &&
+        result_state.result.timeout
+      ) {
         emitter.emit("PROCESS.TIMER.CREATING", `      CREATING NEW TIMER ON PID [${p_lock.id}]`, {
           process_id: p_lock.id,
         });
@@ -649,40 +649,41 @@ class Process extends PersistedEntity {
 
     return inner_loop_result;
   }
-  
   async _manageSignalCreation(input_trx) {
     const node = this._blueprint.fetchNode(this._state.node_id)
     const trigger_params = {
       signal: this.state.result.signal,
       input: this.state.result.trigger_payload,
       actor_data: this.state.actor_data,
-      process_id: this.id
-    }
-    if(
-      node._spec.category === 'signal' && 
-      node._spec.type.toLowerCase() === 'finish'
-    ) {
-      const trigger_process_id = this.state.bag.trigger_process_id
-      if(trigger_process_id) {
-        trigger_params.target_process_id = trigger_process_id
+      process_id: this.id,
+    };
+    if (node._spec.category === "signal" && node._spec.type.toLowerCase() === "finish") {
+      const trigger_process_id = this.state.bag.trigger_process_id;
+      if (trigger_process_id) {
+        trigger_params.target_process_id = trigger_process_id;
       }
       const trigger = new Trigger(trigger_params);
       await trigger.save(input_trx);
     }
 
-    if(
-      (node._spec.type.toLowerCase() === 'event' && !this.state.result.target_data) || 
-      (node._spec.type.toLowerCase() === 'usertask' && node._spec.category === 'signal' && 
-      this._current_status === 'waiting')
+    if (
+      (node._spec.type.toLowerCase() === "event" && !this.state.result.target_data) ||
+      (node._spec.type.toLowerCase() === "usertask" &&
+        node._spec.category === "signal" &&
+        this._current_status === "waiting")
     ) {
       const events = this.state.result.events;
-      await Promise.all(events.map((event) => {
-        if(event.family==="trigger") {
-          const tr_params = {
-            signal: event.definition,
-            input: this.state.result.trigger_payload,
-            actor_data: this.state.actor_data,
-            process_id: this.id
+      await Promise.all(
+        events.map((event) => {
+          if (event.family === "trigger") {
+            const tr_params = {
+              signal: event.definition,
+              input: this.state.result.trigger_payload,
+              actor_data: this.state.actor_data,
+              process_id: this.id,
+            };
+            const trigger = new Trigger(tr_params);
+            return trigger.save();
           }
           const trigger = new Trigger(tr_params);
           return trigger.save(input_trx);
@@ -717,7 +718,7 @@ class Process extends PersistedEntity {
 
       let ps = null;
       try {
-        if(input_trx) {
+        if (input_trx) {
           [ps, activity_manager, timer] = await this._intermediaryLoop(custom_lisp, actor_data, input_trx);
           await this._manageSignalCreation(input_trx);
         } else {
@@ -777,7 +778,18 @@ class Process extends PersistedEntity {
         await ActivityManager.interruptActivityManagerForProcess(this._id);
         break;
       case ProcessStatus.FINISHED:
-        await ActivityManager.finishActivityManagerForProcess(this._id, input_trx);  
+        const node = this._blueprint.fetchNode(this._state.node_id);
+        if (node._spec.category === "signal") {
+          const signal_params = {
+            signal: this.state.result.signal,
+            input: this.state.result.trigger_payload,
+            actor_data: this.state.actor_data,
+            process_id: this.id,
+          };
+          const signal = new Trigger(signal_params);
+          await signal.save();
+        }
+        await ActivityManager.finishActivityManagerForProcess(this._id, input_trx);
         break;
       case ProcessStatus.FORBIDDEN:
         await ActivityManager.finishActivityManagerForProcess(this._id);
