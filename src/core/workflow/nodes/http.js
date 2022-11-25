@@ -1,3 +1,4 @@
+const crypto = require("crypto");
 const obju = require("../../utils/object");
 const { prepare } = require("../../utils/input");
 const { ProcessStatus } = require("../process_state");
