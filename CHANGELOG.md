@@ -1,3 +1,10 @@
+## [2.17.0-beta.6](https://github.com/flow-build/engine/compare/v2.17.0-beta.5...v2.17.0-beta.6) (2022-11-25)
+
+
+### Bug Fixes
+
+* **process:** :bug: fix a duplicated return after the merges ([ef9e503](https://github.com/flow-build/engine/commit/ef9e50363a51330f5f4356beeb1e0445cd5a218c))
+
 ## [2.17.0-beta.5](https://github.com/flow-build/engine/compare/v2.17.0-beta.4...v2.17.0-beta.5) (2022-11-24)
 
 
