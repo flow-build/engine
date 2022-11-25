@@ -650,7 +650,7 @@ class Process extends PersistedEntity {
     return inner_loop_result;
   }
   async _manageSignalCreation(input_trx) {
-    const node = this._blueprint.fetchNode(this._state.node_id)
+    const node = this._blueprint.fetchNode(this._state.node_id);
     const trigger_params = {
       signal: this.state.result.signal,
       input: this.state.result.trigger_payload,
@@ -683,22 +683,19 @@ class Process extends PersistedEntity {
               process_id: this.id,
             };
             const trigger = new Trigger(tr_params);
-            return trigger.save();
+            return trigger.save(input_trx);
           }
-          const trigger = new Trigger(tr_params);
-          return trigger.save(input_trx);
-        }
-        if(event.family==='target') {
-          const target_params = {
-            signal: event.definition,
-            resource_type: 'process',
-            resource_id: this.id,
-            process_state_id: this._current_state_id
+          if (event.family === "target") {
+            const target_params = {
+              signal: event.definition,
+              resource_type: "process",
+              resource_id: this.id,
+              process_state_id: this._current_state_id,
+            };
+            const target = new Target(target_params);
+            return target.save(input_trx);
           }
-          const target = new Target(target_params);
-          return target.save(input_trx);
-        }
-      })
+        })
       );
     }
   }
