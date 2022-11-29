@@ -1,3 +1,10 @@
+### [2.16.4](https://github.com/flow-build/engine/compare/v2.16.3...v2.16.4) (2022-11-24)
+
+
+### Bug Fixes
+
+* removes duplicate code from knex file query ([8268c9c](https://github.com/flow-build/engine/commit/8268c9cf34bfa7362cef1e4ae5a500c35b9d53fd))
+
 ### [2.16.3](https://github.com/flow-build/engine/compare/v2.16.2...v2.16.3) (2022-11-16)
 
 
