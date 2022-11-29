@@ -4,7 +4,7 @@
     "master",
     "next",
     "next-major",
-    { "name": "development", "channel": "rc", "prerelease": "rc" },
+    { "name": "development", "channel": "rc", "prerelease": true },
     { "name": "beta", "prerelease": true },
     { "name": "alpha", "prerelease": true }
   ],
