@@ -1,3 +1,17 @@
+## [2.17.0-beta.7](https://github.com/flow-build/engine/compare/v2.17.0-beta.6...v2.17.0-beta.7) (2022-11-29)
+
+
+### Features
+
+* adds extra logging for HTTP node ([4239fd3](https://github.com/flow-build/engine/commit/4239fd3eaf5a9d4346f33f523f88a6acafa40b9f))
+* adjust logs to add PID and change control ENV ([3ad95d2](https://github.com/flow-build/engine/commit/3ad95d271e039545d747bbf637fbb18f0351cc28))
+
+
+### Bug Fixes
+
+* adjust preProcessing to avoid roverwriting 'prepare' result ([8834a3e](https://github.com/flow-build/engine/commit/8834a3eab951164970d86475a357484092bf554c))
+* removes process_id reference from request payload ([00df3ca](https://github.com/flow-build/engine/commit/00df3cab0b8b13a0749061adc58a38d90da2759b))
+
 ## [2.17.0-beta.6](https://github.com/flow-build/engine/compare/v2.17.0-beta.5...v2.17.0-beta.6) (2022-11-25)
 
 
