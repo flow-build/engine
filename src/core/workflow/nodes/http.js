@@ -54,7 +54,7 @@ class HttpSystemTaskNode extends SystemTaskNode {
   }
 
   static validate(spec) {
-    const ajv = new Ajv({ allErrors: true });
+    const ajv = new Ajv({ allErrors: true, allowUnionTypes: true });
     addFormats(ajv);
     const validate = ajv.compile(HttpSystemTaskNode.schema);
     const validation = validate(spec);
