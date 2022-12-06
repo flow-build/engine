@@ -4,6 +4,21 @@ const { HttpSystemTaskNode } = require("../http");
 const axios = require("axios");
 const { ProcessStatus } = require("../../process_state");
 
+describe("static code inspection", () => {
+  test("Should correctly identify codes", async () => {
+    const target_codes = [400, '5XX', 'ECONNABORTED'];
+    
+    let response = HttpSystemTaskNode.includesHTTPCode(target_codes, 404);
+    expect(response).toBeNull();
+
+    response = HttpSystemTaskNode.includesHTTPCode(target_codes, 503);
+    expect(response).toBeTruthy();
+
+    response = HttpSystemTaskNode.includesHTTPCode(target_codes, 'ECONNABORTED');
+    expect(response).toBeTruthy();
+  });
+});
+
 describe("static Schema", () => {
   test("Should merge Node and Parameterized schema", async () => {
     const schema = HttpSystemTaskNode.schema;
