@@ -27,11 +27,25 @@ class HttpSystemTaskNode extends SystemTaskNode {
                 },
                 verb: { type: "string", enum: ["GET", "POST", "PATCH", "PUT", "DELETE", "HEAD"] },
                 header: { type: "object" },
+                retry: {
+                  type: "object",
+                  required: ["amount", "conditions"],
+                  properties: {
+                    amount: {type: "integer"},
+                    interval: {type: "integer"},
+                    conditions: {
+                      type: "array",
+                      items: {type: "integer"} 
+                    }
+                  }
+                }
               },
             },
             valid_response_codes: {
               type: "array",
-              items: { type: "integer" },
+              items: { 
+                type:  ["integer","string"] 
+              },
             },
           },
         },
@@ -45,6 +59,31 @@ class HttpSystemTaskNode extends SystemTaskNode {
     const validate = ajv.compile(HttpSystemTaskNode.schema);
     const validation = validate(spec);
     return [validation, JSON.stringify(validate.errors)];
+  }
+
+  static includesHTTPCode(code_array, answer_code) {
+    const target_codes = code_array.map(code => code.toString());
+    const input_code = answer_code.toString();
+
+    const re = /[1-5][X][X]/;
+    const codeMatch = (code) => {
+      if(code.match(re)) {
+        const code_re = new RegExp(`${code[0]}[0-9][0-9]`);
+        return input_code.match(code_re)
+      }
+      return code === input_code;
+    }
+
+    return target_codes.find(code => codeMatch(code)) || null;
+  }
+
+  next(result) {
+    const retry_conditions = this._spec.parameters.retry?.conditions || [];
+    const retry_amount = this._spec.parameters.retry?.amount || 0;
+    if(HttpSystemTaskNode.includesHTTPCode(retry_conditions, result.status) && result.attempt < retry_amount) {
+      return this._spec["id"];
+    }
+    return this._spec["next"];
   }
 
   validate() {
@@ -86,7 +125,9 @@ class HttpSystemTaskNode extends SystemTaskNode {
 
     const request_id = crypto.randomBytes(16).toString("hex");
     const process_id = execution_data.process_id;
+    const request_attempt = execution_data.HTTP_REQUEST_ATTEMPT || 0;
     delete execution_data.process_id;
+    delete execution_data.HTTP_REQUEST_ATTEMPT;
 
     emitter.emit("HTTP.NODE.REQUEST", {
       verb,
@@ -107,13 +148,20 @@ class HttpSystemTaskNode extends SystemTaskNode {
         result = {
           status: err.response.status,
           data: err.response.data,
+          attempt: request_attempt + 1,
+        };
+      } else if(err.code === 'ECONNABORTED') {
+        result = {
+          status: err.code,
+          data: {},
+          attempt: request_attempt + 1,
         };
       } else {
         throw new Error(`Got no response from request to ${verb} ${endpoint}, ${err.message}`);
       }
     }
     if (this._spec.parameters.valid_response_codes) {
-      if (!this._spec.parameters.valid_response_codes.includes(result.status)) {
+      if(!HttpSystemTaskNode.includesHTTPCode(this._spec.parameters.valid_response_codes, result.status)) {
         emitter.emit("HTTP.NODE.RESPONSE", result, { error: true, request_id: request_id, process_id: process_id });
         throw new Error(`Invalid response status: ${result.status}`);
       }
@@ -125,7 +173,7 @@ class HttpSystemTaskNode extends SystemTaskNode {
   _preProcessing({ bag, input, actor_data, environment, parameters }) {
     this.request = prepare(this._spec.parameters.request, { bag, result: input, actor_data, environment, parameters });
     const pre_processed = super._preProcessing({ bag, input, actor_data, environment, parameters });
-    return { process_id: parameters?.process_id || "unknown", ...pre_processed };
+    return { process_id: parameters?.process_id || "unknown", HTTP_REQUEST_ATTEMPT: input.attempt || 0, ...pre_processed };
   }
 }
 
