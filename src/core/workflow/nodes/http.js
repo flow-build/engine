@@ -29,7 +29,7 @@ class HttpSystemTaskNode extends SystemTaskNode {
                 header: { type: "object" },
                 retry: {
                   type: "object",
-                  required: ["amount", "conditions"],
+                  required: ["amount", "interval", "conditions"],
                   properties: {
                     amount: {type: "integer"},
                     interval: {type: "integer"},
