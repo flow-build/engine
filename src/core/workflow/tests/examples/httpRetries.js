@@ -30,7 +30,7 @@ module.exports = {
           url: { $ref: "environment.host" },
         },
         retry: {
-          amount: 3,
+          attempts: 3,
           conditions: ["5XX"],
           interval: 1
         },

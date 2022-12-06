@@ -29,9 +29,9 @@ class HttpSystemTaskNode extends SystemTaskNode {
                 header: { type: "object" },
                 retry: {
                   type: "object",
-                  required: ["amount", "interval", "conditions"],
+                  required: ["attempts", "interval", "conditions"],
                   properties: {
-                    amount: {type: "integer"},
+                    attempts: {type: "integer"},
                     interval: {type: "integer"},
                     conditions: {
                       type: "array",
@@ -65,11 +65,14 @@ class HttpSystemTaskNode extends SystemTaskNode {
     const target_codes = code_array.map(code => code.toString());
     const input_code = answer_code.toString();
 
-    const re = /[1-5][X][X]/;
+    const re = /[1-5][X0-9][X0-9]/;
     const codeMatch = (code) => {
       if(code.match(re)) {
-        const code_re = new RegExp(`${code[0]}[0-9][0-9]`);
-        return input_code.match(code_re)
+        const first_char = code[0];
+        const second_char = code[1] === 'X' ? '[0-9]': code[1];
+        const third_char = code[2] === 'X' ? '[0-9]': code[2];
+        const code_re = new RegExp(`${first_char}${second_char}${third_char}`);
+        return input_code.match(code_re);
       }
       return code === input_code;
     }
@@ -79,8 +82,8 @@ class HttpSystemTaskNode extends SystemTaskNode {
 
   next(result) {
     const retry_conditions = this._spec.parameters.retry?.conditions || [];
-    const retry_amount = this._spec.parameters.retry?.amount || 0;
-    if(HttpSystemTaskNode.includesHTTPCode(retry_conditions, result.status) && result.attempt < retry_amount) {
+    const retry_attempts = this._spec.parameters.retry?.attempts || 0;
+    if(HttpSystemTaskNode.includesHTTPCode(retry_conditions, result.status) && result.attempt < retry_attempts) {
       return this._spec["id"];
     }
     return this._spec["next"];
@@ -171,8 +174,8 @@ class HttpSystemTaskNode extends SystemTaskNode {
     emitter.emit("HTTP.NODE.RESPONSE", result, { error: false, request_id: request_id, process_id: process_id });
     
     const retry_conditions = this._spec.parameters.retry?.conditions || [];
-    const retry_amount = this._spec.parameters.retry?.amount || 0;
-    if(HttpSystemTaskNode.includesHTTPCode(retry_conditions, result.status) && result.attempt < retry_amount) {
+    const retry_attempts = this._spec.parameters.retry?.attempts || 0;
+    if(HttpSystemTaskNode.includesHTTPCode(retry_conditions, result.status) && result.attempt < retry_attempts) {
       return [result, ProcessStatus.PENDING];  
     }
     
