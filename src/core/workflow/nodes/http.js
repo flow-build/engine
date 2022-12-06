@@ -149,12 +149,14 @@ class HttpSystemTaskNode extends SystemTaskNode {
           status: err.response.status,
           data: err.response.data,
           attempt: request_attempt + 1,
+          timeout: this._spec.parameters.retry?.interval,
         };
       } else if(err.code === 'ECONNABORTED') {
         result = {
           status: err.code,
           data: {},
           attempt: request_attempt + 1,
+          timeout: this._spec.parameters.retry?.interval,
         };
       } else {
         throw new Error(`Got no response from request to ${verb} ${endpoint}, ${err.message}`);
@@ -166,7 +168,14 @@ class HttpSystemTaskNode extends SystemTaskNode {
         throw new Error(`Invalid response status: ${result.status}`);
       }
     }
-    emitter.emit("HTTP.NODE.RESPONSE", result, { error: false, request_id: request_id, process_id: process_id })
+    emitter.emit("HTTP.NODE.RESPONSE", result, { error: false, request_id: request_id, process_id: process_id });
+    
+    const retry_conditions = this._spec.parameters.retry?.conditions || [];
+    const retry_amount = this._spec.parameters.retry?.amount || 0;
+    if(HttpSystemTaskNode.includesHTTPCode(retry_conditions, result.status) && result.attempt < retry_amount) {
+      return [result, ProcessStatus.PENDING];  
+    }
+    
     return [result, ProcessStatus.RUNNING];
   }
 
