@@ -383,7 +383,7 @@ test("run process using environment", async () => {
   }
 });
 
-test("run process using environment", async () => {
+test("run process with http retries", async () => {
   const original_env_environment = process.env.ENVIRONMENT;
   const original_env_api_host = process.env.API_HOST;
   const original_env_payload = process.env.PAYLOAD;
