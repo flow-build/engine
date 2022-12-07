@@ -147,17 +147,10 @@ class HttpSystemTaskNode extends SystemTaskNode {
     try {
       result = await request[verb](endpoint, execution_data, headers, { http_timeout, max_content_length });
     } catch (err) {
-      if (err.response) {
+      if (err.response || err.code === 'ECONNABORTED') {
         result = {
-          status: err.response.status,
-          data: err.response.data,
-          attempt: request_attempt + 1,
-          timeout: this._spec.parameters.retry?.interval,
-        };
-      } else if(err.code === 'ECONNABORTED') {
-        result = {
-          status: err.code,
-          data: {},
+          status: err.response?.status || err.code,
+          data: err.response?.data === undefined ? {} : err.response?.data,
           attempt: request_attempt + 1,
           timeout: this._spec.parameters.retry?.interval,
         };
