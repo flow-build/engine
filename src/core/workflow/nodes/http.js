@@ -35,7 +35,9 @@ class HttpSystemTaskNode extends SystemTaskNode {
                     interval: {type: "integer"},
                     conditions: {
                       type: "array",
-                      items: {type: "integer"} 
+                      items: {
+                        type: ["integer","string"]
+                      } 
                     }
                   }
                 }
@@ -81,8 +83,8 @@ class HttpSystemTaskNode extends SystemTaskNode {
   }
 
   next(result) {
-    const retry_conditions = this._spec.parameters.retry?.conditions || [];
-    const retry_attempts = this._spec.parameters.retry?.attempts || 0;
+    const retry_conditions = this._spec.parameters.request.retry?.conditions || [];
+    const retry_attempts = this._spec.parameters.request.retry?.attempts || 0;
     if(HttpSystemTaskNode.includesHTTPCode(retry_conditions, result.status) && result.attempt < retry_attempts) {
       return this._spec["id"];
     }
@@ -152,7 +154,7 @@ class HttpSystemTaskNode extends SystemTaskNode {
           status: err.response?.status || err.code,
           data: err.response?.data === undefined ? {} : err.response?.data,
           attempt: request_attempt + 1,
-          timeout: this._spec.parameters.retry?.interval,
+          timeout: this._spec.parameters.request.retry?.interval,
         };
       } else {
         throw new Error(`Got no response from request to ${verb} ${endpoint}, ${err.message}`);
@@ -166,8 +168,8 @@ class HttpSystemTaskNode extends SystemTaskNode {
     }
     emitter.emit("HTTP.NODE.RESPONSE", result, { error: false, request_id: request_id, process_id: process_id });
     
-    const retry_conditions = this._spec.parameters.retry?.conditions || [];
-    const retry_attempts = this._spec.parameters.retry?.attempts || 0;
+    const retry_conditions = this._spec.parameters.request.retry?.conditions || [];
+    const retry_attempts = this._spec.parameters.request.retry?.attempts || 0;
     if(HttpSystemTaskNode.includesHTTPCode(retry_conditions, result.status) && result.attempt < retry_attempts) {
       return [result, ProcessStatus.PENDING];  
     }

@@ -28,11 +28,11 @@ module.exports = {
         request: {
           verb: "POST",
           url: { $ref: "environment.host" },
-        },
-        retry: {
-          attempts: 3,
-          conditions: ["5XX"],
-          interval: 1
+          retry: {
+            attempts: 3,
+            conditions: ["5XX"],
+            interval: 1
+          },
         },
         valid_response_codes: [
             "2XX",
