@@ -436,6 +436,70 @@ test("run process using environment", async () => {
   }
 });
 
+test("run process with http retries", async () => {
+  const original_env_environment = process.env.ENVIRONMENT;
+  const original_env_api_host = process.env.API_HOST;
+  const original_env_payload = process.env.PAYLOAD;
+  const original_env_limit = process.env.LIMIT;
+
+  try {
+    process.env.ENVIRONMENT = "test";
+    process.env.API_HOST = "https://postman-echo.com/status/503";
+    process.env.PAYLOAD = "payload";
+    process.env.LIMIT = "999";
+
+    const workflow = await engine.saveWorkflow("sample", "sample", blueprints_.http_retries);
+
+    let process_state_history = [];
+    engine.setProcessStateNotifier((process_state) => process_state_history.push(process_state));
+
+    let workflow_process = await engine.createProcess(workflow.id, actors_.simpleton);
+    expect(workflow_process.state.status).toEqual("unstarted");
+
+    workflow_process = await engine.runProcess(workflow_process.id, actors_.simpleton);
+  
+    await sleep(5000)
+
+    expect(process_state_history).toHaveLength(6)
+
+    let http_script = process_state_history[2];
+    expect(http_script.node_id).toEqual("2");
+    expect(http_script.result).toEqual({
+      attempt:1,
+      data:"",
+      status:503,
+      step_number:3,
+      timeout:1
+    });
+
+    http_script = process_state_history[3];
+    expect(http_script.node_id).toEqual("2");
+    expect(http_script.result).toEqual({
+      attempt:2,
+      data:"",
+      status:503,
+      step_number:4,
+      timeout:1
+    });
+
+    http_script = process_state_history[4];
+    expect(http_script.node_id).toEqual("2");
+    expect(http_script.result).toEqual({
+      attempt:3,
+      data:"",
+      status:503,
+      step_number:5,
+      timeout:1
+    });
+  } finally {
+    engine.setProcessStateNotifier();
+    process.env.ENVIRONMENT = original_env_environment;
+    process.env.API_HOST = original_env_api_host;
+    process.env.PAYLOAD = original_env_payload;
+    process.env.LIMIT = original_env_limit;
+  }
+});
+
 test("run process that creaters another process", async () => {
   try {
     const minimal_workflow = await engine.saveWorkflow("minimal", "minimal", blueprints_.minimal);
