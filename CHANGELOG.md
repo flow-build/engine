@@ -1,3 +1,10 @@
+## [2.18.0-beta.2](https://github.com/flow-build/engine/compare/v2.18.0-beta.1...v2.18.0-beta.2) (2022-12-08)
+
+
+### Bug Fixes
+
+* removes duplication of trigger creattion on process logic ([c547396](https://github.com/flow-build/engine/commit/c547396440bea6f2b2abd0168b9f3ee29582d7be))
+
 ## [2.18.0-beta.1](https://github.com/flow-build/engine/compare/v2.17.0...v2.18.0-beta.1) (2022-12-08)
 
 
