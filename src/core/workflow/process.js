@@ -775,17 +775,6 @@ class Process extends PersistedEntity {
         await ActivityManager.interruptActivityManagerForProcess(this._id);
         break;
       case ProcessStatus.FINISHED:
-        const node = this._blueprint.fetchNode(this._state.node_id);
-        if (node._spec.category === "signal") {
-          const signal_params = {
-            signal: this.state.result.signal,
-            input: this.state.result.trigger_payload,
-            actor_data: this.state.actor_data,
-            process_id: this.id,
-          };
-          const signal = new Trigger(signal_params);
-          await signal.save();
-        }
         await ActivityManager.finishActivityManagerForProcess(this._id, input_trx);
         break;
       case ProcessStatus.FORBIDDEN:
