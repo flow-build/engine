@@ -1,3 +1,18 @@
+## [2.18.0](https://github.com/flow-build/engine/compare/v2.17.0...v2.18.0) (2022-12-12)
+
+
+### Features
+
+* adds 'interval' as required parameter on HTTP node ([9d7df73](https://github.com/flow-build/engine/commit/9d7df7355a9424c7641bb6f1a033fd764ed42fef))
+* adds http node retry logic and ECCONABORTED code treatment ([df32952](https://github.com/flow-build/engine/commit/df329526f49e54f5c9823b28fa7912ec1ca8ade2))
+* adds timer trigger on HTTP node in case of retriees ([b8549fb](https://github.com/flow-build/engine/commit/b8549fbe53977b9e3ac09dace7381f1df30333b1))
+* adjust 'amount' to 'attempts' and changes regex for http status codes ([90ae09b](https://github.com/flow-build/engine/commit/90ae09ba0500720495322f9bed919d35e6585c57))
+
+
+### Bug Fixes
+
+* adjust HTTP parameters usage ([eca496e](https://github.com/flow-build/engine/commit/eca496eeac800c6dba8339375aea4238280fd682))
+
 ## [2.17.0](https://github.com/flow-build/engine/compare/v2.16.4...v2.17.0) (2022-11-29)
 
 
