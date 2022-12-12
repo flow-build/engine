@@ -59,6 +59,15 @@ const defaultMock = {
       throw new Error("Request failed with status code 401");
     }
 
+    if (endpoint === "https://postman-echo.com/status/503") {
+      throw {
+        response: {
+          status: 503,
+          data: '',
+        }
+      };
+    }
+
     expect(endpoint).toBe("https://koa-app:3000/test_api");
     expect(payload).toStrictEqual({ payload: { dummy: "payload" } });
     return { status: 201, data: { response: "post_success" } };
