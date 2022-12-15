@@ -180,6 +180,22 @@ class Process extends PersistedEntity {
     }
   }
 
+  async checkForLock(trx = false) {
+    const current_node = this._blueprint.fetchNode(this._state.node_id);
+    const next_node_name = current_node._spec.next;
+    const [lock] = await process_manager.fetchLockForWorkflow(this._workflow_id, trx);
+    if(lock && lock.active) {
+
+      console.trace("process.js -> checkForLock -> lock.node_id, next_node_name", lock.node_id, next_node_name)
+      
+      if(lock.node_id === next_node_name) {
+        return true;
+      }
+      return false;
+    }
+    return false;
+  }
+
   async run(actor_data, execution_input) {
     emitter.emit("PROCESS.RUN", `RUN ON PID [${this.id}]`, { process_id: this.id });
 
@@ -250,11 +266,19 @@ class Process extends PersistedEntity {
     }
   }
 
-  async continue(result_data, actor_data, trx) {
+  async continue(result_data, actor_data, trx, skipLock = false) {
     emitter.emit("PROCESS.CONTINUE", `CONTINUE ON PID [${this.id}]`, { process_id: this.id });
     if (!this.state) {
       this.state = await this.getPersist().getLastStateByProcess(this._id);
     }
+
+    if(!skipLock) {
+      const isLocked = await this.checkForLock(trx);
+      if(isLocked) {
+        return this._errorState();
+      }
+    }
+
     let currentNode;
 
     try {
@@ -292,7 +316,7 @@ class Process extends PersistedEntity {
         this._blueprint_spec.prepare
       );
 
-      await this._executionLoop(custom_lisp, actor_data, trx);
+      await this._executionLoop(custom_lisp, actor_data, trx, skipLock);
     }
   }
 
@@ -701,7 +725,15 @@ class Process extends PersistedEntity {
   }
 
   // eslint-disable-next-line no-unused-vars
-  async _executionLoop(custom_lisp, actor_data, input_trx = false) {
+  async _executionLoop(custom_lisp, actor_data, input_trx = false, skipLock = false) {
+    
+    if(!skipLock) {
+      const isLocked = await this.checkForLock(input_trx);
+      if(isLocked) {
+        return this._errorState();
+      }
+    }
+
     emitter.emit("EXECUTION_LOOP.START", `CALLED EXECUTION LOOP PID [${this.id}] STATUS [${this.status}]`, {
       process_id: this.id,
       engine_id: ENGINE_ID,
