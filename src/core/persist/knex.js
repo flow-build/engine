@@ -4,6 +4,7 @@ const { Activity } = require("../workflow/activity");
 const { Timer } = require("../workflow/timer");
 const { Trigger } = require("../workflow/trigger");
 const { Target } = require("../workflow/target");
+const { Lock } = require("../workflow/lock");
 const { v1: uuid } = require("uuid");
 
 class KnexPersist {
@@ -434,6 +435,20 @@ class TriggerTargetKnexPersist extends KnexPersist {
   }
 }
 
+class LockKnexPersist extends KnexPersist {
+  constructor(db) {
+    super(db, Lock, "locks");
+  }
+
+  async getByWorkflowId(workflow_id, trx) {
+    if (trx) {
+      return await this._db(this._table).where("workflow_id", workflow_id).transacting(trx);
+    } else {
+      return await this._db(this._table).where("workflow_id", workflow_id);
+    }
+  }
+}
+
 module.exports = {
   KnexPersist: KnexPersist,
   PackagesKnexPersist: PackagesKnexPersist,
@@ -442,5 +457,6 @@ module.exports = {
   TimerKnexPersist: TimerKnexPersist,
   TriggerKnexPersist: TriggerKnexPersist,
   TargetKnexPersist: TargetKnexPersist,
-  TriggerTargetKnexPersist: TriggerTargetKnexPersist
+  TriggerTargetKnexPersist: TriggerTargetKnexPersist,
+  LockKnexPersist: LockKnexPersist,
 };
