@@ -6,6 +6,8 @@ const { Packages } = require("../core/workflow/packages");
 const { PersistorProvider } = require("../core/persist/provider");
 const { Timer } = require("../core/workflow/timer");
 const { Trigger } = require("../core/workflow/trigger");
+const { Target } = require("../core/workflow/target");
+const { Lock } = require("../core/workflow/lock");
 const { ActivityManager } = require("../core/workflow/activity_manager");
 const { ActivityStatus } = require("../core/workflow/activity");
 const { setProcessStateNotifier, setActivityManagerNotifier } = require("../core/notifier_manager");
@@ -19,7 +21,6 @@ const { ProcessStatus } = require("./../core/workflow/process_state");
 const { validateTimeInterval } = require("../core/utils/ajvValidator");
 const { validate: uuidValidate } = require("uuid");
 const { isEmpty } = require("lodash");
-const { Target } = require("../core/workflow/target");
 
 function getActivityManagerFromData(activity_manager_data) {
   const activity_manager = ActivityManager.deserialize(activity_manager_data);
@@ -82,6 +83,9 @@ class Engine {
   static async _beat() {
     const TIMER_BATCH = process.env.TIMER_BATCH || 40;
     const ORPHAN_BATCH = process.env.ORPHAN_BATCH || 10;
+    const TRIGGER_BATCH = process.env.TRIGGER_BATCH || 10;
+    const LOCK_BATCH = process.env.LOCK_BATCH || 10;
+
     emitter.emit("ENGINE.HEARTBEAT", `HEARTBEAT @ [${new Date().toISOString()}]`);
     await Timer.getPersist()._db.transaction(async (trx) => {
       try {
@@ -112,10 +116,17 @@ class Engine {
         const locked_orphans = await trx("process")
           .select("process.*")
           .join("process_state", "process_state.id", "process.current_state_id")
-          .where("engine_id", "!=", ENGINE_ID)
-          .where("current_status", "running")
+          .fullOuterJoin("locks", "locks.workflow_id", "process.workflow_id")
+          .where("process.current_status", "running")
+          .andWhere(function() {
+            this.whereNull("locks").orWhere(function() {
+              this.whereNot("locks.active", true).orWhere(function() {
+                this.where("locks.active", true).andWhere("locks.node_id", "process_state.node_id")
+              })
+            })
+          })
           .limit(ORPHAN_BATCH)
-          .forUpdate()
+          .forUpdate("process", "process_state")
           .skipLocked();
         emitter.emit("ENGINE.ORPHANS_FETCHED", `  FETCHED [${locked_orphans.length}] ORPHANS ON HEARTBEAT`, {
           orphans: locked_orphans.length,
@@ -162,11 +173,11 @@ class Engine {
 
     await Process.getPersist()._db.transaction(async (trx) => {
       try {
-        emitter.emit("ENGINE.SIGNAL_FETCHING", `FETCHING SIGNAL PROCESSES ON HEARTBEAT BATCH [${5}]`);
+        emitter.emit("ENGINE.SIGNAL_FETCHING", `FETCHING SIGNAL PROCESSES ON HEARTBEAT BATCH [${TRIGGER_BATCH}]`);
         const signals = await trx("trigger")
           .select("*")
           .where("active", true)
-          .limit(5)
+          .limit(TRIGGER_BATCH)
           .forUpdate()
           .skipLocked();
         return await Promise.all(signals.map((l_trigger) => {
@@ -175,6 +186,25 @@ class Engine {
         }))
       } catch (e) {
         emitter.emit("ENGINE.SIGNAL.ERROR", "  ERROR FETCHING SIGNALS ON HEARTBEAT", { error: e });
+      }
+    });
+
+    await Process.getPersist()._db.transaction(async (trx) => {
+      try {
+        emitter.emit("ENGINE.LOCK_FETCHING", `FETCHING LOCK ON PROCESSES ON HEARTBEAT BATCH [${LOCK_BATCH}]`);
+        const locks = await trx("locks")
+          .select("*")
+          .where("active", true)
+          .limit(LOCK_BATCH)
+          .forUpdate()
+          .skipLocked();
+        
+        return await Promise.all(locks.map((l_lock) => {
+          const lock = Lock.deserialize(l_lock);
+          return lock.validate(trx);
+        }))
+      } catch (e) {
+        emitter.emit("ENGINE.LOCKS.ERROR", "  ERROR FETCHING LOCKS ON HEARTBEAT", { error: e });
       }
     });
   }
