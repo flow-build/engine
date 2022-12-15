@@ -1,3 +1,4 @@
+const _ = require('lodash');
 const { PersistedEntity } = require("./base");
 const { Process } = require("./process");
 const { Blueprint } = require("./blueprint");
@@ -22,7 +23,12 @@ class Workflow extends PersistedEntity {
 
   static deserialize(serialized) {
     if (serialized) {
-      const workflow = new Workflow(serialized.name, serialized.description, serialized.blueprint_spec);
+      const workflow = new Workflow(
+        serialized.name,
+        serialized.description,
+        _.isString(serialized.blueprint_spec) ? JSON.parse(serialized.blueprint_spec) : serialized.blueprint_spec,
+        serialized.id,
+      );
       workflow._id = serialized.id;
       workflow._created_at = serialized.created_at;
       workflow._version = serialized.version;

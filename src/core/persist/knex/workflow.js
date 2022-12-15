@@ -1,5 +1,6 @@
 const { Workflow } = require("../../workflow/workflow");
 const { KnexPersist } = require("../knex");
+const _ = require('lodash');
 
 class WorkflowKnexPersist extends KnexPersist {
   constructor(db) {
@@ -27,6 +28,11 @@ class WorkflowKnexPersist extends KnexPersist {
       const current_version = (
         await this._db(this._table).transacting(trx).max("version").where({ name: workflow.name }).first()
       ).max;
+
+      if(this.SQLite){
+        workflow.blueprint_spec = JSON.stringify(workflow.blueprint_spec);
+      }
+
       return this._db(this._table)
         .transacting(trx)
         .insert({

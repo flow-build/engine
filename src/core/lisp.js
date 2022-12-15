@@ -1,4 +1,6 @@
-const miniMAL = require('minimal-lisp'), m = miniMAL(global);
+require("dotenv").config();
+const miniMAL = process.env.NODE_ENV === "sqlite" ? require('react-native-lisp') : require('minimal-lisp');
+const m = miniMAL(global);
 
 const return_true = function() {
   return ["fn", ["&", "args"], true];

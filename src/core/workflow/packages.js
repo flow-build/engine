@@ -1,3 +1,4 @@
+const { has } = require('lodash')
 const { PersistedEntity } = require("./base");
 const lisp = require("../lisp");
 
@@ -57,10 +58,10 @@ class Packages extends PersistedEntity {
   static _evaluateLisp(required_codes) {
     const m = lisp.new_lisp();
     for (let code of required_codes) {
-      m.eval(code);
+      has(m, 'evalb') ? m.evalb(code) : m.eval(code);
     }
     m.evaluate = function (lisp_function) {
-      return m.eval(lisp_function);
+      return has(m, 'evalb') ? m.evalb(lisp_function) : m.eval(lisp_function);;
     };
     return m;
   }

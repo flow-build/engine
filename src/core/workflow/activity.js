@@ -1,3 +1,4 @@
+const _ = require('lodash');
 const { PersistedEntity } = require("./base");
 
 class ActivityStatus {
@@ -22,6 +23,10 @@ class Activity extends PersistedEntity {
   }
 
   static serialize(activity) {
+    if(activity._data && !_.isObject(activity._data)){
+      throw new Error('invalid input syntax for type json');
+    }
+
     return {
       id: activity._id,
       created_at: activity._created_at,
@@ -34,6 +39,10 @@ class Activity extends PersistedEntity {
 
   static deserialize(serialized) {
     if (serialized) {
+      if(_.isString(serialized.data)){
+        serialized.data = JSON.parse(serialized.data);
+        serialized.actor_data = JSON.parse(serialized.actor_data);
+      }
       const activity = new Activity(
         serialized.activity_manager_id,
         serialized.actor_data,

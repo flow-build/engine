@@ -1,3 +1,4 @@
+const _ = require("lodash");
 const delegate = require("delegates");
 const bpu = require("../core/utils/blueprint");
 const { Workflow } = require("../core/workflow/workflow");
@@ -15,12 +16,12 @@ class Cockpit {
     Cockpit._instance = instance;
   }
 
-  constructor(persist_mode, persist_args, logger_level) {
+  constructor(persist_mode, persist_args, logger_level, nodes = null, whiteList = null) {
     if (Cockpit.instance) {
       return Cockpit.instance;
     }
 
-    this._engine = new Engine(persist_mode, persist_args, logger_level);
+    this._engine = new Engine(persist_mode, persist_args, logger_level, nodes, whiteList);
     delegate(this, "_engine")
       .method("fetchAvailableActivitiesForActor")
       .method("fetchDoneActivitiesForActor")

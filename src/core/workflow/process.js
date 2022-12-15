@@ -1,6 +1,8 @@
 /* eslint-disable indent */
+require("dotenv").config();
 const _ = require("lodash");
 const { PersistedEntity } = require("./base");
+const { getMobileNodes } = require('../utils/node_factory')
 const { Packages } = require("../workflow/packages");
 const { ProcessState, ENGINE_ID } = require("./process_state");
 const { ProcessStatus } = require("./process_state");
@@ -42,10 +44,10 @@ class Process extends PersistedEntity {
           id: serialized.workflow_id,
           name: serialized.workflow_name,
         },
-        serialized.blueprint_spec
+        _.isString(serialized.blueprint_spec) ? JSON.parse(serialized.blueprint_spec) : serialized.blueprint_spec
       );
       process._id = serialized.id;
-      process._created_at = serialized.created_at;
+      process._created_at = new Date(serialized.created_at);
       process._state = state;
       process._current_state_id = serialized.current_state_id;
       process._current_status = serialized.current_status;
@@ -143,6 +145,34 @@ class Process extends PersistedEntity {
 
   get next_node() {
     return this._blueprint.fetchNode(this._state.next_node_id);
+  }
+
+  get workflow_id() {
+    return this._workflow_id;
+  }
+
+  get blueprint_spec() {
+    return this._blueprint_spec;
+  }
+
+  get current_state_id() {
+    return this._current_state_id;
+  }
+
+  get current_status() {
+    return this._current_status;
+  }
+
+  set current_status(status) {
+    this._current_status = status;
+  }
+
+  set current_state_id(id) {
+    this._current_state_id = id;
+  }
+
+  get offline(){
+    return Process.connection_status === ProcessStatus.UNAVAILABLE;
   }
 
   async create(actor_data, initial_bag) {
@@ -261,7 +291,7 @@ class Process extends PersistedEntity {
       return this._forbiddenState(err);
     }
 
-    if (currentNode && this.status !== ProcessStatus.FINISHED) {
+    if (currentNode && this.status !== ProcessStatus.FINISHED && this.status !== ProcessStatus.UNAVAILABLE) {
       if (this.status !== ProcessStatus.RUNNING) {
         const next_node_id = currentNode.next();
         const step_number = await this.getNextStepNumber();
@@ -389,6 +419,31 @@ class Process extends PersistedEntity {
     return this;
   }
 
+  async setStateUnavailable({ node_id, bag, result, error, next_node_id,
+                              actor_data, time_elapsed }, trx = false){
+
+    const step_number = Process.calculateNextStep(this.state.step_number);
+
+    this.state = new ProcessState(
+        this.id,
+        step_number,
+        node_id,
+        bag,
+        {},
+        result,
+        error,
+        ProcessStatus.UNAVAILABLE,
+        next_node_id,
+        actor_data,
+        time_elapsed
+    );
+    this._current_state_id = this._state.id;
+    await this.save(trx);
+    await this._notifyProcessState();
+
+    return this.state;
+  }
+
   async getNextStepNumber() {
     const last_step_number = await this.getPersist().getLastStepNumber(this._id);
     return Process.calculateNextStep(last_step_number);
@@ -400,29 +455,40 @@ class Process extends PersistedEntity {
       .from("process")
       .where("id", this.id)
       .where("current_state_id", current_state_id)
-      .first()
-      .forUpdate()
-      .noWait();
-    if (!p_lock) {
+      .first();
+
+    const SQLite = (trx.client.config.dialect || trx.context.client.config.client) === "sqlite3";
+    if(!SQLite){
+      p_lock.forUpdate().noWait();
+    }
+
+    const process_lock = await p_lock;
+
+    if (!process_lock) {
       throw new Error(`No process found for lock, process_id [${this.id}] current_state_id [${current_state_id}]`);
     }
-    emitter.emit("INNERLOOP.LOCK", `      LOCK PID ${p_lock.id}`, {
-      process_id: p_lock.id,
+    emitter.emit("INNERLOOP.LOCK", `      LOCK PID ${process_lock.id}`, {
+      process_id: process_lock.id,
     });
 
     const ps_lock = await trx
       .select("id")
       .from("process_state")
       .first()
-      .where("id", current_state_id)
-      .forUpdate()
-      .noWait();
-    if (!ps_lock) {
+      .where("id", current_state_id);
+
+    if(!SQLite){
+      ps_lock.forUpdate().noWait();
+    }
+
+    const process_state_lock = await ps_lock;
+
+    if (!process_state_lock) {
       throw new Error(`No lock for process state [${current_state_id}]`);
     }
-    emitter.emit("INNERLOOP.STATE_LOCK", `      LOCK PID [${p_lock.id}] PS [${ps_lock.id}]`, {
-      process_id: p_lock.id,
-      process_state_id: ps_lock.id,
+    emitter.emit("INNERLOOP.STATE_LOCK", `      LOCK PID [${process_lock.id}] PS [${process_state_lock.id}]`, {
+      process_id: process_lock.id,
+      process_state_id: process_state_lock.id,
     });
 
     const next_step_number = await this.getNextStepNumber();
@@ -444,27 +510,43 @@ class Process extends PersistedEntity {
     let am = null;
     let timer = null;
 
-    try {
-      this.next_node;
-    } catch (error) {
-      this.state = new ProcessState(
-        this._state.process_id,
-        next_step_number,
-        this._state.node_id,
-        this._state.bag,
-        this._state.external_input,
-        this._state.result,
-        error.toString(),
-        ProcessStatus.FORBIDDEN,
-        this._state.next_node_id,
-        this._state.actor_data,
-        null
-      );
-
+    if (!SQLite) {
+      try {
+        this.next_node;
+      } catch (error) {
+        this.state = new ProcessState(
+          this._state.process_id,
+          next_step_number,
+          this._state.node_id,
+          this._state.bag,
+          this._state.external_input,
+          this._state.result,
+          error.toString(),
+          ProcessStatus.FORBIDDEN,
+          this._state.next_node_id,
+          this._state.actor_data,
+          null
+        );
+      }
       await this._notifyProcessState(actor_data);
       await this.save(trx);
 
       return [this, null, null];
+    } else {
+      const nodes = getMobileNodes();
+      const type = (_.get(this.next_node, ['_spec', 'type'])).toLowerCase() === "systemtask"
+
+      if(type) {
+
+        const category = _.get(this.next_node, ['_spec', 'category'])
+        const available = nodes.includes(category.toLowerCase())
+
+        if(!available) {
+          const state = await this.setStateUnavailable(this.state, trx);
+          emitter.emit('PROCESS.UNAVAILABLE', this)
+          return [state, am, timer];
+        }
+      }
     }
 
     emitter.emit(
@@ -511,7 +593,7 @@ class Process extends PersistedEntity {
     if (result_state.step_number === next_step_number) {
       this.state = result_state;
       await this.save(trx);
-      emitter.emit("PROCESS_STATE.NEW", `      NEW STATE ON PID [${p_lock.id}] PS [${this.state.id}]`, {
+      emitter.emit("PROCESS_STATE.NEW", `      NEW STATE ON PID [${process_lock.id}] PS [${this.state.id}]`, {
         process_id: this.id,
         process_state_id: this.state.id,
       });
@@ -522,19 +604,19 @@ class Process extends PersistedEntity {
         (result_state.status === ProcessStatus.PENDING || result_state.status === ProcessStatus.WAITING) 
           && result_state.result.timeout) 
           {
-        emitter.emit("PROCESS.TIMER.CREATING", `      CREATING NEW TIMER ON PID [${p_lock.id}]`, {
-          process_id: p_lock.id,
+        emitter.emit("PROCESS.TIMER.CREATING", `      CREATING NEW TIMER ON PID [${process_lock.id}]`, {
+          process_id: process_lock.id,
         });
 
         timer = new Timer("Process", this.id, Timer.timeoutFromNow(result_state.result.timeout), { actor_data });
         await timer.save(trx);
-        emitter.emit("PROCESS.TIMER.NEW", `      NEW TIMER ON PID [${p_lock.id}] TIMER [${timer.id}]`, {
+        emitter.emit("PROCESS.TIMER.NEW", `      NEW TIMER ON PID [${process_lock.id}] TIMER [${timer.id}]`, {
           process_id: this.id,
           timer_id: timer.id,
         });
       } else if (node_result.activity_manager) {
-        emitter.emit("PROCESS.AM.CREATING", `      CREATING NEW ACTIVITY MANAGER ON PID [${p_lock.id}]`, {
-          process_id: p_lock.id,
+        emitter.emit("PROCESS.AM.CREATING", `      CREATING NEW ACTIVITY MANAGER ON PID [${process_lock.id}]`, {
+          process_id: process_lock.id,
         });
 
         am = await this._createActivityManager(
@@ -544,13 +626,13 @@ class Process extends PersistedEntity {
           node_result.activity_schema
         );
 
-        emitter.emit("PROCESS.AM.NEW", `      NEW ACTIVITY MANAGER ON PID [${p_lock.id}] AM [${am.id}]`, {
-          process_id: p_lock.id,
+        emitter.emit("PROCESS.AM.NEW", `      NEW ACTIVITY MANAGER ON PID [${process_lock.id}] AM [${am.id}]`, {
+          process_id: process_lock.id,
           activity_manager_id: am.id,
         });
       } else if (result_state.status === ProcessStatus.DELEGATED) {
-        emitter.emit("PROCESS.SUBPROCESS.CREATING", `      CREATING NEW SUBPROCESS ON PID [${p_lock.id}]`, {
-          process_id: p_lock.id,
+        emitter.emit("PROCESS.SUBPROCESS.CREATING", `      CREATING NEW SUBPROCESS ON PID [${process_lock.id}]`, {
+          process_id: process_lock.id,
           sub_workflow_name: node_result.workflow_name,
         });
         const initial_bag = result_state.result;
@@ -565,8 +647,8 @@ class Process extends PersistedEntity {
           initial_bag
         );
         if (child_process.status === ProcessStatus.UNSTARTED) {
-          emitter.emit("PROCESS.SUBPROCESS.NEW", `NEW SUBPROCESS ON PID [${p_lock.id}] SPID [${child_process.id}]`, {
-            process_id: p_lock.id,
+          emitter.emit("PROCESS.SUBPROCESS.NEW", `NEW SUBPROCESS ON PID [${process_lock.id}] SPID [${child_process.id}]`, {
+            process_id: process_lock.id,
             sub_process_id: child_process.id,
           });
 
@@ -575,16 +657,16 @@ class Process extends PersistedEntity {
           throw new Error(`ERROR CREATING SUBPROCESS`);
         }
       } else if (result_state.status === ProcessStatus.FINISHED) {
-        emitter.emit("PROCESS.FINISHED", `      FINISHED PID [${p_lock.id}]`, {
-          process_id: p_lock.id,
+        emitter.emit("PROCESS.FINISHED", `      FINISHED PID [${process_lock.id}]`, {
+          process_id: process_lock.id,
           result_data: result_state.result,
         });
         if (result_state.bag.parent_process_data) {
           emitter.emit(
             "PROCESS.SUBPROCESS.UPSTREAM",
-            `      SUBPROCESS UPSTREAM ON PID [${p_lock.id}] PPID [${result_state.bag.parent_process_data.id}]`,
+            `      SUBPROCESS UPSTREAM ON PID [${process_lock.id}] PPID [${result_state.bag.parent_process_data.id}]`,
             {
-              process_id: p_lock.id,
+              process_id: process_lock.id,
               parent_process_id: result_state.bag.parent_process_data.id,
             }
           );
@@ -797,6 +879,7 @@ class Process extends PersistedEntity {
     activity_manager.parameters.activity_schema = activity_schema;
     activity_manager.process_state_id = this._state.id;
     const am = await activity_manager.save(trx);
+    await this._notifyActivityManager(activity_manager);
     return am;
   }
 

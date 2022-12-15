@@ -32,6 +32,10 @@ class ActivityManager extends PersistedEntity {
 
   static deserialize(serialized) {
     if (serialized) {
+      if(_.isString(serialized.props)){
+        serialized.props = JSON.parse(serialized.props);
+        serialized.parameters = JSON.parse(serialized.parameters);
+      }
       const activity_manager = activity_manager_factory.getActivityManager(
         serialized.type,
         serialized.process_state_id,
@@ -40,7 +44,7 @@ class ActivityManager extends PersistedEntity {
         serialized.parameters
       );
       activity_manager._id = serialized.id;
-      activity_manager._created_at = serialized.created_at;
+      activity_manager._created_at = new Date(serialized.created_at);
 
       return activity_manager;
     }
@@ -55,6 +59,13 @@ class ActivityManager extends PersistedEntity {
   static async checkActorPermission(activity_datas, actor_data) {
     const allowed_activities = [];
     for (let activity_data of activity_datas) {
+      if(_.isString(activity_data.blueprint_spec)){
+        activity_data.blueprint_spec = JSON.parse(activity_data.blueprint_spec);
+        activity_data.props = JSON.parse(activity_data.props);
+        activity_data.bag = JSON.parse(activity_data.bag);
+        activity_data.parameters = JSON.parse(activity_data.parameters);
+        activity_data.external_input = JSON.parse(activity_data.external_input);
+      }
       const blueprint = activity_data.blueprint_spec;
       const node_id = activity_data.node_id;
       const lane_id = blueprint.nodes.filter((node) => node.id === node_id)[0].lane_id;
@@ -125,10 +136,11 @@ class ActivityManager extends PersistedEntity {
       if (allowed_activities.length === 1) {
         result = allowed_activities[0];
         result.activities = await this.getPersist().getActivities(result.id);
+        result.created_at = new Date(result.created_at);
 
         const timer = await this.getPersist().getTimerfromResourceId(activity_manager.id);
         if (timer.length !== 0) {
-          result.expires_at = timer[0].expires_at;
+          result.expires_at = new Date(new Date(timer[0].expires_at).toISOString());
         }
       }
     }
@@ -139,11 +151,15 @@ class ActivityManager extends PersistedEntity {
     let timer = await this.getPersist().getTimerfromResourceId(id);
 
     if (timer.length !== 0) {
-      const new_expired_date = new Date(
-        timer[0].expires_at.setTime(timer[0].expires_at.getTime() + timeInterval * 1000)
-      );
+      const expires_at = new Date(timer[0].expires_at)
 
       const db = Timer.getPersist()._db;
+      const SQLite = db.context.client.config.client === "sqlite3";
+      let new_expired_date = new Date(expires_at.setTime(expires_at.getTime() + timeInterval*1000));
+      if(SQLite) {
+        new_expired_date.toISOString();
+      }
+
       await db("timer")
         .where("resource_type", resource_type)
         .andWhere("resource_id", id)
@@ -384,26 +400,51 @@ class ActivityManager extends PersistedEntity {
     });
 
     const db = Timer.getPersist()._db;
-
+    const SQLite = db.context.client.config.client === "sqlite3";
+    
     if (time instanceof Date) {
+
+      let created_at = new Date();
+      let expires_at = new Date(time);
+      let params = {}
+
+      if(SQLite){
+        created_at = created_at.toISOString();
+        expires_at = expires_at.toISOString();
+        params = '{}';
+      }
+
       await db("timer").insert({
         id: uuid(),
-        created_at: new Date(),
-        expires_at: new Date(time),
+        created_at,
+        expires_at,
         active: true,
         resource_type: "ActivityManager",
         resource_id: id,
-        params: {},
+        params,
       });
     } else {
+      const ms = time*1000;
+      const getTime = new Date().getTime();
+
+      let created_at = new Date();
+      let expires_at = new Date(getTime + ms);
+      let params = {}
+
+      if(SQLite){
+        created_at = created_at.toISOString();
+        expires_at = expires_at.toISOString();
+        params = '{}';
+      }
+
       await db("timer").insert({
         id: uuid(),
-        created_at: new Date(),
-        expires_at: new Date(new Date().getTime() + time * 1000),
+        created_at,
+        expires_at,
         active: true,
         resource_type: resource_type,
         resource_id: id,
-        params: {},
+        params
       });
     }
   }

@@ -1,5 +1,6 @@
 /* eslint-disable indent */
 const nodes = require("../workflow/nodes/index.js");
+let mobileWhiteList = [];
 
 const types = {
   start: nodes.StartNode,
@@ -26,6 +27,10 @@ function getNodeTypes() {
 
 function getNodeCategories() {
   return categories;
+}
+
+function reset() {
+  categories = getNodeCategories();
 }
 
 function getNode(nodeSpec) {
@@ -65,9 +70,20 @@ function addSystemTaskCategory(customCategories) {
   }
 }
 
+function getMobileNodes() {
+  return mobileWhiteList;
+}
+
+function addMobileWhiteList(nodes) {
+  mobileWhiteList = nodes;
+}
+
 module.exports = {
   getNode,
   getNodeTypes,
   getNodeCategories,
   addSystemTaskCategory,
+  getMobileNodes,
+  addMobileWhiteList,
+  reset
 };
