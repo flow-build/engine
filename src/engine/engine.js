@@ -603,137 +603,6 @@ class Engine {
   }
 }
 
-class PostgresEngine extends Engine {
-  static get default_nodes() {
-    return nodes;
-  }
-
-  static get reset_nodes(){
-    return reset();
-  }
-
-  static get event_emitter(){
-    return emitter;
-  }
-
-  static get instance() {
-    return PostgresEngine._instance;
-  }
-
-  static set instance(instance) {
-    PostgresEngine._instance = instance;
-  }
-
-  static get persistor() {
-    return PostgresEngine._persistor;
-  }
-
-  static set persistor(instance) {
-    PostgresEngine._persistor = instance;
-  }
-
-  static set heart(h) {
-    PostgresEngine._heart = h;
-  }
-
-  static get heart() {
-    return PostgresEngine._heart;
-  }
-
-  constructor(persist_mode, persist_args, logger_level, availableNodes = null, whiteList = null) {
-    super(persist_mode, persist_args, logger_level, availableNodes, whiteList);
-    try {
-      PostgresEngine.heart = PostgresEngine.setNextHeartBeat();
-    } catch (e) {
-      emitter.emit("ENGINE.ERROR", "ERROR AT ENGINE POSTGRES", { error: e });
-    }
-  }
-
-  static setNextHeartBeat() {
-    return setTimeout(async () => {
-      try {
-        await PostgresEngine._beat();
-      } catch (e) {
-        emitter.emit("ENGINE.HEART.ERROR", `HEART FAILURE @ ENGINE_ID [${ENGINE_ID}] ${JSON.stringify({ e })}`, {
-            engine_id: ENGINE_ID,
-            error: e
-        });
-      } finally {
-        PostgresEngine.heart = PostgresEngine.setNextHeartBeat();
-        emitter.emit("ENGINE.NEXT", "NEXT HEARTBEAT SET");
-      }
-    }, env.HEART_BEAT || 1000);
-  }
-
-  static kill() {
-    if (PostgresEngine.heart)
-      clearTimeout(PostgresEngine.heart);
-  }
-
-  static async _beat(){
-    const TIMER_BATCH = process.env.TIMER_BATCH || 20;
-    const ORPHAN_BATCH = process.env.ORPHAN_BATCH || 10;
-    emitter.emit("ENGINE.HEARTBEAT", `HEARTBEAT @ [${new Date().toISOString()}]`);
-    const locked_timers = await Timer.getPersist()._db.transaction(async (trx) => {
-      try {
-        emitter.emit("ENGINE.FETCHING_TIMERS", `  FETCHING TIMERS ON HEARTBEAT BATCH [${TIMER_BATCH}]`);
-        const locked_timers = await trx("timer")
-          .where("expires_at", "<", new Date().toISOString())
-          .andWhere("active", true)
-          .limit(TIMER_BATCH)
-          .forUpdate()
-          .skipLocked();  
-        return locked_timers;    
-      } catch (e) {
-        throw new Error(e);
-      }
-    });
-    emitter.emit("ENGINE.TIMERS", `  FETCHED [${locked_timers.length}] TIMERS ON HEARTBEAT`,{ timers: locked_timers.length });
-    await Promise.all(locked_timers.map((t_lock) => {
-      emitter.emit("ENGINE.FIRING_TIMER", `  FIRING TIMER [${t_lock.id}] ON HEARTBEAT`, { timer_id: t_lock.id });
-      const timer = Timer.deserialize(t_lock);
-      return timer.run();
-    }));
-    const orphan_process = await Process.getPersist()._db.transaction(async (trx) => {
-      try {
-        emitter.emit("ENGINE.ORPHANS_FETCHING", `FETCHING ORPHAN PROCESSES ON HEARTBEAT BATCH [${ORPHAN_BATCH}]`);
-        const locked_orphans = await trx("process")
-          .select('process.*')
-          .join('process_state', 'process_state.id', 'process.current_state_id')
-          .where('engine_id', '!=', ENGINE_ID)
-          .whereIn('current_status', ['running', 'unavailable'])
-          .limit(ORPHAN_BATCH).forUpdate().skipLocked();
-        emitter.emit("ENGINE.ORPHANS_FETCHED", `  FETCHED [${locked_orphans.length}] ORPHANS ON HEARTBEAT`,{ orphans: locked_orphans.length });
-        return await Promise.all(locked_orphans.map(async (orphan) => {
-          emitter.emit("ENGINE.ORPHAN_FETCHING", `  FETCHING PS FOR ORPHAN [${orphan.id}] ON HEARTBEAT`, { process_id: orphan.id });
-          orphan.state = await trx("process_state")
-            .select().where("id", orphan.current_state_id)
-            .where('engine_id', '!=', ENGINE_ID)
-            .forUpdate().noWait()
-            .first();
-          emitter.emit("ENGINE.ORPHAN_FETCHED", `  FETCHED PS FOR ORPHAN [${orphan.id}] ON HEARTBEAT`, { process_id: orphan.id });
-          if (orphan.state) {
-            return Process.deserialize(orphan);
-          }
-        }));
-      } catch (e) {
-        emitter.emit("ENGINE.ORPHANS.ERROR", "  ERROR FETCHING ORPHANS ON HEARTBEAT", { error: e });
-        throw new Error(e);
-      }
-    });
-      const continue_promises = orphan_process.map((process) => {
-        if (process) {
-          emitter.emit("ENGINE.ORPHAN.CONTINUE", `    START CONTINUE ORPHAN PID [${process.id}] AND STATE [${process.state.id}] ON HEARTBEAT`, {
-            process_id: process.id,
-            process_state_id: process.state.id
-          });
-          return process.continue({}, process.state._actor_data);
-        }
-      });
-      await Promise.all(continue_promises);
-  }
-}
-
 class SQLiteEngine extends Engine {
     static get default_nodes() {
       return nodes_mobile;
@@ -811,7 +680,7 @@ class SQLiteEngine extends Engine {
                 SQLiteEngine.heart = SQLiteEngine.setNextHeartBeat(bgService, options);
                 emitter.emit("ENGINE.NEXT", "NEXT HEARTBEAT SET");
             }
-        }, env.HEART_BEAT || 10000);
+        }, process.env.HEART_BEAT || 10000);
     }
 
     static kill() {
@@ -820,8 +689,8 @@ class SQLiteEngine extends Engine {
     }
 
     static async _beat(){
-        const TIMER_BATCH = env.TIMER_BATCH || 1
-        const ORPHAN_BATCH = env.ORPHAN_BATCH || 1;
+        const TIMER_BATCH = process.env.TIMER_BATCH || 1
+        const ORPHAN_BATCH = process.env.ORPHAN_BATCH || 1;
         emitter.emit("ENGINE.HEARTBEAT", `HEARTBEAT @ [${new Date().toISOString()}]`);
         await Timer.getPersist()._db.transaction(async (trx) => {
             try {
@@ -880,5 +749,5 @@ class SQLiteEngine extends Engine {
 }
 
 module.exports = {
-  Engine: process.env.NODE_ENV === "sqlite" ? SQLiteEngine : PostgresEngine,
+  Engine: process.env.NODE_ENV === "sqlite" ? SQLiteEngine : Engine,
 };
