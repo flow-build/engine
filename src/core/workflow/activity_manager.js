@@ -157,7 +157,7 @@ class ActivityManager extends PersistedEntity {
       const SQLite = db.context.client.config.client === "sqlite3";
       let new_expired_date = new Date(expires_at.setTime(expires_at.getTime() + timeInterval*1000));
       if(SQLite) {
-        new_expired_date.toISOString();
+        new_expired_date = new_expired_date.toISOString();
       }
 
       await db("timer")

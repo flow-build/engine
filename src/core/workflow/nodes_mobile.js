@@ -50,7 +50,7 @@ class Node {
         try {
 
             const execution_data = this._preProcessing({ bag, input, actor_data, environment, parameters });
-            const [result, status] = await this._run(
+            const [result, status] = this._run(
                 execution_data,
                 lisp,
                 trx
