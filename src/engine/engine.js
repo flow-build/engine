@@ -671,8 +671,8 @@ class PostgresEngine extends Engine {
   }
 
   static async _beat(){
-    const TIMER_BATCH = env.TIMER_BATCH || 20
-    const ORPHAN_BATCH = env.ORPHAN_BATCH || 10;
+    const TIMER_BATCH = process.env.TIMER_BATCH || 20;
+    const ORPHAN_BATCH = process.env.ORPHAN_BATCH || 10;
     emitter.emit("ENGINE.HEARTBEAT", `HEARTBEAT @ [${new Date().toISOString()}]`);
     const locked_timers = await Timer.getPersist()._db.transaction(async (trx) => {
       try {

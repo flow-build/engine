@@ -450,7 +450,7 @@ class Process extends PersistedEntity {
   }
 
   async __inerLoop(current_state_id, { custom_lisp, actor_data }, trx) {
-    const p_lock = await trx
+    const p_lock = trx
       .select("id", "current_state_id")
       .from("process")
       .where("id", this.id)
@@ -458,11 +458,13 @@ class Process extends PersistedEntity {
       .first();
 
     const SQLite = (trx.client.config.dialect || trx.context.client.config.client) === "sqlite3";
+    
+    let process_lock;
     if(!SQLite){
-      p_lock.forUpdate().noWait();
+      process_lock = await p_lock.forUpdate().noWait();
+    } else {
+      process_lock = await p_lock;
     }
-
-    const process_lock = await p_lock;
 
     if (!process_lock) {
       throw new Error(`No process found for lock, process_id [${this.id}] current_state_id [${current_state_id}]`);
@@ -471,17 +473,18 @@ class Process extends PersistedEntity {
       process_id: process_lock.id,
     });
 
-    const ps_lock = await trx
+    const ps_lock = trx
       .select("id")
       .from("process_state")
       .first()
       .where("id", current_state_id);
 
+    let process_state_lock;
     if(!SQLite){
-      ps_lock.forUpdate().noWait();
+      process_state_lock = await ps_lock.forUpdate().noWait();
+    } else {
+      process_state_lock = await ps_lock;
     }
-
-    const process_state_lock = await ps_lock;
 
     if (!process_state_lock) {
       throw new Error(`No lock for process state [${current_state_id}]`);
@@ -527,11 +530,12 @@ class Process extends PersistedEntity {
           this._state.actor_data,
           null
         );
-      }
-      await this._notifyProcessState(actor_data);
-      await this.save(trx);
 
-      return [this, null, null];
+        await this._notifyProcessState(actor_data);
+        await this.save(trx);
+
+        return [this, null, null];
+      }
     } else {
       const nodes = getMobileNodes();
       const type = (_.get(this.next_node, ['_spec', 'type'])).toLowerCase() === "systemtask"
@@ -755,6 +759,9 @@ class Process extends PersistedEntity {
 
         ps && emitter.emit("PROCESS.STEP_CREATED", "", {});
       } catch (e) {
+        
+        console.log("Error: ", e);
+
         execution_success = false;
         emitter.emit(
           "EXECUTION_LOOP.ROLLBACK",

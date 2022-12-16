@@ -7,7 +7,7 @@ module.exports = {
   requirements: ["core"],
   prepare: [],
   nodes: [
-    buildStartNode({ next: "2" }),
+    buildStartNode({ next: "SYSTEM-TASK" }),
     buildSystemTaskNode({
       category: "abortProcess",
       parameters: {
