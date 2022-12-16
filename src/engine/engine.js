@@ -382,7 +382,7 @@ class Engine {
 
   async submitActivity(activity_manager_id, actor_data, external_input) {
     try {
-      if(!validate(activity_manager_id)){
+      if(!uuidValidate(activity_manager_id)){
         throw new Error('invalid input syntax for type uuid');
       }
       let activity_manager_data = await ActivityManager.get(activity_manager_id, actor_data);
