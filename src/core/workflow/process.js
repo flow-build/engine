@@ -886,7 +886,6 @@ class Process extends PersistedEntity {
     activity_manager.parameters.activity_schema = activity_schema;
     activity_manager.process_state_id = this._state.id;
     const am = await activity_manager.save(trx);
-    await this._notifyActivityManager(activity_manager);
     return am;
   }
 
