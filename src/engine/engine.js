@@ -70,7 +70,9 @@ class Engine {
     this.emitter = emitter;
     if (heartBeat === true || heartBeat === "true") {
       try {
-        Engine.heart = Engine.setNextHeartBeat();
+        const beatMode = process.env.BEAT_MODE || 'parallel';
+        const initialBeat = beatMode === 'parallel' ? 'ALL' : 'ORPHAN_PROCESSES';
+        Engine.heart = Engine.setNextHeartBeat(beatMode, initialBeat);
         emitter.emit("ENGINE.CONTRUCTOR", "HEARTBEAT INITIALIZED", {});
       } catch (e) {
         emitter.emit("ENGINE.ERROR", "ERROR AT ENGINE", { error: e });
@@ -80,36 +82,7 @@ class Engine {
     }
   }
 
-  static async _beat() {
-    const TIMER_BATCH = process.env.TIMER_BATCH || 40;
-    const ORPHAN_BATCH = process.env.ORPHAN_BATCH || 10;
-    const TRIGGER_BATCH = process.env.TRIGGER_BATCH || 10;
-    const LOCK_BATCH = process.env.LOCK_BATCH || 10;
-
-    emitter.emit("ENGINE.HEARTBEAT", `HEARTBEAT @ [${new Date().toISOString()}]`);
-    await Timer.getPersist()._db.transaction(async (trx) => {
-      try {
-        emitter.emit("ENGINE.FETCHING_TIMERS", `  FETCHING TIMERS ON HEARTBEAT BATCH [${TIMER_BATCH}]`);
-        const locked_timers = await trx("timer")
-          .where("expires_at", "<", new Date())
-          .andWhere("active", true)
-          .limit(TIMER_BATCH)
-          .forUpdate()
-          .skipLocked();
-        emitter.emit("ENGINE.TIMERS", `  FETCHED [${locked_timers.length}] TIMERS ON HEARTBEAT`, {
-          timers: locked_timers.length,
-        });
-        await Promise.all(
-          locked_timers.map((t_lock) => {
-            emitter.emit("ENGINE.FIRING_TIMER", `  FIRING TIMER [${t_lock.id}] ON HEARTBEAT`, { timer_id: t_lock.id });
-            const timer = Timer.deserialize(t_lock);
-            return timer.run(trx);
-          })
-        );
-      } catch (e) {
-        throw new Error(e);
-      }
-    });
+  static async resolveOrphanProcesses(ORPHAN_BATCH) {
     const orphan_process = await Process.getPersist()._db.transaction(async (trx) => {
       try {
         emitter.emit("ENGINE.ORPHANS_FETCHING", `FETCHING ORPHAN PROCESSES ON HEARTBEAT BATCH [${ORPHAN_BATCH}]`);
@@ -170,7 +143,35 @@ class Engine {
       }
     });
     await Promise.all(continue_promises);
+  }
 
+  static async resolveTimers(TIMER_BATCH) {
+    await Timer.getPersist()._db.transaction(async (trx) => {
+      try {
+        emitter.emit("ENGINE.FETCHING_TIMERS", `  FETCHING TIMERS ON HEARTBEAT BATCH [${TIMER_BATCH}]`);
+        const locked_timers = await trx("timer")
+          .where("expires_at", "<", new Date())
+          .andWhere("active", true)
+          .limit(TIMER_BATCH)
+          .forUpdate()
+          .skipLocked();
+        emitter.emit("ENGINE.TIMERS", `  FETCHED [${locked_timers.length}] TIMERS ON HEARTBEAT`, {
+          timers: locked_timers.length,
+        });
+        await Promise.all(
+          locked_timers.map((t_lock) => {
+            emitter.emit("ENGINE.FIRING_TIMER", `  FIRING TIMER [${t_lock.id}] ON HEARTBEAT`, { timer_id: t_lock.id });
+            const timer = Timer.deserialize(t_lock);
+            return timer.run(trx);
+          })
+        );
+      } catch (e) {
+        throw new Error(e);
+      }
+    });
+  }
+
+  static async resolveTriggers(TRIGGER_BATCH) {
     await Process.getPersist()._db.transaction(async (trx) => {
       try {
         emitter.emit("ENGINE.SIGNAL_FETCHING", `FETCHING SIGNAL PROCESSES ON HEARTBEAT BATCH [${TRIGGER_BATCH}]`);
@@ -188,7 +189,9 @@ class Engine {
         emitter.emit("ENGINE.SIGNAL.ERROR", "  ERROR FETCHING SIGNALS ON HEARTBEAT", { error: e });
       }
     });
+  }
 
+  static async resolveLocks(LOCK_BATCH) {
     await Process.getPersist()._db.transaction(async (trx) => {
       try {
         emitter.emit("ENGINE.LOCK_FETCHING", `FETCHING LOCK ON PROCESSES ON HEARTBEAT BATCH [${LOCK_BATCH}]`);
@@ -209,17 +212,71 @@ class Engine {
     });
   }
 
-  static setNextHeartBeat() {
+  static async _beat(action = 'ALL') {
+    const TIMER_BATCH = process.env.TIMER_BATCH || 40;
+    const ORPHAN_BATCH = process.env.ORPHAN_BATCH || 10;
+    const TRIGGER_BATCH = process.env.TRIGGER_BATCH || 10;
+    const LOCK_BATCH = process.env.LOCK_BATCH || 10;
+
+    emitter.emit("ENGINE.HEARTBEAT", `HEARTBEAT @ [${new Date().toISOString()}]`);
+
+    switch(action) {
+      case 'ORPHAN_PROCESSES':
+        await Engine.resolveOrphanProcesses(ORPHAN_BATCH);
+        break;
+      case 'TIMERS':
+        await Engine.resolveTimers(TIMER_BATCH);
+        break;
+      case 'TRIGGERS':
+        await Engine.resolveTriggers(TRIGGER_BATCH);
+        break;
+      case 'LOCKS':
+        await Engine.resolveLocks(LOCK_BATCH);
+        break;
+      default:
+        await Engine.resolveOrphanProcesses(ORPHAN_BATCH);
+        await Engine.resolveTimers(TIMER_BATCH);
+        await Engine.resolveTriggers(TRIGGER_BATCH);
+        await Engine.resolveLocks(LOCK_BATCH);
+        break;
+    }
+  }
+
+  static setNextHeartBeat(beatMode = 'parallel', action = 'ALL') {
+    const beatConfiguration = [
+      {
+        action: 'ORPHAN_PROCESSES',
+        next: 'TIMERS'
+      },
+      {
+        action: 'TIMERS',
+        next: 'TRIGGERS'
+      },
+      {
+        action: 'TRIGGERS',
+        next: 'LOCKS'
+      },
+      {
+        action: 'LOCKS',
+        next: 'ORPHAN_PROCESSES'
+      },
+      {
+        action: 'ALL',
+        next: 'ALL'
+      },
+    ];
+
     return setTimeout(async () => {
       try {
-        await Engine._beat();
+        await Engine._beat(action);
       } catch (e) {
         emitter.emit("ENGINE.HEART.ERROR", `HEART FAILURE @ ENGINE_ID [${ENGINE_ID}]`, {
           engine_id: ENGINE_ID,
           error: e,
         });
       } finally {
-        Engine.heart = Engine.setNextHeartBeat();
+        const actionObj = beatMode === 'sequential' ? beatConfiguration.find(b => b.action === action) : { next: 'ALL' };
+        Engine.heart = Engine.setNextHeartBeat(beatMode, actionObj.next);
         emitter.emit("ENGINE.NEXT", "NEXT HEARTBEAT SET");
       }
     }, process.env.HEART_BEAT || 1000);
