@@ -2,9 +2,7 @@
 const _ = require("lodash");
 const { PersistedEntity } = require("./base");
 const processDependency = require("./process");
-const { promisify } = require("util");
 const ajvValidator = require("../utils/ajvValidator");
-const sleep = promisify(setTimeout);
 
 class Lock extends PersistedEntity {
   static getEntityClass() {
@@ -94,7 +92,7 @@ class Lock extends PersistedEntity {
       node_id: target_node_id,
       expected_result,
       expected_status,
-      expected_success,
+      expected_successes,
     } = this._release_condition;
 
     const registered_processes = await trx("process")
@@ -113,37 +111,37 @@ class Lock extends PersistedEntity {
       }
     }));
 
-    if(registered_processes.length) {
-      await sleep(timeout);
-    };
-
     await trx.commit();
 
-    const results = await Promise.all(registered_processes.map(async(serialized_process) => {
-      const process_history = await processDependency.Process.fetchStateHistory(serialized_process.id);
-      const target_state = process_history.find(ps => ps._node_id === target_node_id);
-      
-      if(!target_state) {
-        return { is_valid: false };
-      };
-
-      if(target_state._status !== expected_status) {
-        return { is_valid: false };
-      };
-
-      try {
-        ajvValidator.validateResult(expected_result, target_state._result);
-        return { is_valid: true };
-      } catch(err) {
-        return { is_valid: false };
-      }
-    }));
-
-    const valid_responses = results.filter(r => r.is_valid);
-    if(valid_responses.length >= expected_success) {
-      this._active = false;
-      await this.save();
-    }
+    if(registered_processes.length) {
+      setTimeout(async () => {
+        const results = await Promise.all(registered_processes.map(async(serialized_process) => {
+          const process_history = await processDependency.Process.fetchStateHistory(serialized_process.id);
+          const target_state = process_history.find(ps => ps._node_id === target_node_id);
+          
+          if(!target_state) {
+            return { is_valid: false };
+          };
+    
+          if(target_state._status !== expected_status) {
+            return { is_valid: false };
+          };
+    
+          try {
+            ajvValidator.validateResult(expected_result, target_state._result);
+            return { is_valid: true };
+          } catch(err) {
+            return { is_valid: false };
+          }
+        }));
+    
+        const valid_responses = results.filter(r => r.is_valid); 
+        if(valid_responses.length >= expected_successes) {
+          this._active = false;
+          await this.save();
+        }
+      }, timeout);
+    };
   }
 }
 

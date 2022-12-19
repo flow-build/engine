@@ -185,9 +185,6 @@ class Process extends PersistedEntity {
     const next_node_name = current_node._spec.next;
     const [lock] = await process_manager.fetchLockForWorkflow(this._workflow_id, trx);
     if(lock && lock.active) {
-
-      console.trace("process.js -> checkForLock -> lock.node_id, next_node_name", lock.node_id, next_node_name)
-      
       if(lock.node_id === next_node_name) {
         return true;
       }
