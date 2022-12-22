@@ -16,6 +16,7 @@ class TriggerFinishNode extends FinishNode {
             properties: {
                 signal: { type: "string" },
                 input: { type: "object" },
+                target_process_id: { type: ["string", "object"] },
             },
           },
       },
@@ -25,7 +26,7 @@ class TriggerFinishNode extends FinishNode {
   }
 
   static validate(spec) {
-    const ajv = new Ajv({ allErrors: true });
+    const ajv = new Ajv({ allErrors: true, allowUnionTypes: true });
     addFormats(ajv);
     const validate = ajv.compile(TriggerFinishNode.schema);
     const validation = validate(spec);
@@ -38,16 +39,18 @@ class TriggerFinishNode extends FinishNode {
 
   _preProcessing({ bag, input, actor_data, environment, parameters = {} }) {
     if (this._spec.parameters && this._spec.parameters.input) {
-      const preparedInput = prepare(this._spec.parameters.input, {
+      const prepareParameters = {
         bag,
         result: input,
         actor_data,
         environment,
         parameters,
-      });
+      };
+      const preparedInput = prepare(this._spec.parameters.input, prepareParameters);
       return {
+        target_process_id: prepare(this._spec.parameters.target_process_id, prepareParameters),
         trigger_payload: { ...preparedInput },
-        signal: this._spec.parameters.signal
+        signal: prepare(this._spec.parameters.signal, prepareParameters)
       }
     }
     return {};

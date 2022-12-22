@@ -25,6 +25,7 @@ class EventNode extends ParameterizedNode {
                       definition: { type: "string" },
                       family: { type: "string" },
                       category: { type: "string" },
+                      target_process_id: { type: ["string", "object"] },
                     }
                   } 
                 },
@@ -37,7 +38,7 @@ class EventNode extends ParameterizedNode {
   }
 
   static validate(spec) {
-    const ajv = new Ajv({ allErrors: true });
+    const ajv = new Ajv({ allErrors: true, allowUnionTypes: true });
     addFormats(ajv);
     const validate = ajv.compile(EventNode.schema);
     const validation = validate(spec);
@@ -58,16 +59,18 @@ class EventNode extends ParameterizedNode {
 
   _preProcessing({ bag, input, actor_data, environment, parameters = {} }) {
     if (this._spec.parameters && this._spec.parameters.input) {
-      const preparedInput = prepare(this._spec.parameters.input, {
+      const prepareParameters = {
         bag,
         result: input,
         actor_data,
         environment,
         parameters,
-      });
+      };
+      const preparedInput = prepare(this._spec.parameters.input, prepareParameters);
+      const parsedEvents = prepare(this._spec.parameters.events, prepareParameters);
       return {
         trigger_payload: { ...preparedInput },
-        events: this._spec.parameters.events
+        events: parsedEvents
       }
     }
     return {};

@@ -658,9 +658,9 @@ class Process extends PersistedEntity {
       process_id: this.id,
     };
     if (node._spec.category === "signal" && node._spec.type.toLowerCase() === "finish") {
-      const trigger_process_id = this.state.bag.trigger_process_id;
-      if (trigger_process_id) {
-        trigger_params.target_process_id = trigger_process_id;
+      const target_process_id = this.state.result.target_process_id;
+      if (target_process_id) {
+        trigger_params.target_process_id = target_process_id;
       }
       const trigger = new Trigger(trigger_params);
       await trigger.save(input_trx);
@@ -682,6 +682,10 @@ class Process extends PersistedEntity {
               actor_data: this.state.actor_data,
               process_id: this.id,
             };
+            const target_process_id = event.target_process_id;
+            if (target_process_id) {
+              tr_params.target_process_id = target_process_id;
+            }
             const trigger = new Trigger(tr_params);
             return trigger.save(input_trx);
           }
