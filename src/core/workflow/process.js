@@ -104,7 +104,7 @@ class Process extends PersistedEntity {
 
   static async fetchStateHistory(process_id) {
     const states = await this.getPersist().getStateHistoryByProcess(process_id);
-    return _.map(states, (state) => ProcessState.deserialize(state));
+    return _.map(states, ProcessState.deserialize)
   }
 
   static calculateNextStep(last_step_number) {
@@ -210,8 +210,8 @@ class Process extends PersistedEntity {
 
   async run(actor_data, execution_input) {
     emitter.emit("PROCESS.RUN", `RUN ON PID [${this.id}]`, { process_id: this.id });
-
-    this.state = await this.getPersist().getLastStateByProcess(this._id);
+    const state = await this.getPersist().getLastStateByProcess(this._id);
+    this.state = ProcessState.deserialize(state);
     let currentNode;
 
     try {
@@ -326,7 +326,8 @@ class Process extends PersistedEntity {
 
   async runPendingProcess(actor_data, trx = false) {
     emitter.emit("PROCESS.RUN_PENDING", `RUN PENDING PID [${this.id}]`, { process_id: this.id });
-    this.state = await this.getPersist().getLastStateByProcess(this._id);
+    const state = await this.getPersist().getLastStateByProcess(this._id);
+    this.state = ProcessState.deserialize(state);
     if (this.status !== ProcessStatus.PENDING) {
       throw new Error(`Process on invalid status ${this.status}`);
     }
@@ -538,7 +539,7 @@ class Process extends PersistedEntity {
       }
     } else {
       const nodes = getMobileNodes();
-      const type = (_.get(this.next_node, ['_spec', 'type'])).toLowerCase() === "systemtask"
+      const type = (_.get(this.next_node, ['_spec', 'type'])).toLowerCase() === "systemtask";
 
       if(type) {
 
@@ -831,7 +832,8 @@ class Process extends PersistedEntity {
       timer_id: timer.id,
     });
 
-    this.state = await this.getPersist().getLastStateByProcess(this._id);
+    const state = await this.getPersist().getLastStateByProcess(this._id);
+    this.state = ProcessState.deserialize(state);
     switch (this.status) {
       case ProcessStatus.ERROR:
       case ProcessStatus.FINISHED:
@@ -895,7 +897,6 @@ class Process extends PersistedEntity {
     result_schema = ""
   ) {
     const step_number = await this.getNextStepNumber();
-
     if (error) {
       this._errorState(error);
       status = ProcessStatus.ERROR;

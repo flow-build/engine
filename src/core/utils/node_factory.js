@@ -65,8 +65,10 @@ function getNode(nodeSpec) {
 }
 
 function addSystemTaskCategory(customCategories) {
-  for (const [key, value] of Object.entries(customCategories)) {
-    categories[key.toLowerCase()] = value;
+  if (typeof customCategories === "object") {
+    for (const [key, value] of Object.entries(customCategories)) {
+      categories[key.toLowerCase()] = value;
+    }
   }
 }
 

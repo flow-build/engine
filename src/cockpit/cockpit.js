@@ -16,7 +16,7 @@ class Cockpit {
     Cockpit._instance = instance;
   }
 
-  constructor(persist_mode, persist_args, logger_level, nodes = null, whiteList = null) {
+  constructor(persist_mode, persist_args, logger_level, nodes, whiteList) {
     if (Cockpit.instance) {
       return Cockpit.instance;
     }
@@ -72,7 +72,8 @@ class Cockpit {
   }
 
   async getProcessStateHistory(process_id) {
-    return await Process.getPersist().getStateHistoryByProcess(process_id);
+    const history = await Process.getPersist().getStateHistoryByProcess(process_id);
+    return _.map(history, ProcessState.deserialize);
   }
 
   async getWorkflows() {

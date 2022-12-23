@@ -100,9 +100,12 @@ class ProcessKnexPersist extends KnexPersist {
   }
 
   async getLastStepNumber(id) {
-    const last_step = await this._db(this._state_table).max("step_number").where("process_id", id).first();
-    const count = Number(last_step.max);
-    return count;
+    const last_step = await this._db(this._state_table)
+      .max('step_number')
+      .where("process_id", id)
+      .first();
+    const step = last_step.max || _.get(last_step, "max(`step_number`)") || 0;
+    return Number(step) ;
   }
 
   async getTasks(filters) {
@@ -126,17 +129,12 @@ class ProcessKnexPersist extends KnexPersist {
             builder.where("wf.id", filters.workflow_id);
           }
 
-          if (this.SQLite) {
-            filters.start_date = new Date(filters.start_date).toISOString();
-            filters.end_date = new Date(filters.end_date).toISOString()
-          }
-
           if (filters.start_date) {
-            builder.where("p.created_at", ">=", filters.start_date);
+            builder.where("p.created_at", ">=", new Date(filters.start_date).toISOString());
           }
 
           if (filters.end_date) {
-            builder.where("p.created_at", "<=", filters.end_date);
+            builder.where("p.created_at", "<=", new Date(filters.end_date).toISOString());
           }
         }
       });

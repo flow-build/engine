@@ -1,5 +1,6 @@
 require("dotenv").config();
-const miniMAL = process.env.NODE_ENV === "sqlite" ? require('react-native-lisp') : require('minimal-lisp');
+const { has } = require('lodash');
+const miniMAL = require('minimal-lisp');
 const m = miniMAL(global);
 
 const return_true = function() {
@@ -15,7 +16,7 @@ const validate_claim = function(valid_claim) {
 };
 
 const evaluate = function(minimal_expression) {
-  return m.eval(minimal_expression);
+  return has(m, 'evalb') ? m.evalb(minimal_expression) : m.eval(minimal_expression);
 };
 
 const new_lisp = function(minimal_expression) {

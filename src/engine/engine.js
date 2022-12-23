@@ -1,6 +1,5 @@
 require("dotenv").config();
 const _ = require("lodash");
-const nodes_mobile = require("../core/workflow/nodes_mobile");
 const nodes = require("../core/workflow/nodes/index");
 const { Workflow } = require("../core/workflow/workflow");
 const { Blueprint } = require("../core/workflow/blueprint");
@@ -32,6 +31,14 @@ function getActivityManagerFromData(activity_manager_data) {
 const sleep = (ms) => new Promise((res) => setTimeout(res, ms));
 
 class Engine {
+  static get default_nodes() {
+    return nodes;
+  }
+
+  static get reset_nodes() {
+    return reset();
+  }
+
   static get event_emitter() {
     return emitter;
   }
@@ -60,7 +67,7 @@ class Engine {
     return Engine._heart;
   }
 
-  constructor(persist_mode, persist_args, logger_level, availableNodes = null, whiteList = null) {
+  constructor(persist_mode, persist_args, logger_level) {
     const heartBeat = process.env.ENGINE_HEARTBEAT || true;
     createLogger(logger_level);
     if (Engine.instance) {
@@ -68,12 +75,6 @@ class Engine {
       return Engine.instance;
     }
     PersistorProvider.getPersistor(persist_mode, persist_args);
-    if (whiteList) { 
-      addMobileWhiteList(whiteList);
-    }
-    if (availableNodes) {
-      addSystemTaskCategory(availableNodes);
-    }
     this._db = persist_args;
     Engine.instance = this;
     this.emitter = emitter;
@@ -216,7 +217,7 @@ class Engine {
   }
 
   async fetchAvailableActivitiesForActor(actor_data) {
-    const filters = {
+    const filters = await {
       current_status: [ProcessStatus.WAITING, ProcessStatus.RUNNING, ProcessStatus.DELEGATED, ProcessStatus.PENDING],
     };
 
@@ -604,14 +605,6 @@ class Engine {
 }
 
 class SQLiteEngine extends Engine {
-    static get default_nodes() {
-      return nodes_mobile;
-    }
-
-    static get reset_nodes() {
-      return reset();
-    }
-
     static get event_emitter() {
       return emitter;
     }
@@ -640,8 +633,10 @@ class SQLiteEngine extends Engine {
       return SQLiteEngine._heart;
     }
 
-    constructor(persist_mode, persist_args, logger_level, availableNodes = null, whiteList = null) {
-      super(persist_mode, persist_args, logger_level, availableNodes, whiteList);
+    constructor(persist_mode, persist_args, logger_level, availableNodes, whiteList) {
+      super(persist_mode, persist_args, logger_level);
+      addMobileWhiteList(whiteList);
+      addSystemTaskCategory(availableNodes);
     }
 
     static init(bgService, options) {
