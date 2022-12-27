@@ -7,7 +7,7 @@ const { PersistorProvider } = require("../core/persist/provider");
 const { Timer } = require("../core/workflow/timer");
 const { Trigger } = require("../core/workflow/trigger");
 const { Target } = require("../core/workflow/target");
-const { Lock } = require("../core/workflow/lock");
+const { Switch } = require("../core/workflow/switch");
 const { ActivityManager } = require("../core/workflow/activity_manager");
 const { ActivityStatus } = require("../core/workflow/activity");
 const { setProcessStateNotifier, setActivityManagerNotifier } = require("../core/notifier_manager");
@@ -89,12 +89,12 @@ class Engine {
         const locked_orphans = await trx("process")
           .select("process.*")
           .join("process_state", "process_state.id", "process.current_state_id")
-          .fullOuterJoin("locks", "locks.workflow_id", "process.workflow_id")
+          .fullOuterJoin("switch", "switch.workflow_id", "process.workflow_id")
           .where("process.current_status", "running")
           .andWhere(function() {
-            this.whereNull("locks").orWhere(function() {
-              this.whereNot("locks.active", true).orWhere(function() {
-                this.where("locks.active", true).andWhere("locks.node_id", "process_state.node_id")
+            this.whereNull("switch").orWhere(function() {
+              this.whereNot("switch.active", true).orWhere(function() {
+                this.where("switch.active", true).andWhere("switch.node_id", "process_state.node_id")
               })
             })
           })
@@ -191,23 +191,23 @@ class Engine {
     });
   }
 
-  static async resolveLocks(LOCK_BATCH) {
+  static async resolveSwitches(SWITCH_BATCH) {
     await Process.getPersist()._db.transaction(async (trx) => {
       try {
-        emitter.emit("ENGINE.LOCK_FETCHING", `FETCHING LOCK ON PROCESSES ON HEARTBEAT BATCH [${LOCK_BATCH}]`);
-        const locks = await trx("locks")
+        emitter.emit("ENGINE.SWITCH_FETCHING", `FETCHING SWITCH ON PROCESSES ON HEARTBEAT BATCH [${SWITCH_BATCH}]`);
+        const switches = await trx("switch")
           .select("*")
           .where("active", true)
-          .limit(LOCK_BATCH)
+          .limit(SWITCH_BATCH)
           .forUpdate()
           .skipLocked();
         
-        return await Promise.all(locks.map((l_lock) => {
-          const lock = Lock.deserialize(l_lock);
-          return lock.validate(trx);
+        return await Promise.all(switches.map((l_switch) => {
+          const switch_ = Switch.deserialize(l_switch);
+          return switch_.validate(trx);
         }))
       } catch (e) {
-        emitter.emit("ENGINE.LOCKS.ERROR", "  ERROR FETCHING LOCKS ON HEARTBEAT", { error: e });
+        emitter.emit("ENGINE.SWITCHES.ERROR", "  ERROR FETCHING SWITCHES ON HEARTBEAT", { error: e });
       }
     });
   }
@@ -216,7 +216,7 @@ class Engine {
     const TIMER_BATCH = process.env.TIMER_BATCH || 40;
     const ORPHAN_BATCH = process.env.ORPHAN_BATCH || 10;
     const TRIGGER_BATCH = process.env.TRIGGER_BATCH || 10;
-    const LOCK_BATCH = process.env.LOCK_BATCH || 10;
+    const SWITCH_BATCH = process.env.SWITCH_BATCH || 10;
 
     emitter.emit("ENGINE.HEARTBEAT", `HEARTBEAT @ [${new Date().toISOString()}]`);
 
@@ -230,14 +230,14 @@ class Engine {
       case 'TRIGGERS':
         await Engine.resolveTriggers(TRIGGER_BATCH);
         break;
-      case 'LOCKS':
-        await Engine.resolveLocks(LOCK_BATCH);
+      case 'SWITCHES':
+        await Engine.resolveSwitches(SWITCH_BATCH);
         break;
       default:
         await Engine.resolveOrphanProcesses(ORPHAN_BATCH);
         await Engine.resolveTimers(TIMER_BATCH);
         await Engine.resolveTriggers(TRIGGER_BATCH);
-        await Engine.resolveLocks(LOCK_BATCH);
+        await Engine.resolveSwitches(SWITCH_BATCH);
         break;
     }
   }
@@ -254,10 +254,10 @@ class Engine {
       },
       {
         action: 'TRIGGERS',
-        next: 'LOCKS'
+        next: 'SWITCHES'
       },
       {
-        action: 'LOCKS',
+        action: 'SWITCHES',
         next: 'ORPHAN_PROCESSES'
       },
       {
