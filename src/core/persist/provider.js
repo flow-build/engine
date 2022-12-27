@@ -14,7 +14,7 @@ const {
   TriggerKnexPersist,
   TargetKnexPersist,
   TriggerTargetKnexPersist,
-  LockKnexPersist,
+  SwitchKnexPersist,
 } = require("../persist/knex");
 const { ProcessStateKnexPersist } = require("./knex/processState");
 const { PersistorSingleton } = require("../persist/persist");
@@ -52,7 +52,7 @@ class PersistorProvider {
           Trigger: [TriggerKnexPersist, db],
           Target: [TargetKnexPersist, db],
           TriggerTarget: [TriggerTargetKnexPersist, db],
-          Lock: [LockKnexPersist, db],
+          Switch: [SwitchKnexPersist, db],
         };
         break;
       default:

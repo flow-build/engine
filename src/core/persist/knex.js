@@ -4,7 +4,7 @@ const { Activity } = require("../workflow/activity");
 const { Timer } = require("../workflow/timer");
 const { Trigger } = require("../workflow/trigger");
 const { Target } = require("../workflow/target");
-const { Lock } = require("../workflow/lock");
+const { Switch } = require("../workflow/switch");
 const { v1: uuid } = require("uuid");
 
 class KnexPersist {
@@ -435,9 +435,9 @@ class TriggerTargetKnexPersist extends KnexPersist {
   }
 }
 
-class LockKnexPersist extends KnexPersist {
+class SwitchKnexPersist extends KnexPersist {
   constructor(db) {
-    super(db, Lock, "locks");
+    super(db, Switch, "switch");
   }
 
   async getByWorkflowId(workflow_id, trx) {
@@ -458,5 +458,5 @@ module.exports = {
   TriggerKnexPersist: TriggerKnexPersist,
   TargetKnexPersist: TargetKnexPersist,
   TriggerTargetKnexPersist: TriggerTargetKnexPersist,
-  LockKnexPersist: LockKnexPersist,
+  SwitchKnexPersist: SwitchKnexPersist,
 };
