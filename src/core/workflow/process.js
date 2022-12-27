@@ -180,12 +180,12 @@ class Process extends PersistedEntity {
     }
   }
 
-  async checkForLock(trx = false) {
+  async checkForSwitch(trx = false) {
     const current_node = this._blueprint.fetchNode(this._state.node_id);
     const next_node_name = current_node._spec.next;
-    const [lock] = await process_manager.fetchLockForWorkflow(this._workflow_id, trx);
-    if(lock && lock.active) {
-      if(lock.node_id === next_node_name) {
+    const [switch_] = await process_manager.fetchSwitchForWorkflow(this._workflow_id, trx);
+    if(switch_ && switch_.active) {
+      if(switch_.node_id === next_node_name) {
         return true;
       }
       return false;
@@ -270,7 +270,7 @@ class Process extends PersistedEntity {
     }
 
     if(!skipLock) {
-      const isLocked = await this.checkForLock(trx);
+      const isLocked = await this.checkForSwitch(trx);
       if(isLocked) {
         return this._errorState();
       }
@@ -725,7 +725,7 @@ class Process extends PersistedEntity {
   async _executionLoop(custom_lisp, actor_data, input_trx = false, skipLock = false) {
     
     if(!skipLock) {
-      const isLocked = await this.checkForLock(input_trx);
+      const isLocked = await this.checkForSwitch(input_trx);
       if(isLocked) {
         return this._errorState();
       }
