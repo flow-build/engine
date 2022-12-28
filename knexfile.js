@@ -26,7 +26,7 @@ module.exports = {
       database: "workflow",
       port: 5432,
     },
-    pool: { min: 10, max: 40 },
+    pool: { min: 0, max: 100 },
     migrations: {
       directory: path.join(BASE_PATH, "migrations"),
     },
@@ -44,6 +44,25 @@ module.exports = {
       port: 5432,
     },
     pool: { min: 10, max: 40 },
+    migrations: {
+      directory: path.join(BASE_PATH, "migrations"),
+    },
+    seeds: {
+      directory: path.join(BASE_PATH, "seeds"),
+    },
+  },
+  sqlite: {
+    client: "sqlite3",
+    useNullAsDefault: true,
+    connection: {
+      database: "workflow",
+      filename: `${BASE_PATH}/workflow.sqlite`
+    },
+    pool: {
+      min: 1,
+      max: 50,
+      idleTimeoutMillis: 360000 * 1000
+    },
     migrations: {
       directory: path.join(BASE_PATH, "migrations"),
     },

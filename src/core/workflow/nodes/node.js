@@ -1,5 +1,6 @@
 /* eslint-disable indent */
 /* eslint-disable no-unused-vars */
+require("dotenv").config();
 const _ = require("lodash");
 const Ajv = require("ajv");
 const addFormats = require("ajv-formats");
@@ -50,13 +51,13 @@ class Node {
   }
 
   async run({ bag = {}, input = {}, external_input = {}, actor_data = {}, environment = {}, parameters = {} }, lisp) {
-    const hrt_run_start = process.hrtime();
+    const hrt_run_start = process.env.NODE_ENV === "sqlite" ? new Date().getMilliseconds() : process.hrtime();
     try {
       const execution_data = this._preProcessing({ bag, input, actor_data, environment, parameters });
       const [result, status] = await this._run(execution_data, lisp);
 
-      const hrt_run_interval = process.hrtime(hrt_run_start);
-      const time_elapsed = Math.ceil(hrt_run_interval[0] * 1000 + hrt_run_interval[1] / 1000000);
+      const hrt_run_interval = process.env.NODE_ENV === "sqlite" ? new Date().getMilliseconds() - hrt_run_start : process.hrtime(hrt_run_start);
+      const time_elapsed = process.env.NODE_ENV === "sqlite" ? hrt_run_interval : Math.ceil(hrt_run_interval[0] * 1000 + hrt_run_interval[1] / 1000000);
 
       return {
         node_id: this.id,
@@ -69,8 +70,8 @@ class Node {
         time_elapsed: time_elapsed,
       };
     } catch (err) {
-      const hrt_run_interval = process.hrtime(hrt_run_start);
-      const time_elapsed = Math.ceil(hrt_run_interval[0] * 1000 + hrt_run_interval[1] / 1000000);
+      const hrt_run_interval = process.env.NODE_ENV === "sqlite" ? new Date().getMilliseconds() - hrt_run_start : process.hrtime(hrt_run_start);
+      const time_elapsed = process.env.NODE_ENV === "sqlite" ? hrt_run_interval : Math.ceil(hrt_run_interval[0] + hrt_run_interval[1] / 1000000);
       return this._processError(err, { bag, external_input, time_elapsed });
     }
   }

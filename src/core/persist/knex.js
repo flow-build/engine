@@ -1,3 +1,4 @@
+const _ = require('lodash');
 const { Packages } = require("../workflow/packages");
 const { ActivityManager } = require("../workflow/activity_manager");
 const { Activity } = require("../workflow/activity");
@@ -8,10 +9,13 @@ class KnexPersist {
     this._db = db;
     this._class = class_;
     this._table = table;
+    this.SQLite = (this._db.client.config.dialect || this._db.context.client.config.client) === "sqlite3";
   }
 
   async save(obj, ...args) {
     const is_update = obj.id && (await this.get(obj.id));
+    obj.created_at = new Date(obj.created_at).toISOString();
+
     if (is_update) {
       await this._update(obj.id, obj, ...args);
       return "update";
@@ -34,6 +38,10 @@ class KnexPersist {
 
   async get(obj_id) {
     return await this._db.select("*").from(this._table).where("id", obj_id).first();
+  }
+
+  async getAll() {
+    return await this._db.select("*").from(this._table).orderBy("created_at", "desc");
   }
 
   async _create(obj, trx = false) {
@@ -139,6 +147,16 @@ class ActivityManagerKnexPersist extends KnexPersist {
     return await this.getActivityDataFromStatusQuery(status, filters)
   }
 
+  async getActiveActivityManagers() {
+    return await this._db(this._table)
+        .where("status", "started");
+  }
+
+  async getCompletedActivityManagers() {
+    return await this._db(this._table)
+        .where("status", "completed");
+  }
+
   async getActivityDataFromId(obj_id) {
     return await this._db
       .select(
@@ -170,6 +188,23 @@ class ActivityManagerKnexPersist extends KnexPersist {
       .first();
   }
 
+  async getProcessId(process_state_id) {
+    const activity = await this._db
+        .select('process_id')
+        .from('process_state')
+        .where('id', '=', process_state_id)
+        .first();
+
+    return this._parseToJson(activity);
+  }
+
+  async getActivityManagerByProcessStateId(process_state_id) {
+    return await this._db
+        .select('*')
+        .from('activity_manager')
+        .where('process_state_id', '=', process_state_id);
+  }
+
   async getActivities(activity_manager_id) {
     return await this._db.select().from(this._activity_table).where("activity_manager_id", activity_manager_id);
   }
@@ -177,11 +212,31 @@ class ActivityManagerKnexPersist extends KnexPersist {
   async getTimerfromResourceId(resource_id) {
     return await this._db.select().from("timer").where("resource_id", resource_id);
   }
+
+  async save(obj, ...args) {
+
+    if(this.SQLite){
+      obj.parameters = JSON.stringify(obj.parameters);
+      obj.props = JSON.stringify(obj.props);
+    }
+
+    return super.save(obj, ...args);
+  }
 }
 
 class ActivityKnexPersist extends KnexPersist {
   constructor(db) {
     super(db, Activity, "activity");
+  }
+
+  async save(obj, ...args) {
+
+    if(this.SQLite){
+      obj.actor_data = JSON.stringify(obj.actor_data);
+      obj.data = JSON.stringify(obj.data || {});
+    }
+
+    return super.save(obj, ...args);
   }
 }
 
@@ -191,7 +246,18 @@ class TimerKnexPersist extends KnexPersist {
   }
 
   getAllReady() {
-    return this._db.select().from(this._table).where("expires_at", "<", new Date()).andWhere("active", true);
+    const date = this.SQLite ? new Date().toISOString() : new Date();
+    return this._db.select().from(this._table).where("expires_at", "<", date).andWhere("active", true);
+  }
+
+  async save(obj, ...args) {
+
+    if( this.SQLite ){
+      obj.params = JSON.stringify(obj.params);
+      obj.expires_at = obj.expires_at.toISOString()
+    }
+
+    return super.save(obj, ...args);
   }
 }
 

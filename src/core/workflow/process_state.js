@@ -1,3 +1,4 @@
+const _ = require('lodash');
 const { PersistedEntity } = require("./base");
 const { v1: uuid } = require("uuid");
 
@@ -34,6 +35,9 @@ class ProcessStatus {
   static get EXPIRED() {
     return "expired";
   }
+  static get UNAVAILABLE() {
+    return "unavailable";
+  }
 }
 
 class ProcessState extends PersistedEntity {
@@ -62,6 +66,12 @@ class ProcessState extends PersistedEntity {
 
   static deserialize(serialized) {
     if (serialized) {
+      if(_.isString(serialized.actor_data)){
+        serialized.bag = JSON.parse(serialized.bag);
+        serialized.external_input = JSON.parse(serialized.external_input);
+        serialized.result = JSON.parse(serialized.result);
+        serialized.actor_data = JSON.parse(serialized.actor_data);
+      }
       const state = new ProcessState(
         serialized.process_id,
         serialized.step_number,
@@ -76,7 +86,7 @@ class ProcessState extends PersistedEntity {
         serialized.time_elapsed
       );
       state._id = serialized.id;
-      state._created_at = serialized.created_at;
+      state._created_at = new Date(serialized.created_at);
       state._engine_id = serialized.engine_id;
       return state;
     }
@@ -168,6 +178,10 @@ class ProcessState extends PersistedEntity {
 
   get status() {
     return this._status;
+  }
+
+  set status(status){
+    this._status = status
   }
 
   get next_node_id() {

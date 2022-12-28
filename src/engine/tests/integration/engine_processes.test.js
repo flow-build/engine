@@ -6,6 +6,7 @@ const { Process } = require("../../../core/workflow/process");
 const { blueprints_, actors_ } = require("../../../core/workflow/tests/unitary/blueprint_samples");
 const { Timer } = require("../../../core/workflow/timer");
 const { v1: uuid } = require("uuid");
+const _ = require("lodash");
 
 const { promisify } = require("util");
 const sleep = promisify(setTimeout);
@@ -172,6 +173,54 @@ describe("Run existing process", () => {
     const result_process = await engine.fetchProcess(process.id);
 
     expect(result_process.status).toEqual(ProcessStatus.EXPIRED);
+    const activity_managers = await engine.fetchAvailableActivitiesForActor(actors_.simpleton);
+    expect(activity_managers).toHaveLength(0);
+  });
+
+  test("Engine run process with timeout informed on bag", async () => {
+    const nodes = Engine.default_nodes;
+    const engine = new Engine(...settings.persist_options, nodes);
+
+    jest.setTimeout(60000);
+    let startTimeoutBlueprint = _.cloneDeep(blueprints_.identity_user_task);
+    startTimeoutBlueprint.nodes[0].parameters.timeout = { "$ref": "bag.informedTimeout" };
+
+    const bag = {
+      informedTimeout: 5
+    }
+
+    const workflow = await engine.saveWorkflow("timeoutWorkflow", "timeoutWorkflow", startTimeoutBlueprint, actors_.simpleton.account_id);
+    let process = await engine.createProcess(workflow.id, actors_.simpleton, bag);
+    process = await engine.runProcess(process.id, actors_.simpleton);
+
+    const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
+    await delay(8000);
+
+    process = await engine.fetchProcess(process.id)
+
+    expect(process.status).toEqual(ProcessStatus.EXPIRED);
+    const activity_managers = await engine.fetchAvailableActivitiesForActor(actors_.simpleton);
+    expect(activity_managers).toHaveLength(0);
+  });
+
+  test("Engine run process with timeout informed on $js", async () => {
+    const nodes = Engine.default_nodes;
+    const engine = new Engine(...settings.persist_options, nodes);
+
+    jest.setTimeout(60000);
+    let startTimeoutBlueprint = _.cloneDeep(blueprints_.identity_user_task);
+    startTimeoutBlueprint.nodes[0].parameters.timeout = { "$js": "Math.floor(Math.random() * 11)" };
+
+    const workflow = await engine.saveWorkflow("timeoutWorkflow", "timeoutWorkflow", startTimeoutBlueprint, actors_.simpleton.account_id);
+    let process = await engine.createProcess(workflow.id, actors_.simpleton);
+    process = await engine.runProcess(process.id, actors_.simpleton);
+
+    const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
+    await delay(11000);
+
+    process = await engine.fetchProcess(process.id);
+
+    expect(process.status).toEqual(ProcessStatus.EXPIRED);
     const activity_managers = await engine.fetchAvailableActivitiesForActor(actors_.simpleton);
     expect(activity_managers).toHaveLength(0);
   });
@@ -438,6 +487,29 @@ test("child process has restricted input schema", async () => {
   const childState = await engine.fetchProcess(childProcessList[0].id);
   expect(childState.state.status).not.toBe(ProcessStatus.UNSTARTED);
   expect(childState.state.status).not.toBe(ProcessStatus.ERROR);
+});
+
+test("run process that abort another process", async () => {
+  const engine = new Engine(...settings.persist_options);
+
+  const user_task_workflow = await engine.saveWorkflow("user_task", "user_task", blueprints_.identity_user_task);
+  const abort_process_workflow = await engine.saveWorkflow("abort_process_minimal", "abort_process_minimal", blueprints_.abort_process_minimal);
+
+  let user_task_process = await engine.createProcess(user_task_workflow.id, actors_.simpleton);
+  user_task_process = await engine.runProcess(user_task_process.id, actors_.simpleton);
+  expect(user_task_process.state.status).toEqual(ProcessStatus.WAITING);
+
+  let abort_process = await engine.createProcess(abort_process_workflow.id, actors_.simpleton, {
+    process_list: [
+      user_task_process.id,
+      uuid(),
+    ]
+  });
+  abort_process = await engine.runProcess(abort_process.id, actors_.simpleton);
+  expect(abort_process.state.status).toEqual(ProcessStatus.FINISHED);
+
+  user_task_process = await engine.fetchProcess(user_task_process.id);
+  expect(user_task_process.state.status).toEqual(ProcessStatus.INTERRUPTED);
 });
 
 describe("User task timeout", () => {
@@ -786,6 +858,44 @@ test("Beat won't break despite orphan timer", async () => {
     await delay(2000);
     await Engine._beat();
   }
+});
+
+describe("Set to bag Node input parsed", () => {
+  test("$mustache works with environment and bag ", async () => {
+    const nodes = Engine.default_nodes;
+    const engine = new Engine(...settings.persist_options, nodes);
+    let spec_blueprint = _.cloneDeep(blueprints_.notify_user_task);
+
+    spec_blueprint.nodes[1] = {
+      id: "2",
+      type: "SystemTask",
+      category: "SetToBag",
+      name: "sum of three terms",
+      next: "3",
+      lane_id: "true",
+      parameters: {
+        input: {
+          sum_result: {
+            $js: "({bag, second_term = 2, third_term = 3}) => { return bag.first_term + second_term + third_term }"
+          }
+        }
+      }
+    };
+
+    const workflow = await engine.saveWorkflow("sample", "sample", spec_blueprint, actors_.simpleton.account_id);
+
+    const initial_bag = {
+      first_term: 5
+    };
+
+    let workflow_process = await engine.createProcess(workflow.id, actors_.sys_admin, initial_bag);
+
+    workflow_process = await engine.runProcess(workflow_process.id, actors_.simpleton);
+    const state_history = await engine.fetchProcessStateHistory(workflow_process.id);
+    expect(state_history[0].status).toEqual("finished");
+    expect(state_history[0].bag.sum_result).toEqual(10);
+
+  });
 });
 
 const _clean = async () => {

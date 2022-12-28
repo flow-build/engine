@@ -8,6 +8,9 @@ class Timer extends PersistedEntity {
   }
 
   static serialize(timer) {
+    if(timer._fired_at) {
+      timer._fired_at = timer._fired_at.toISOString()
+    }
     return {
       id: timer._id,
       created_at: timer._created_at,
@@ -22,6 +25,10 @@ class Timer extends PersistedEntity {
 
   static deserialize(serialized) {
     if (serialized) {
+      if(_.isString(serialized.params)){
+        serialized.params = JSON.parse(serialized.params)
+        serialized.expires_at = new Date(serialized.expires_at)
+      }
       const timer = new Timer(
         serialized.resource_type,
         serialized.resource_id,
@@ -60,6 +67,10 @@ class Timer extends PersistedEntity {
 
   get params() {
     return this._params;
+  }
+
+  set params(params) {
+    this._params = params
   }
 
   get resource_type() {

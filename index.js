@@ -4,7 +4,8 @@ const { Cockpit } = require("./src/cockpit/cockpit");
 const Nodes = require("./src/core/workflow/nodes/index.js");
 const { nodefyFunction, nodefyClass } = require("./src/core/utils/nodefy");
 const { ProcessStatus } = require("./src/core/workflow/process_state");
-const { getNode, addSystemTaskCategory, getNodeCategories, getNodeTypes } = require("./src/core/utils/node_factory");
+const { getNode, addSystemTaskCategory, getNodeCategories,
+  getNodeTypes, getMobileNodes, addMobileWhiteList } = require("./src/core/utils/node_factory");
 const { Validator } = require("./src/core/validators");
 const { prepare } = require("./src/core/utils/input");
 const { ENGINE_ID } = require("./src/core/workflow/process_state");
@@ -19,6 +20,8 @@ module.exports = {
     nodefyClass: nodefyClass,
     getNodeTypes,
     getNodeCategories,
+    getMobileNodes,
+    addMobileWhiteList,
   },
   ProcessStatus,
   getNode,

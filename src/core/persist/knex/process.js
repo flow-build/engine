@@ -2,6 +2,7 @@ const { Process } = require("../../workflow/process");
 const { ProcessState } = require("../../workflow/process_state");
 const { Workflow } = require("../../workflow/workflow");
 const { KnexPersist } = require("../knex");
+const _ = require('lodash');
 
 class ProcessKnexPersist extends KnexPersist {
   constructor(db) {
@@ -99,9 +100,12 @@ class ProcessKnexPersist extends KnexPersist {
   }
 
   async getLastStepNumber(id) {
-    const last_step = await this._db(this._state_table).max("step_number").where("process_id", id).first();
-    const count = Number(last_step.max);
-    return count;
+    const last_step = await this._db(this._state_table)
+      .max('step_number')
+      .where("process_id", id)
+      .first();
+    const step = last_step.max || _.get(last_step, "max(`step_number`)") || 0;
+    return Number(step) ;
   }
 
   async getTasks(filters) {
@@ -126,11 +130,11 @@ class ProcessKnexPersist extends KnexPersist {
           }
 
           if (filters.start_date) {
-            builder.where("p.created_at", ">=", filters.start_date);
+            builder.where("p.created_at", ">=", new Date(filters.start_date).toISOString());
           }
 
           if (filters.end_date) {
-            builder.where("p.created_at", "<=", filters.end_date);
+            builder.where("p.created_at", "<=", new Date(filters.end_date).toISOString());
           }
         }
       });
@@ -146,6 +150,16 @@ class ProcessKnexPersist extends KnexPersist {
       await this._db.transaction(async (trx) => {
         const state = process.state;
         delete process["state"];
+
+        if(this.SQLite){
+          process.blueprint_spec = JSON.stringify(process.blueprint_spec);
+
+          state.bag = JSON.stringify(state.bag);
+          state.external_input = JSON.stringify(state.external_input);
+          state.result = JSON.stringify(state.result);
+          state.actor_data = JSON.stringify(state.actor_data);
+        }
+
         await this._db(this._table).transacting(trx).insert(process);
         if (state) {
           await this._db(this._state_table).transacting(trx).insert(state);
@@ -162,6 +176,15 @@ class ProcessKnexPersist extends KnexPersist {
   async _update(id, process, trx = false) {
     const state = process.state;
     delete process["state"];
+
+    if(this.SQLite){
+      process.blueprint_spec = JSON.stringify(process.blueprint_spec);
+
+      state.bag = JSON.stringify(state.bag);
+      state.external_input = JSON.stringify(state.external_input);
+      state.result = JSON.stringify(state.result);
+      state.actor_data = JSON.stringify(state.actor_data);
+    }
 
     if (trx) {
       await trx(this._state_table).insert(state);

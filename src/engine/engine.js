@@ -1,3 +1,6 @@
+require("dotenv").config();
+const _ = require("lodash");
+const nodes = require("../core/workflow/nodes/index");
 const { Workflow } = require("../core/workflow/workflow");
 const { Blueprint } = require("../core/workflow/blueprint");
 const { Process } = require("../core/workflow/process");
@@ -8,7 +11,7 @@ const { Timer } = require("../core/workflow/timer");
 const { ActivityManager } = require("../core/workflow/activity_manager");
 const { ActivityStatus } = require("../core/workflow/activity");
 const { setProcessStateNotifier, setActivityManagerNotifier } = require("../core/notifier_manager");
-const { addSystemTaskCategory } = require("../core/utils/node_factory");
+const { addSystemTaskCategory , reset, addMobileWhiteList} = require("../core/utils/node_factory");
 const process_manager = require("../core/workflow/process_manager");
 const crypto_manager = require("../core/crypto_manager");
 const startEventListener = require("../core/utils/eventEmitter");
@@ -25,7 +28,17 @@ function getActivityManagerFromData(activity_manager_data) {
   return activity_manager;
 }
 
+const sleep = (ms) => new Promise((res) => setTimeout(res, ms));
+
 class Engine {
+  static get default_nodes() {
+    return nodes;
+  }
+
+  static get reset_nodes() {
+    return reset();
+  }
+
   static get event_emitter() {
     return emitter;
   }
@@ -70,7 +83,7 @@ class Engine {
         Engine.heart = Engine.setNextHeartBeat();
         emitter.emit("ENGINE.CONTRUCTOR", "HEARTBEAT INITIALIZED", {});
       } catch (e) {
-        emitter.emit("ENGINE.ERROR", "ERROR AT ENGINE", { error: e });
+        emitter.emit("ENGINE.ERROR", "ERROR AT ENGINE SUPER", { error: e });
       }
     } else {
       emitter.emit("ENGINE.CONTRUCTOR", "HEARTBEAT NOT INITIALIZED", {});
@@ -204,7 +217,7 @@ class Engine {
   }
 
   async fetchAvailableActivitiesForActor(actor_data) {
-    const filters = {
+    const filters = await {
       current_status: [ProcessStatus.WAITING, ProcessStatus.RUNNING, ProcessStatus.DELEGATED, ProcessStatus.PENDING],
     };
 
@@ -370,6 +383,9 @@ class Engine {
 
   async submitActivity(activity_manager_id, actor_data, external_input) {
     try {
+      if(!uuidValidate(activity_manager_id)){
+        throw new Error('invalid input syntax for type uuid');
+      }
       let activity_manager_data = await ActivityManager.get(activity_manager_id, actor_data);
       if (activity_manager_data) {
         if (activity_manager_data.activity_status === "started") {
@@ -588,6 +604,145 @@ class Engine {
   }
 }
 
+class SQLiteEngine extends Engine {
+    static get event_emitter() {
+      return emitter;
+    }
+
+    static get instance() {
+      return SQLiteEngine._instance;
+    }
+
+    static set instance(instance) {
+      SQLiteEngine._instance = instance;
+    }
+
+    static get persistor() {
+      return SQLiteEngine._persistor;
+    }
+
+    static set persistor(instance) {
+      SQLiteEngine._persistor = instance;
+    }
+
+    static set heart(h) {
+      SQLiteEngine._heart = h;
+    }
+
+    static get heart() {
+      return SQLiteEngine._heart;
+    }
+
+    constructor(persist_mode, persist_args, logger_level, availableNodes, whiteList) {
+      super(persist_mode, persist_args, logger_level);
+      addMobileWhiteList(whiteList);
+      addSystemTaskCategory(availableNodes);
+    }
+
+    static init(bgService, options) {
+        try {
+            SQLiteEngine.heart = SQLiteEngine.setNextHeartBeat(bgService, options);
+        } catch (e) {
+          emitter.emit("ENGINE.ERROR", "ERROR AT ENGINE SQLITE", { error: e });
+        }
+    }
+
+    static setNextHeartBeat(bgService, options = {
+        taskName: 'engine_beat',
+        taskTitle: 'Background Service Start',
+        taskDesc: 'SQLiteEngine Beat',
+        taskIcon: {
+            name: 'ic_launcher',
+            type: 'mipmap',
+        },
+        parameters: {
+            delay: 1000,
+        },
+    }) {
+        return setTimeout(async () => {
+            try {
+                bgService.start(async (taskParams) => {
+                    await SQLiteEngine._beat();
+                    await sleep(taskParams.delay);
+                }, options);
+            } catch (e) {
+                await bgService.stop()
+                emitter.emit("ENGINE.HEART.ERROR", `HEART FAILURE @ ENGINE_ID [${ENGINE_ID}] ${JSON.stringify({ e })} `, {
+                    engine_id: ENGINE_ID,
+                    error: e
+                });
+            } finally {
+                SQLiteEngine.heart = SQLiteEngine.setNextHeartBeat(bgService, options);
+                emitter.emit("ENGINE.NEXT", "NEXT HEARTBEAT SET");
+            }
+        }, process.env.HEART_BEAT || 10000);
+    }
+
+    static kill() {
+        if (SQLiteEngine.heart)
+            clearTimeout(SQLiteEngine.heart);
+    }
+
+    static async _beat(){
+        const TIMER_BATCH = process.env.TIMER_BATCH || 1
+        const ORPHAN_BATCH = process.env.ORPHAN_BATCH || 1;
+        emitter.emit("ENGINE.HEARTBEAT", `HEARTBEAT @ [${new Date().toISOString()}]`);
+        await Timer.getPersist()._db.transaction(async (trx) => {
+            try {
+                emitter.emit("ENGINE.FETCHING_TIMERS", `  FETCHING TIMERS ON HEARTBEAT BATCH [${TIMER_BATCH}]`);
+                const locked_timers = await trx("timer")
+                    .where("expires_at", "<", new Date().toISOString())
+                    .andWhere("active", true)
+                    .limit(TIMER_BATCH)
+                emitter.emit("ENGINE.TIMERS", `  FETCHED [${locked_timers.length}] TIMERS ON HEARTBEAT`,{ timers: locked_timers.length });
+                await Promise.all(locked_timers.map((t_lock) => {
+                    emitter.emit("ENGINE.FIRING_TIMER", `  FIRING TIMER [${t_lock.id}] ON HEARTBEAT`, { timer_id: t_lock.id });
+                    const timer = Timer.deserialize(t_lock);
+                    return timer.run(trx);
+                }));
+            } catch (e) {
+                throw new Error(e);
+            }
+        });
+        const orphan_process = await Process.getPersist()._db.transaction(async (trx) => {
+            try {
+                emitter.emit("ENGINE.ORPHANS_FETCHING", `FETCHING ORPHAN PROCESSES ON HEARTBEAT BATCH [${ORPHAN_BATCH}]`);
+                const locked_orphans = await trx("process")
+                    .select('process.*')
+                    .join('process_state', 'process_state.id', 'process.current_state_id')
+                    .where('engine_id', '!=', ENGINE_ID)
+                    .where("process.current_status", "running")
+                    .limit(ORPHAN_BATCH)
+                emitter.emit("ENGINE.ORPHANS_FETCHED", `  FETCHED [${locked_orphans.length}] ORPHANS ON HEARTBEAT`,{ orphans: locked_orphans.length });
+                return await Promise.all(locked_orphans.map(async (orphan) => {
+                    emitter.emit("ENGINE.ORPHAN_FETCHING",`  FETCHING PS FOR ORPHAN [${orphan.id}] ON HEARTBEAT`, { process_id: orphan.id });
+                    orphan.state = await trx("process_state")
+                        .select().where("id", orphan.current_state_id)
+                        .where('engine_id', '!=', ENGINE_ID)
+                        .first();
+                    emitter.emit("ENGINE.ORPHAN_FETCHED", `  FETCHED PS FOR ORPHAN [${orphan.id}] ON HEARTBEAT`, { process_id: orphan.id });
+                    if (orphan.state) {
+                        return Process.deserialize(orphan);
+                    }
+                }));
+            } catch (e) {
+                emitter.emit("ENGINE.ORPHANS.ERROR", "  ERROR FETCHING ORPHANS ON HEARTBEAT", { error: e });
+                throw new Error(e);
+            }
+        });
+        const continue_promises = orphan_process.map((process) => {
+            if (process) {
+                emitter.emit("ENGINE.ORPHAN.CONTINUE", `    START CONTINUE ORPHAN PID [${process.id}] AND STATE [${process.state.id}] ON HEARTBEAT`, {
+                    process_id: process.id,
+                    process_state_id: process.state.id
+                });
+                return process.continue({}, process.state._actor_data);
+            }
+        });
+        await Promise.all(continue_promises);
+    }
+}
+
 module.exports = {
-  Engine: Engine,
+  Engine: process.env.NODE_ENV === "sqlite" ? SQLiteEngine : Engine,
 };
