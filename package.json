@@ -48,6 +48,8 @@
     "test-example": "node examples/bag_example.js",
     "seeds:local": "knex --env local_docker_db --knexfile knexfile.js seed:run",
     "migrations:local": "knex --env local_docker_db --knexfile knexfile.js migrate:latest",
+    "seeds:sqlite": "knex --env sqlite --knexfile knexfile.js seed:run",
+    "migrations:sqlite": "knex --env sqlite --knexfile knexfile.js migrate:latest",
     "get-version": "echo $npm_package_version",
     "release": "semantic-release"
   },
