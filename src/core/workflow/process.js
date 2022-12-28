@@ -514,35 +514,11 @@ class Process extends PersistedEntity {
     let am = null;
     let timer = null;
 
-    if (!SQLite) {
-      try {
-        this.next_node;
-      } catch (error) {
-        this.state = new ProcessState(
-          this._state.process_id,
-          next_step_number,
-          this._state.node_id,
-          this._state.bag,
-          this._state.external_input,
-          this._state.result,
-          error.toString(),
-          ProcessStatus.FORBIDDEN,
-          this._state.next_node_id,
-          this._state.actor_data,
-          null
-        );
-
-        await this._notifyProcessState(actor_data);
-        await this.save(trx);
-
-        return [this, null, null];
-      }
-    } else {
+    if (SQLite) {
       const nodes = getMobileNodes();
       const type = (_.get(this.next_node, ['_spec', 'type'])).toLowerCase() === "systemtask";
 
-      if(type) {
-
+      if (type) {
         const category = _.get(this.next_node, ['_spec', 'category'])
         const available = nodes.includes(category.toLowerCase())
 
@@ -552,6 +528,29 @@ class Process extends PersistedEntity {
           return [state, am, timer];
         }
       }
+    }
+
+    try {
+      this.next_node;
+    } catch (error) {
+      this.state = new ProcessState(
+        this._state.process_id,
+        next_step_number,
+        this._state.node_id,
+        this._state.bag,
+        this._state.external_input,
+        this._state.result,
+        error.toString(),
+        ProcessStatus.FORBIDDEN,
+        this._state.next_node_id,
+        this._state.actor_data,
+        null
+      );
+
+      await this._notifyProcessState(actor_data);
+      await this.save(trx);
+
+      return [this, null, null];
     }
 
     emitter.emit(
