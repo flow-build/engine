@@ -1,3 +1,20 @@
+## [2.18.0-alpha.1](https://github.com/flow-build/engine/compare/v2.17.0...v2.18.0-alpha.1) (2022-12-28)
+
+
+### Features
+
+* add fieldlink features ([f3ff322](https://github.com/flow-build/engine/commit/f3ff3221b8bdec94f2082ec08074aac3ab210b01))
+* add missing httpNoSSL node ([2844966](https://github.com/flow-build/engine/commit/28449667fdc4756cd864bbcc0a6f726ea2667855))
+* remove PostgresEngine & let only Engine ([ab7f2c6](https://github.com/flow-build/engine/commit/ab7f2c619b69f912d3d21925e627ac08a9eaffc6))
+
+
+### Bug Fixes
+
+* adjustments for SQLite Engine ([b74e946](https://github.com/flow-build/engine/commit/b74e94660b1b9670d10440391c8d8d52cdeee3cc))
+* adjustments on fieldlink related new features ([77810c4](https://github.com/flow-build/engine/commit/77810c4cf984274a3df456ede706e6f907cd822d))
+* fix uuid validation on engine ([3ee3d0c](https://github.com/flow-build/engine/commit/3ee3d0cb1c8791d16389fef0b5eb3c3990e75b82))
+* removes notifyActivityManager on create method ([d1ac296](https://github.com/flow-build/engine/commit/d1ac29639d209e14902ec5db8145f69318864bc4))
+
 ## [2.17.0](https://github.com/flow-build/engine/compare/v2.16.4...v2.17.0) (2022-11-29)
 
 
