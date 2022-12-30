@@ -1,7 +1,7 @@
 const { Process } = require("../../workflow/process");
 const { ProcessState } = require("../../workflow/process_state");
 const { Workflow } = require("../../workflow/workflow");
-const { KnexPersist } = require("../knex");
+const { KnexPersist, ExtraFieldsKnexPersist } = require("../knex");
 const _ = require('lodash');
 
 class ProcessKnexPersist extends KnexPersist {
@@ -13,7 +13,17 @@ class ProcessKnexPersist extends KnexPersist {
 
   async get(id) {
     return this._db.transaction(async (trx) => {
-      const process = await this._db.select("*").from(this._table).where({ id }).first().transacting(trx);
+      const process = await this._db
+        .select("*")
+        .from(this._table)
+        .leftJoin("extra_fields AS ef", function() {
+          this
+            .on("process.id", "=", "ef.entity_id")
+            .onIn("ef.entity_name", ["process"])
+        })
+        .where({ id })
+        .first()
+        .transacting(trx);
       if (process) {
         const state = await this.getLastStateByProcess(id).transacting(trx);
         const workflow = await Workflow.fetch(process.workflow_id);
@@ -147,6 +157,18 @@ class ProcessKnexPersist extends KnexPersist {
   async _create(process) {
     //todo trx
     try {
+      const { extra_fields } = process;
+      delete process.extra_fields;
+
+      if (extra_fields) {
+        await new ExtraFieldsKnexPersist(this._db)
+          ._create({
+            entity_id: process.id,
+            entity_name: "process",
+            extra_fields
+          });
+      }
+
       await this._db.transaction(async (trx) => {
         const state = process.state;
         delete process["state"];
@@ -176,6 +198,7 @@ class ProcessKnexPersist extends KnexPersist {
   async _update(id, process, trx = false) {
     const state = process.state;
     delete process["state"];
+    delete process["extra_fields"];
 
     if(this.SQLite){
       process.blueprint_spec = JSON.stringify(process.blueprint_spec);

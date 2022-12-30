@@ -65,6 +65,9 @@ class UserTaskNode extends ParameterizedNode {
           action: this._spec.parameters.action,
         };
         activity_manager.parameters = {};
+        if (actor_data?.extra_fields) {
+          activity_manager._extra_fields = { ...actor_data.extra_fields };
+        }
 
         activity_manager.parameters.timeout = timeoutParse(this._spec.parameters, execution_data);
 

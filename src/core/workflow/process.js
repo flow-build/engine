@@ -31,6 +31,7 @@ class Process extends PersistedEntity {
       state: state ? state.serialize() : undefined,
       current_state_id: process._current_state_id,
       current_status: process._current_status,
+      extra_fields: process?._extra_fields,
     };
   }
 
@@ -44,7 +45,8 @@ class Process extends PersistedEntity {
           id: serialized.workflow_id,
           name: serialized.workflow_name,
         },
-        _.isString(serialized.blueprint_spec) ? JSON.parse(serialized.blueprint_spec) : serialized.blueprint_spec
+        _.isString(serialized.blueprint_spec) ? JSON.parse(serialized.blueprint_spec) : serialized.blueprint_spec,
+        _.isString(serialized?.extra_fields) ? JSON.parse(serialized?.extra_fields) : serialized?.extra_fields,
       );
       process._id = serialized.id;
       process._created_at = new Date(serialized.created_at);
@@ -112,7 +114,7 @@ class Process extends PersistedEntity {
   }
 
   constructor(workflow_data, blueprint_spec) {
-    super();
+    super(workflow_data.extra_fields);
 
     this._workflow_id = workflow_data.id;
     this.workflow_name = workflow_data.name;

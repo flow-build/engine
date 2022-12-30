@@ -5,6 +5,7 @@ const { ProcessStatus } = require("../../../workflow/process_state");
 const { PersistorProvider } = require("../../../persist/provider");
 const { blueprints_, actors_ } = require("./blueprint_samples");
 const JSum = require("jsum");
+const { v1: uuid } = require("uuid");
 
 beforeEach(async () => {
   await _clean();

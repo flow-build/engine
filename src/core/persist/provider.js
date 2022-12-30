@@ -11,6 +11,7 @@ const {
   ActivityManagerKnexPersist,
   ActivityKnexPersist,
   TimerKnexPersist,
+  ExtraFieldsKnexPersist
 } = require("../persist/knex");
 const { ProcessStateKnexPersist } = require("./knex/processState");
 const { PersistorSingleton } = require("../persist/persist");
@@ -32,6 +33,7 @@ class PersistorProvider {
           Packages: [PackagesMemoryPersist],
           ActivityManager: [ActivityManagerMemoryPersist],
           Activity: [ActivityMemoryPersist],
+          ExtraFields: [ExtraFieldsKnexPersist],
         };
         break;
       case "knex":
@@ -45,6 +47,7 @@ class PersistorProvider {
           Activity: [ActivityKnexPersist, db],
           Timer: [TimerKnexPersist, db],
           ProcessState: [ProcessStateKnexPersist, db],
+          ExtraFields: [ExtraFieldsKnexPersist, db],
         };
         break;
       default:
