@@ -27,6 +27,7 @@ class ActivityManager extends PersistedEntity {
       status: activity_manager._status,
       props: activity_manager._props,
       parameters: activity_manager._parameters,
+      extra_fields: activity_manager?._extra_fields,
     };
   }
 
@@ -45,6 +46,7 @@ class ActivityManager extends PersistedEntity {
       );
       activity_manager._id = serialized.id;
       activity_manager._created_at = new Date(serialized.created_at);
+      activity_manager._extra_fields = _.isString(serialized?.extra_fields) ? JSON.parse(serialized?.extra_fields) : serialized?.extra_fields;
 
       return activity_manager;
     }

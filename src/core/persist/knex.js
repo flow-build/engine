@@ -2,6 +2,7 @@ const _ = require('lodash');
 const { Packages } = require("../workflow/packages");
 const { ActivityManager } = require("../workflow/activity_manager");
 const { Activity } = require("../workflow/activity");
+const { ExtraFields } = require("../workflow/extra_fields");
 const { Timer } = require("../workflow/timer");
 
 class KnexPersist {
@@ -106,12 +107,18 @@ class ActivityManagerKnexPersist extends KnexPersist {
         "p.blueprint_spec",
         "p.current_status as current_status",
         "wf.name as workflow_name",
-        "wf.description as workflow_description"
+        "wf.description as workflow_description",
+        "ef.extra_fields"
       )
       .from("activity_manager AS am")
       .rightJoin("process_state AS ps", "am.process_state_id", "ps.id")
       .rightJoin("process AS p", "ps.process_id", "p.id")
       .rightJoin("workflow AS wf", "p.workflow_id", "wf.id")
+      .leftJoin("extra_fields AS ef", function() {
+        this
+          .on("am.id", "=", "ef.entity_id")
+          .onIn("ef.entity_name", ["activity_manager"])
+      })
       .where("am.status", "=", status)
       .modify((builder) => {
         if (filters) {
@@ -178,24 +185,28 @@ class ActivityManagerKnexPersist extends KnexPersist {
         "p.workflow_id",
         "p.blueprint_spec",
         "wf.name as workflow_name",
-        "wf.description as workflow_description"
+        "wf.description as workflow_description",
+        "ef.extra_fields"
       )
       .from("activity_manager AS am")
       .rightJoin("process_state AS ps", "am.process_state_id", "ps.id")
       .rightJoin("process AS p", "ps.process_id", "p.id")
       .rightJoin("workflow AS wf", "p.workflow_id", "wf.id")
+      .leftJoin("extra_fields AS ef", function() {
+        this
+          .on("am.id", "=", "ef.entity_id")
+          .onIn("ef.entity_name", ["activity_manager"])
+      })
       .where("am.id", "=", obj_id)
       .first();
   }
 
   async getProcessId(process_state_id) {
-    const activity = await this._db
-        .select('process_id')
-        .from('process_state')
-        .where('id', '=', process_state_id)
-        .first();
-
-    return this._parseToJson(activity);
+    return await this._db
+      .select('process_id')
+      .from('process_state')
+      .where('id', '=', process_state_id)
+      .first();
   }
 
   async getActivityManagerByProcessStateId(process_state_id) {
@@ -206,7 +217,15 @@ class ActivityManagerKnexPersist extends KnexPersist {
   }
 
   async getActivities(activity_manager_id) {
-    return await this._db.select().from(this._activity_table).where("activity_manager_id", activity_manager_id);
+    return await this._db
+      .select()
+      .from(this._activity_table)
+      .leftJoin("extra_fields AS ef", function() {
+        this
+          .on("activity.id", "=", "ef.entity_id")
+          .onIn("ef.entity_name", ["activity_manager"])
+      })
+      .where("activity_manager_id", activity_manager_id);
   }
 
   async getTimerfromResourceId(resource_id) {
@@ -214,6 +233,17 @@ class ActivityManagerKnexPersist extends KnexPersist {
   }
 
   async save(obj, ...args) {
+    const { extra_fields } = obj;
+    delete obj.extra_fields;
+
+    if (extra_fields) {
+      await new ExtraFieldsKnexPersist(this._db)
+        ._create({
+          entity_id: obj.id,
+          entity_name: "activity_manager",
+          extra_fields
+        });
+    }
 
     if(this.SQLite){
       obj.parameters = JSON.stringify(obj.parameters);
@@ -230,6 +260,17 @@ class ActivityKnexPersist extends KnexPersist {
   }
 
   async save(obj, ...args) {
+    const { extra_fields } = obj;
+    delete obj.extra_fields;
+
+    if (extra_fields) {
+      await new ExtraFieldsKnexPersist(this._db)
+        ._create({
+          entity_id: obj.id,
+          entity_name: "activity_manager",
+          extra_fields
+        });
+    }
 
     if(this.SQLite){
       obj.actor_data = JSON.stringify(obj.actor_data);
@@ -261,10 +302,17 @@ class TimerKnexPersist extends KnexPersist {
   }
 }
 
+class ExtraFieldsKnexPersist extends KnexPersist {
+  constructor(db) {
+    super(db, ExtraFields, "extra_fields");
+  }
+}
+
 module.exports = {
   KnexPersist: KnexPersist,
   PackagesKnexPersist: PackagesKnexPersist,
   ActivityManagerKnexPersist: ActivityManagerKnexPersist,
   ActivityKnexPersist: ActivityKnexPersist,
   TimerKnexPersist: TimerKnexPersist,
+  ExtraFieldsKnexPersist: ExtraFieldsKnexPersist,
 };

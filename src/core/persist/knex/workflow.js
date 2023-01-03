@@ -1,5 +1,5 @@
 const { Workflow } = require("../../workflow/workflow");
-const { KnexPersist } = require("../knex");
+const { KnexPersist, ExtraFieldsKnexPersist } = require("../knex");
 const _ = require('lodash');
 
 class WorkflowKnexPersist extends KnexPersist {
@@ -8,7 +8,16 @@ class WorkflowKnexPersist extends KnexPersist {
   }
 
   async get(id) {
-    const workflow = await this._db.select("*").from(this._table).where("id", id).first();
+    let workflow = await this._db
+      .select("*")
+      .from(this._table)
+      .leftJoin("extra_fields AS ef", function() {
+        this
+          .on("workflow.id", "=", "ef.entity_id")
+          .onIn("ef.entity_name", ["workflow"])
+      })
+      .where("id", id)
+      .first();
     if (!workflow) {
       return undefined;
     }
@@ -25,6 +34,18 @@ class WorkflowKnexPersist extends KnexPersist {
   }
 
   async save(workflow) {
+    const { extra_fields } = workflow;
+    delete workflow.extra_fields
+
+    if (extra_fields) {
+      await new ExtraFieldsKnexPersist(this._db)
+        ._create({
+          entity_id: workflow.id,
+          entity_name: "workflow",
+          extra_fields
+        });
+    }
+
     await this._db.transaction(async (trx) => {
       const current_version = await this._db(this._table).max("version").where({ name: workflow.name }).first()
       const version = current_version.max || _.get(current_version, "max(`version`)") || 0;

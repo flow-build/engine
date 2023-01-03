@@ -33,7 +33,8 @@ class Activity extends PersistedEntity {
       activity_manager_id: activity.activity_manager_id,
       actor_data: activity._actor_data,
       data: activity._data,
-      status: activity._status
+      status: activity._status,
+      extra_fields: activity?._extra_fields,
     };
   }
 
@@ -47,7 +48,8 @@ class Activity extends PersistedEntity {
         serialized.activity_manager_id,
         serialized.actor_data,
         serialized.data,
-        serialized.status);
+        serialized.status,
+        _.isString(serialized?.extra_fields) ? JSON.parse(serialized?.extra_fields) : serialized?.extra_fields);
       activity._id = serialized.id;
       activity._created_at = serialized.created_at;
 

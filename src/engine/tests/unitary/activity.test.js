@@ -519,13 +519,12 @@ describe("Deserialize convert activity_manager to correct type", () => {
     try {
       let activity_manager;
       engine.setActivityManagerNotifier((data) => (activity_manager = data));
-
       const workflow = await engine.saveWorkflow("sample", "sample", blueprints_.identity_user_task);
       const process = await createRunProcess(engine, workflow.id, actors_.simpleton);
       expect(process.status).toBe(ProcessStatus.WAITING);
 
       expect(activity_manager).toBeDefined();
-      let fetch_result = await engine.fetchActivityManager(activity_manager._id, actors_.admin);
+      let fetch_result = await engine.fetchActivityManager(activity_manager._id, actors_.simpleton);
       const deserialize_result = ActivityManager.deserialize(fetch_result);
       expect(deserialize_result).toBeDefined();
       expect(deserialize_result instanceof ActivityManager).toEqual(true);

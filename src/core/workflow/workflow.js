@@ -18,6 +18,7 @@ class Workflow extends PersistedEntity {
       blueprint_spec: workflow._blueprint_spec,
       version: workflow._version,
       blueprint_hash: workflow._blueprint_hash,
+      extra_fields: workflow?._extra_fields,
     };
   }
 
@@ -28,6 +29,7 @@ class Workflow extends PersistedEntity {
         serialized.description,
         _.isString(serialized.blueprint_spec) ? JSON.parse(serialized.blueprint_spec) : serialized.blueprint_spec,
         serialized.id,
+        _.isString(serialized?.extra_fields) ? JSON.parse(serialized?.extra_fields) : serialized?.extra_fields,
       );
       workflow._id = serialized.id;
       workflow._created_at = serialized.created_at;
@@ -56,8 +58,8 @@ class Workflow extends PersistedEntity {
     return workflow;
   }
 
-  constructor(name, description, blueprint_spec, id = null) {
-    super();
+  constructor(name, description, blueprint_spec, id = null, extra_fields = null) {
+    super(extra_fields);
 
     if (blueprint_spec) {
       //Blueprint.assert_is_valid(blueprint_spec);
@@ -83,7 +85,7 @@ class Workflow extends PersistedEntity {
   }
 
   async createProcess(actor_data, initial_bag = {}) {
-    return await new Process({ id: this._id, name: this._name }, Blueprint.parseSpec(this._blueprint_spec)).create(
+    return await new Process({ id: this._id, name: this._name, extra_fields: actor_data?.extra_fields }, Blueprint.parseSpec(this._blueprint_spec)).create(
       actor_data,
       initial_bag
     );

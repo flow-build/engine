@@ -31,6 +31,7 @@ class Process extends PersistedEntity {
       state: state ? state.serialize() : undefined,
       current_state_id: process._current_state_id,
       current_status: process._current_status,
+      extra_fields: process?._extra_fields,
     };
   }
 
@@ -44,7 +45,8 @@ class Process extends PersistedEntity {
           id: serialized.workflow_id,
           name: serialized.workflow_name,
         },
-        _.isString(serialized.blueprint_spec) ? JSON.parse(serialized.blueprint_spec) : serialized.blueprint_spec
+        _.isString(serialized.blueprint_spec) ? JSON.parse(serialized.blueprint_spec) : serialized.blueprint_spec,
+        _.isString(serialized?.extra_fields) ? JSON.parse(serialized?.extra_fields) : serialized?.extra_fields,
       );
       process._id = serialized.id;
       process._created_at = new Date(serialized.created_at);
@@ -112,7 +114,7 @@ class Process extends PersistedEntity {
   }
 
   constructor(workflow_data, blueprint_spec) {
-    super();
+    super(workflow_data.extra_fields);
 
     this._workflow_id = workflow_data.id;
     this.workflow_name = workflow_data.name;
@@ -514,35 +516,11 @@ class Process extends PersistedEntity {
     let am = null;
     let timer = null;
 
-    if (!SQLite) {
-      try {
-        this.next_node;
-      } catch (error) {
-        this.state = new ProcessState(
-          this._state.process_id,
-          next_step_number,
-          this._state.node_id,
-          this._state.bag,
-          this._state.external_input,
-          this._state.result,
-          error.toString(),
-          ProcessStatus.FORBIDDEN,
-          this._state.next_node_id,
-          this._state.actor_data,
-          null
-        );
-
-        await this._notifyProcessState(actor_data);
-        await this.save(trx);
-
-        return [this, null, null];
-      }
-    } else {
+    if (SQLite) {
       const nodes = getMobileNodes();
       const type = (_.get(this.next_node, ['_spec', 'type'])).toLowerCase() === "systemtask";
 
-      if(type) {
-
+      if (type) {
         const category = _.get(this.next_node, ['_spec', 'category'])
         const available = nodes.includes(category.toLowerCase())
 
@@ -552,6 +530,29 @@ class Process extends PersistedEntity {
           return [state, am, timer];
         }
       }
+    }
+
+    try {
+      this.next_node;
+    } catch (error) {
+      this.state = new ProcessState(
+        this._state.process_id,
+        next_step_number,
+        this._state.node_id,
+        this._state.bag,
+        this._state.external_input,
+        this._state.result,
+        error.toString(),
+        ProcessStatus.FORBIDDEN,
+        this._state.next_node_id,
+        this._state.actor_data,
+        null
+      );
+
+      await this._notifyProcessState(actor_data);
+      await this.save(trx);
+
+      return [this, null, null];
     }
 
     emitter.emit(

@@ -12,9 +12,10 @@ class BaseEntity {
     throw Error("Subclass and implement");
   }
 
-  constructor() {
+  constructor(extra_fields) {
     this._id = uuid();
     this._created_at = new Date();
+    this._extra_fields = extra_fields;
   }
 
   get id() {
@@ -52,8 +53,8 @@ class PersistedEntity extends BaseEntity {
     return await this.getPersist().deleteAll();
   }
 
-  constructor() {
-    super();
+  constructor(extra_fields) {
+    super(extra_fields);
   }
 
   getPersist() {
