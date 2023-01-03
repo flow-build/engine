@@ -1,6 +1,5 @@
 require("dotenv").config();
 const _ = require("lodash");
-const nodes = require("../core/workflow/nodes/index");
 const { Workflow } = require("../core/workflow/workflow");
 const { Blueprint } = require("../core/workflow/blueprint");
 const { Process } = require("../core/workflow/process");
@@ -11,7 +10,7 @@ const { Timer } = require("../core/workflow/timer");
 const { ActivityManager } = require("../core/workflow/activity_manager");
 const { ActivityStatus } = require("../core/workflow/activity");
 const { setProcessStateNotifier, setActivityManagerNotifier } = require("../core/notifier_manager");
-const { addSystemTaskCategory , reset, addMobileWhiteList} = require("../core/utils/node_factory");
+const { addSystemTaskCategory } = require("../core/utils/node_factory");
 const process_manager = require("../core/workflow/process_manager");
 const crypto_manager = require("../core/crypto_manager");
 const startEventListener = require("../core/utils/eventEmitter");
@@ -31,14 +30,6 @@ function getActivityManagerFromData(activity_manager_data) {
 const sleep = (ms) => new Promise((res) => setTimeout(res, ms));
 
 class Engine {
-  static get default_nodes() {
-    return nodes;
-  }
-
-  static get reset_nodes() {
-    return reset();
-  }
-
   static get event_emitter() {
     return emitter;
   }
@@ -633,10 +624,8 @@ class SQLiteEngine extends Engine {
       return SQLiteEngine._heart;
     }
 
-    constructor(persist_mode, persist_args, logger_level, availableNodes, whiteList) {
+    constructor(persist_mode, persist_args, logger_level) {
       super(persist_mode, persist_args, logger_level);
-      addMobileWhiteList(whiteList);
-      addSystemTaskCategory(availableNodes);
     }
 
     static init(bgService, options) {
