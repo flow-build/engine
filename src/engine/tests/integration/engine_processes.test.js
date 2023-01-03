@@ -178,8 +178,7 @@ describe("Run existing process", () => {
   });
 
   test("Engine run process with timeout informed on bag", async () => {
-    const nodes = Engine.default_nodes;
-    const engine = new Engine(...settings.persist_options, nodes);
+    const engine = new Engine(...settings.persist_options);
 
     jest.setTimeout(60000);
     let startTimeoutBlueprint = _.cloneDeep(blueprints_.identity_user_task);
@@ -204,8 +203,7 @@ describe("Run existing process", () => {
   });
 
   test("Engine run process with timeout informed on $js", async () => {
-    const nodes = Engine.default_nodes;
-    const engine = new Engine(...settings.persist_options, nodes);
+    const engine = new Engine(...settings.persist_options);
 
     jest.setTimeout(60000);
     let startTimeoutBlueprint = _.cloneDeep(blueprints_.identity_user_task);
@@ -862,8 +860,7 @@ test("Beat won't break despite orphan timer", async () => {
 
 describe("Set to bag Node input parsed", () => {
   test("$mustache works with environment and bag ", async () => {
-    const nodes = Engine.default_nodes;
-    const engine = new Engine(...settings.persist_options, nodes);
+    const engine = new Engine(...settings.persist_options);
     let spec_blueprint = _.cloneDeep(blueprints_.notify_user_task);
 
     spec_blueprint.nodes[1] = {

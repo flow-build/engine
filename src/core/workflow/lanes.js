@@ -22,6 +22,10 @@ class Lane {
       rule_lisp = spec.rule;
     }
 
+    if (typeof bag === "string") {
+      bag = JSON.parse(bag);
+    }
+    
     const rule_call = [rule_lisp, actor_data, bag];
     let retval = false;
 

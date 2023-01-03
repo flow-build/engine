@@ -37,7 +37,7 @@
     "axios": "./__mocks__/axios/index.js"
   },
   "scripts": {
-    "test": "jest --coverage",
+    "test": "jest --coverage --runInBand",
     "test-memory": "jest --coverage",
     "db": "knex",
     "tests": "export test_persist_option='knex' && npm -- test -i --forceExit",
