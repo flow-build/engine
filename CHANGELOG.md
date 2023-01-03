@@ -1,3 +1,15 @@
+## [2.18.0-alpha.2](https://github.com/flow-build/engine/compare/v2.18.0-alpha.1...v2.18.0-alpha.2) (2023-01-03)
+
+
+### Features
+
+* add features for extra_fields ([a0d518f](https://github.com/flow-build/engine/commit/a0d518f5cbd3666495093afddd62c6294a0ef161))
+
+
+### Bug Fixes
+
+* adjust __inerLoop ([f2cf75a](https://github.com/flow-build/engine/commit/f2cf75a6a3ef421f10abe3674d1603949a3b263a))
+
 ## [2.18.0-alpha.1](https://github.com/flow-build/engine/compare/v2.17.0...v2.18.0-alpha.1) (2022-12-28)
 
 
