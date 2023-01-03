@@ -494,7 +494,7 @@ class Engine {
     return abort_result[0].value;
   }
 
-  async saveWorkflow(name, description, blueprint_spec, workflow_id = null) {
+  async saveWorkflow(name, description, blueprint_spec, workflow_id = null, extra_fields = null) {
     if (workflow_id) {
       if (uuidValidate(workflow_id)) {
         const wf = await Workflow.fetch(workflow_id);
@@ -517,7 +517,7 @@ class Engine {
 
     Blueprint.assert_is_valid(blueprint_spec);
 
-    return await new Workflow(name, description, blueprint_spec, workflow_id).save();
+    return await new Workflow(name, description, blueprint_spec, workflow_id, extra_fields).save();
   }
 
   async fetchWorkflow(workflow_id) {
