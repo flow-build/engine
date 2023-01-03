@@ -363,7 +363,12 @@ class Process extends PersistedEntity {
     );
 
     await ActivityManager.interruptActivityManagerForProcess(this._id);
-    await this.save(trx);
+    const SQLite = (trx?.client?.config?.dialect || trx?.context?.client?.config?.client) === "sqlite3";
+    if (SQLite) {
+      await this.save();
+    } else {
+      await this.save(trx);
+    }
     await this._notifyProcessState();
 
     return this;
@@ -441,7 +446,12 @@ class Process extends PersistedEntity {
         time_elapsed
     );
     this._current_state_id = this._state.id;
-    await this.save(trx);
+    const SQLite = (trx?.client?.config?.dialect || trx?.context?.client?.config?.client) === "sqlite3";
+    if (SQLite) {
+      await this.save();
+    } else {
+      await this.save(trx);
+    }
     await this._notifyProcessState();
 
     return this.state;
@@ -460,7 +470,7 @@ class Process extends PersistedEntity {
       .where("current_state_id", current_state_id)
       .first();
 
-    const SQLite = (trx.client.config.dialect || trx.context.client.config.client) === "sqlite3";
+    const SQLite = (trx?.client?.config?.dialect || trx?.context?.client?.config?.client) === "sqlite3";
     
     let process_lock;
     if(!SQLite){
@@ -550,7 +560,11 @@ class Process extends PersistedEntity {
       );
 
       await this._notifyProcessState(actor_data);
-      await this.save(trx);
+      if (SQLite) {
+        await this.save();
+      } else {
+        await this.save(trx);
+      }
 
       return [this, null, null];
     }
@@ -628,7 +642,7 @@ class Process extends PersistedEntity {
         am = await this._createActivityManager(
           node_result.activity_manager,
           Process.calculateNextStep(next_step_number),
-          trx,
+          SQLite ? null : trx,
           node_result.activity_schema
         );
 
@@ -749,9 +763,12 @@ class Process extends PersistedEntity {
     while (execution_success && this.status === ProcessStatus.RUNNING) {
       const db = Process.getPersist()._db;
 
+      const SQLite = (db?.client?.config?.dialect || db?.context?.client?.config?.client) === "sqlite3";
       let ps = null;
       try {
-        if(input_trx) {
+        if (SQLite) {
+          [ps, activity_manager, timer] = await this._intermediaryLoop(custom_lisp, actor_data, db);
+        } else if (input_trx) {
           [ps, activity_manager, timer] = await this._intermediaryLoop(custom_lisp, actor_data, input_trx);
         } else {
           await db.transaction(async (trx) => {
