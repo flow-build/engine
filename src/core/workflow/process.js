@@ -629,7 +629,11 @@ class Process extends PersistedEntity {
         });
 
         timer = new Timer("Process", this.id, Timer.timeoutFromNow(result_state.result.timeout), { actor_data });
-        await timer.save(trx);
+        if (SQLite) {
+          await timer.save();
+        } else {
+          await timer.save(trx);
+        }
         emitter.emit("PROCESS.TIMER.NEW", `      NEW TIMER ON PID [${process_lock.id}] TIMER [${timer.id}]`, {
           process_id: this.id,
           timer_id: timer.id,

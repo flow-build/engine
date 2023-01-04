@@ -40,16 +40,12 @@ class Activity extends PersistedEntity {
 
   static deserialize(serialized) {
     if (serialized) {
-      if(_.isString(serialized.data)){
-        serialized.data = JSON.parse(serialized.data);
-        serialized.actor_data = JSON.parse(serialized.actor_data);
-      }
       const activity = new Activity(
         serialized.activity_manager_id,
-        serialized.actor_data,
-        serialized.data,
+        _.isString(serialized.actor_data) ? JSON.parse(serialized.actor_data) : serialized.actor_data,
+        _.isString(serialized.data) ? JSON.parse(serialized.data) : serialized.data,
         serialized.status,
-        _.isString(serialized?.extra_fields) ? JSON.parse(serialized?.extra_fields) : serialized?.extra_fields);
+        _.isString(serialized.extra_fields) ? JSON.parse(serialized.extra_fields) : serialized.extra_fields);
       activity._id = serialized.id;
       activity._created_at = serialized.created_at;
 
