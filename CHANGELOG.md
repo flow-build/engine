@@ -1,3 +1,18 @@
+## [2.18.0-alpha.4](https://github.com/flow-build/engine/compare/v2.18.0-alpha.3...v2.18.0-alpha.4) (2023-01-04)
+
+
+### Features
+
+* add extra_fields on method saveWorkflow in engine.js ([126985f](https://github.com/flow-build/engine/commit/126985f54c0809f308d108d17fc14a8f4bcfde7a))
+* improve workflow to return extra_fields ([f20c191](https://github.com/flow-build/engine/commit/f20c1910af26c4a32f45cfebecea2f9bac457e0a))
+
+
+### Bug Fixes
+
+* add mehtod _parseToJson on activity persist ([621e6fa](https://github.com/flow-build/engine/commit/621e6fa77cfa5a992ab4ec3b689fa7e530bb3a18))
+* adjust timer ([8d6212d](https://github.com/flow-build/engine/commit/8d6212d88446ccb2e88aa2831ef4b946e4661d6b))
+* adjustments on engine with SQLite ([d47c605](https://github.com/flow-build/engine/commit/d47c6052210acefb1d29aec76183de4737036a0a))
+
 ## [2.18.0-alpha.3](https://github.com/flow-build/engine/compare/v2.18.0-alpha.2...v2.18.0-alpha.3) (2023-01-03)
 
 
