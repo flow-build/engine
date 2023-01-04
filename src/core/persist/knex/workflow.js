@@ -65,7 +65,17 @@ class WorkflowKnexPersist extends KnexPersist {
   }
 
   async getByName(name) {
-    const workflow = await this._db.select("*").from(this._table).where({ name }).orderBy("version", "desc").first();
+    const workflow = await this._db
+      .select("*")
+      .from(this._table)
+      .leftJoin("extra_fields AS ef", function() {
+        this
+          .on("workflow.id", "=", "ef.entity_id")
+          .onIn("ef.entity_name", ["workflow"])
+      })
+      .where({ name })
+      .orderBy("version", "desc")
+      .first();
     return { ...workflow, ...{ latest: true } };
   }
 
@@ -73,6 +83,11 @@ class WorkflowKnexPersist extends KnexPersist {
     const workflow = await this._db
       .select("*")
       .from(this._table)
+      .leftJoin("extra_fields AS ef", function() {
+        this
+          .on("workflow.id", "=", "ef.entity_id")
+          .onIn("ef.entity_name", ["workflow"])
+      })
       .where({
         name,
         version,
