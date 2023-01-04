@@ -85,6 +85,18 @@ class ActivityManagerKnexPersist extends KnexPersist {
     this._activity_table = "activity";
   }
 
+  _parseToJson(data) {
+    if(data && _.isString(data.bag)){
+      data.props = JSON.parse(data.props);
+      data.parameters = JSON.parse(data.parameters);
+      data.bag = JSON.parse(data.bag);
+      data.external_input = JSON.parse(data.external_input);
+      data.blueprint_spec = JSON.parse(data.blueprint_spec);
+      data.extra_fields = JSON.parse(data.extra_fields);
+    }
+    return data
+  }
+
   getActivityDataFromStatusQuery(status, filters) {
     return this._db
       .select(
@@ -147,11 +159,14 @@ class ActivityManagerKnexPersist extends KnexPersist {
   }
 
   async getActivityDataFromStatus(status, filters, trx) {
+    let activity_data;
     if(trx) {
-      return await this.getActivityDataFromStatusQuery(status, filters)
-      .transacting(trx);
+      activity_data = await this.getActivityDataFromStatusQuery(status, filters)
+        .transacting(trx);
+    } else {
+      activity_data = await this.getActivityDataFromStatusQuery(status, filters);
     }
-    return await this.getActivityDataFromStatusQuery(status, filters)
+    return _.map(activity_data, this._parseToJson)
   }
 
   async getActiveActivityManagers() {
@@ -165,7 +180,7 @@ class ActivityManagerKnexPersist extends KnexPersist {
   }
 
   async getActivityDataFromId(obj_id) {
-    return await this._db
+    const activity_data = await this._db
       .select(
         "am.id",
         "am.created_at",
@@ -199,14 +214,16 @@ class ActivityManagerKnexPersist extends KnexPersist {
       })
       .where("am.id", "=", obj_id)
       .first();
+    return this._parseToJson(activity_data);
   }
 
   async getProcessId(process_state_id) {
-    return await this._db
+    const activity = await this._db
       .select('process_id')
       .from('process_state')
       .where('id', '=', process_state_id)
       .first();
+    return this._parseToJson(activity);
   }
 
   async getActivityManagerByProcessStateId(process_state_id) {
@@ -217,7 +234,7 @@ class ActivityManagerKnexPersist extends KnexPersist {
   }
 
   async getActivities(activity_manager_id) {
-    return await this._db
+    const activities = await this._db
       .select()
       .from(this._activity_table)
       .leftJoin("extra_fields AS ef", function() {
@@ -226,10 +243,21 @@ class ActivityManagerKnexPersist extends KnexPersist {
           .onIn("ef.entity_name", ["activity_manager"])
       })
       .where("activity_manager_id", activity_manager_id);
+
+    return _.map(activities, activity => {
+
+      if(_.isString(activity.data)){
+        activity.data = JSON.parse(activity.data);
+        activity.actor_data = JSON.parse(activity.actor_data);
+      }
+
+      return activity;
+    });
   }
 
   async getTimerfromResourceId(resource_id) {
-    return await this._db.select().from("timer").where("resource_id", resource_id);
+    const data = await this._db.select().from("timer").where("resource_id", resource_id);
+    return _.map(data, Timer.deserialize);
   }
 
   async save(obj, ...args) {

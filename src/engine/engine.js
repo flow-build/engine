@@ -86,14 +86,23 @@ class Engine {
     const ORPHAN_BATCH = process.env.ORPHAN_BATCH || 10;
     emitter.emit("ENGINE.HEARTBEAT", `HEARTBEAT @ [${new Date().toISOString()}]`);
     await Timer.getPersist()._db.transaction(async (trx) => {
+      const SQLite = (trx?.client?.config?.dialect || trx?.context?.client?.config?.client) === "sqlite3";
       try {
         emitter.emit("ENGINE.FETCHING_TIMERS", `  FETCHING TIMERS ON HEARTBEAT BATCH [${TIMER_BATCH}]`);
-        const locked_timers = await trx("timer")
-          .where("expires_at", "<", new Date())
-          .andWhere("active", true)
-          .limit(TIMER_BATCH)
-          .forUpdate()
-          .skipLocked();
+        let locked_timers;
+        if (!SQLite) {
+          locked_timers = await trx("timer")
+            .where("expires_at", "<", new Date())
+            .andWhere("active", true)
+            .limit(TIMER_BATCH)
+            .forUpdate()
+            .skipLocked();
+        } else {
+          locked_timers = await trx("timer")
+            .where("expires_at", "<", new Date().toISOString())
+            .andWhere("active", true)
+            .limit(TIMER_BATCH);
+        }
         emitter.emit("ENGINE.TIMERS", `  FETCHED [${locked_timers.length}] TIMERS ON HEARTBEAT`, {
           timers: locked_timers.length,
         });
@@ -109,16 +118,27 @@ class Engine {
       }
     });
     const orphan_process = await Process.getPersist()._db.transaction(async (trx) => {
+      const SQLite = (trx?.client?.config?.dialect || trx?.context?.client?.config?.client) === "sqlite3";
       try {
         emitter.emit("ENGINE.ORPHANS_FETCHING", `FETCHING ORPHAN PROCESSES ON HEARTBEAT BATCH [${ORPHAN_BATCH}]`);
-        const locked_orphans = await trx("process")
-          .select("process.*")
-          .join("process_state", "process_state.id", "process.current_state_id")
-          .where("engine_id", "!=", ENGINE_ID)
-          .where("current_status", "running")
-          .limit(ORPHAN_BATCH)
-          .forUpdate()
-          .skipLocked();
+        let locked_orphans;
+        if (!SQLite) {
+          locked_orphans = await trx("process")
+            .select("process.*")
+            .join("process_state", "process_state.id", "process.current_state_id")
+            .where("engine_id", "!=", ENGINE_ID)
+            .where("current_status", "running")
+            .limit(ORPHAN_BATCH)
+            .forUpdate()
+            .skipLocked();
+        } else {
+          locked_orphans = await trx("process")
+            .select("process.*")
+            .join("process_state", "process_state.id", "process.current_state_id")
+            .where("engine_id", "!=", ENGINE_ID)
+            .where("current_status", "running")
+            .limit(ORPHAN_BATCH);
+        }
         emitter.emit("ENGINE.ORPHANS_FETCHED", `  FETCHED [${locked_orphans.length}] ORPHANS ON HEARTBEAT`, {
           orphans: locked_orphans.length,
         });
@@ -127,13 +147,20 @@ class Engine {
             emitter.emit("ENGINE.ORPHAN_FETCHING", `  FETCHING PS FOR ORPHAN [${orphan.id}] ON HEARTBEAT`, {
               process_id: orphan.id,
             });
-            orphan.state = await trx("process_state")
-              .select()
-              .where("id", orphan.current_state_id)
-              .where("engine_id", "!=", ENGINE_ID)
-              .forUpdate()
-              .noWait()
-              .first();
+            if (!SQLite) {
+              orphan.state = await trx("process_state")
+                .select()
+                .where("id", orphan.current_state_id)
+                .where("engine_id", "!=", ENGINE_ID)
+                .forUpdate()
+                .noWait()
+                .first();
+            } else {
+              orphan.state = await trx("process_state")
+                .select()
+                .where("id", orphan.current_state_id)
+                .where("engine_id", "!=", ENGINE_ID);
+            }
             emitter.emit("ENGINE.ORPHAN_FETCHED", `  FETCHED PS FOR ORPHAN [${orphan.id}] ON HEARTBEAT`, {
               process_id: orphan.id,
             });
@@ -494,7 +521,7 @@ class Engine {
     return abort_result[0].value;
   }
 
-  async saveWorkflow(name, description, blueprint_spec, workflow_id = null) {
+  async saveWorkflow(name, description, blueprint_spec, workflow_id = null, extra_fields = null) {
     if (workflow_id) {
       if (uuidValidate(workflow_id)) {
         const wf = await Workflow.fetch(workflow_id);
@@ -517,7 +544,7 @@ class Engine {
 
     Blueprint.assert_is_valid(blueprint_spec);
 
-    return await new Workflow(name, description, blueprint_spec, workflow_id).save();
+    return await new Workflow(name, description, blueprint_spec, workflow_id, extra_fields).save();
   }
 
   async fetchWorkflow(workflow_id) {
@@ -595,143 +622,6 @@ class Engine {
   }
 }
 
-class SQLiteEngine extends Engine {
-    static get event_emitter() {
-      return emitter;
-    }
-
-    static get instance() {
-      return SQLiteEngine._instance;
-    }
-
-    static set instance(instance) {
-      SQLiteEngine._instance = instance;
-    }
-
-    static get persistor() {
-      return SQLiteEngine._persistor;
-    }
-
-    static set persistor(instance) {
-      SQLiteEngine._persistor = instance;
-    }
-
-    static set heart(h) {
-      SQLiteEngine._heart = h;
-    }
-
-    static get heart() {
-      return SQLiteEngine._heart;
-    }
-
-    constructor(persist_mode, persist_args, logger_level) {
-      super(persist_mode, persist_args, logger_level);
-    }
-
-    static init(bgService, options) {
-        try {
-            SQLiteEngine.heart = SQLiteEngine.setNextHeartBeat(bgService, options);
-        } catch (e) {
-          emitter.emit("ENGINE.ERROR", "ERROR AT ENGINE SQLITE", { error: e });
-        }
-    }
-
-    static setNextHeartBeat(bgService, options = {
-        taskName: 'engine_beat',
-        taskTitle: 'Background Service Start',
-        taskDesc: 'SQLiteEngine Beat',
-        taskIcon: {
-            name: 'ic_launcher',
-            type: 'mipmap',
-        },
-        parameters: {
-            delay: 1000,
-        },
-    }) {
-        return setTimeout(async () => {
-            try {
-                bgService.start(async (taskParams) => {
-                    await SQLiteEngine._beat();
-                    await sleep(taskParams.delay);
-                }, options);
-            } catch (e) {
-                await bgService.stop()
-                emitter.emit("ENGINE.HEART.ERROR", `HEART FAILURE @ ENGINE_ID [${ENGINE_ID}] ${JSON.stringify({ e })} `, {
-                    engine_id: ENGINE_ID,
-                    error: e
-                });
-            } finally {
-                SQLiteEngine.heart = SQLiteEngine.setNextHeartBeat(bgService, options);
-                emitter.emit("ENGINE.NEXT", "NEXT HEARTBEAT SET");
-            }
-        }, process.env.HEART_BEAT || 10000);
-    }
-
-    static kill() {
-        if (SQLiteEngine.heart)
-            clearTimeout(SQLiteEngine.heart);
-    }
-
-    static async _beat(){
-        const TIMER_BATCH = process.env.TIMER_BATCH || 1
-        const ORPHAN_BATCH = process.env.ORPHAN_BATCH || 1;
-        emitter.emit("ENGINE.HEARTBEAT", `HEARTBEAT @ [${new Date().toISOString()}]`);
-        await Timer.getPersist()._db.transaction(async (trx) => {
-            try {
-                emitter.emit("ENGINE.FETCHING_TIMERS", `  FETCHING TIMERS ON HEARTBEAT BATCH [${TIMER_BATCH}]`);
-                const locked_timers = await trx("timer")
-                    .where("expires_at", "<", new Date().toISOString())
-                    .andWhere("active", true)
-                    .limit(TIMER_BATCH)
-                emitter.emit("ENGINE.TIMERS", `  FETCHED [${locked_timers.length}] TIMERS ON HEARTBEAT`,{ timers: locked_timers.length });
-                await Promise.all(locked_timers.map((t_lock) => {
-                    emitter.emit("ENGINE.FIRING_TIMER", `  FIRING TIMER [${t_lock.id}] ON HEARTBEAT`, { timer_id: t_lock.id });
-                    const timer = Timer.deserialize(t_lock);
-                    return timer.run(trx);
-                }));
-            } catch (e) {
-                throw new Error(e);
-            }
-        });
-        const orphan_process = await Process.getPersist()._db.transaction(async (trx) => {
-            try {
-                emitter.emit("ENGINE.ORPHANS_FETCHING", `FETCHING ORPHAN PROCESSES ON HEARTBEAT BATCH [${ORPHAN_BATCH}]`);
-                const locked_orphans = await trx("process")
-                    .select('process.*')
-                    .join('process_state', 'process_state.id', 'process.current_state_id')
-                    .where('engine_id', '!=', ENGINE_ID)
-                    .where("process.current_status", "running")
-                    .limit(ORPHAN_BATCH)
-                emitter.emit("ENGINE.ORPHANS_FETCHED", `  FETCHED [${locked_orphans.length}] ORPHANS ON HEARTBEAT`,{ orphans: locked_orphans.length });
-                return await Promise.all(locked_orphans.map(async (orphan) => {
-                    emitter.emit("ENGINE.ORPHAN_FETCHING",`  FETCHING PS FOR ORPHAN [${orphan.id}] ON HEARTBEAT`, { process_id: orphan.id });
-                    orphan.state = await trx("process_state")
-                        .select().where("id", orphan.current_state_id)
-                        .where('engine_id', '!=', ENGINE_ID)
-                        .first();
-                    emitter.emit("ENGINE.ORPHAN_FETCHED", `  FETCHED PS FOR ORPHAN [${orphan.id}] ON HEARTBEAT`, { process_id: orphan.id });
-                    if (orphan.state) {
-                        return Process.deserialize(orphan);
-                    }
-                }));
-            } catch (e) {
-                emitter.emit("ENGINE.ORPHANS.ERROR", "  ERROR FETCHING ORPHANS ON HEARTBEAT", { error: e });
-                throw new Error(e);
-            }
-        });
-        const continue_promises = orphan_process.map((process) => {
-            if (process) {
-                emitter.emit("ENGINE.ORPHAN.CONTINUE", `    START CONTINUE ORPHAN PID [${process.id}] AND STATE [${process.state.id}] ON HEARTBEAT`, {
-                    process_id: process.id,
-                    process_state_id: process.state.id
-                });
-                return process.continue({}, process.state._actor_data);
-            }
-        });
-        await Promise.all(continue_promises);
-    }
-}
-
 module.exports = {
-  Engine: process.env.NODE_ENV === "sqlite" ? SQLiteEngine : Engine,
+  Engine: Engine,
 };

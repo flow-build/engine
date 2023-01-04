@@ -29,13 +29,22 @@ class WorkflowKnexPersist extends KnexPersist {
     const wfs = await this._db
       .select("*")
       .from(`${this._table} as w1`)
+      .leftJoin("extra_fields AS ef", function() {
+        this
+          .on("w1.id", "=", "ef.entity_id")
+          .onIn("ef.entity_name", ["workflow"])
+      })
       .whereRaw(`w1.version = (select max(version) from ${this._table} as w2 where w1.name = w2.name)`)
-    return _.map(wfs, Workflow.deserialize);
+    return _.map(wfs, (wf) => Workflow.deserialize(wf));
   }
 
   async save(workflow) {
+    if(this.SQLite){
+      workflow.blueprint_spec = JSON.stringify(workflow?.blueprint_spec);
+      workflow.extra_fields = JSON.stringify(workflow?.extra_fields);
+    }
     const { extra_fields } = workflow;
-    delete workflow.extra_fields
+    delete workflow.extra_fields;
 
     if (extra_fields) {
       await new ExtraFieldsKnexPersist(this._db)
@@ -45,14 +54,11 @@ class WorkflowKnexPersist extends KnexPersist {
           extra_fields
         });
     }
+    workflow.created_at = new Date(workflow.created_at).toISOString();
 
     await this._db.transaction(async (trx) => {
       const current_version = await this._db(this._table).max("version").where({ name: workflow.name }).first()
       const version = current_version.max || _.get(current_version, "max(`version`)") || 0;
-
-      if(this.SQLite){
-        workflow.blueprint_spec = JSON.stringify(workflow.blueprint_spec);
-      }
 
       return this._db(this._table)
         .transacting(trx)
@@ -65,7 +71,17 @@ class WorkflowKnexPersist extends KnexPersist {
   }
 
   async getByName(name) {
-    const workflow = await this._db.select("*").from(this._table).where({ name }).orderBy("version", "desc").first();
+    const workflow = await this._db
+      .select("*")
+      .from(this._table)
+      .leftJoin("extra_fields AS ef", function() {
+        this
+          .on("workflow.id", "=", "ef.entity_id")
+          .onIn("ef.entity_name", ["workflow"])
+      })
+      .where({ name })
+      .orderBy("version", "desc")
+      .first();
     return { ...workflow, ...{ latest: true } };
   }
 
@@ -73,6 +89,11 @@ class WorkflowKnexPersist extends KnexPersist {
     const workflow = await this._db
       .select("*")
       .from(this._table)
+      .leftJoin("extra_fields AS ef", function() {
+        this
+          .on("workflow.id", "=", "ef.entity_id")
+          .onIn("ef.entity_name", ["workflow"])
+      })
       .where({
         name,
         version,

@@ -33,16 +33,12 @@ class ActivityManager extends PersistedEntity {
 
   static deserialize(serialized) {
     if (serialized) {
-      if(_.isString(serialized.props)){
-        serialized.props = JSON.parse(serialized.props);
-        serialized.parameters = JSON.parse(serialized.parameters);
-      }
       const activity_manager = activity_manager_factory.getActivityManager(
         serialized.type,
         serialized.process_state_id,
         serialized.status || serialized.activity_status,
-        serialized.props,
-        serialized.parameters
+        _.isString(serialized.props) ? JSON.parse(serialized.props) : serialized.props,
+        _.isString(serialized.parameters) ? JSON.parse(serialized.parameters) : serialized.parameters,
       );
       activity_manager._id = serialized.id;
       activity_manager._created_at = new Date(serialized.created_at);
