@@ -1,3 +1,10 @@
+## [2.18.0-alpha.5](https://github.com/flow-build/engine/compare/v2.18.0-alpha.4...v2.18.0-alpha.5) (2023-01-05)
+
+
+### Features
+
+* change extra_fields to not be nested on extra_fields ([a31dfb4](https://github.com/flow-build/engine/commit/a31dfb4bee50f2bf2c255f4f1cffb29f0ec688a2))
+
 ## [2.18.0-alpha.4](https://github.com/flow-build/engine/compare/v2.18.0-alpha.3...v2.18.0-alpha.4) (2023-01-04)
 
 
