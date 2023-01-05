@@ -72,6 +72,10 @@ class ProcessState extends PersistedEntity {
         serialized.result = JSON.parse(serialized.result);
         serialized.actor_data = JSON.parse(serialized.actor_data);
       }
+      if (serialized?.actor_data?.extra_fields) {
+        serialized.actor_data = { ...serialized.actor_data, ...serialized.actor_data?.extra_fields };
+        delete serialized.actor_data.extra_fields;
+      }
       const state = new ProcessState(
         serialized.process_id,
         serialized.step_number,

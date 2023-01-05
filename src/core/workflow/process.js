@@ -952,12 +952,16 @@ class Process extends PersistedEntity {
   }
 
   async _runNode(node, external_input, custom_lisp, actor_data) {
+    let actorData;
+    if (actor_data?.extra_fields) {
+      actorData = { ...actor_data, ...actor_data?.extra_fields };
+    }
     return await node.run(
       {
         bag: this.bag,
         input: this._state.result,
         external_input: external_input,
-        actor_data: actor_data,
+        actor_data: actorData ? actorData : actor_data,
         environment: this._blueprint_spec.environment,
         result_schema: node._spec.result_schema,
         process_id: this.id,

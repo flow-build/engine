@@ -122,7 +122,7 @@ describe("process with extra_fields", () => {
 
     const process_history = await engine.fetchProcessStateHistory(process_id);
     expect(process_history).toHaveLength(3);
-    expect(process_history[1].actor_data.extra_fields.account_id).toBe(extra_fields.account_id);
+    expect(process_history[1].actor_data.account_id).toBe(extra_fields.account_id);
   });
 });
 
