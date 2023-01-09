@@ -94,7 +94,7 @@ class Engine {
           .andWhere(function() {
             this.whereNull("switch").orWhere(function() {
               this.whereNot("switch.active", true).orWhere(function() {
-                this.where("switch.active", true).andWhere("switch.node_id", "process_state.node_id")
+                this.where("switch.active", true).andWhere("switch.node_id", "process_state.next_node_id")
               })
             })
           })
