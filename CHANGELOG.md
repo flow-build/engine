@@ -1,3 +1,15 @@
+## [2.18.0-beta.3](https://github.com/flow-build/engine/compare/v2.18.0-beta.2...v2.18.0-beta.3) (2023-01-09)
+
+
+### Features
+
+* adds lock class ([a9cb3d9](https://github.com/flow-build/engine/commit/a9cb3d97272da1254a7a342cbc145c746e79723c))
+* adds Lock persistance instance ([fbb4664](https://github.com/flow-build/engine/commit/fbb466482865de8d074910e78453971cd9a51e60))
+* adds lock table creation migration ([990de25](https://github.com/flow-build/engine/commit/990de255d3286b947963772e0c06d7310db5d59a))
+* adds logic to execute beat sequentially ([facf7d6](https://github.com/flow-build/engine/commit/facf7d68fc9f0e9fb9defa02820373a7118cec9f))
+* updates engine heartbeat to read from locks ([65a499b](https://github.com/flow-build/engine/commit/65a499b507049e96e8d8929db99f450e646c4461))
+* updates process execution to read from locks ([670618c](https://github.com/flow-build/engine/commit/670618c166e15acacdd4bc5c86b1063fcc909e4f))
+
 ## [2.18.0-beta.2](https://github.com/flow-build/engine/compare/v2.18.0-beta.1...v2.18.0-beta.2) (2022-12-08)
 
 
