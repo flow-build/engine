@@ -1,6 +1,7 @@
 const processDependency = require("./process");
 const { ProcessStatus } = require("./process_state");
 const workflowDependency = require("./workflow");
+const switchDependency = require("./switch");
 
 async function abortProcess(processIds) {
   const abort_promises = processIds.map(async (id) => {
@@ -109,6 +110,10 @@ async function runProcess(process_id, actor_data, external_input) {
   return undefined;
 }
 
+async function fetchSwitchForWorkflow(workflow_id, trx = false) {
+  return await switchDependency.Switch.fetchByWorkflowId(workflow_id, trx);
+}
+
 module.exports = {
   abortProcess,
   continueProcess,
@@ -121,4 +126,5 @@ module.exports = {
   notifyCompletedActivityManager,
   notifyParentProcess,
   runProcess,
+  fetchSwitchForWorkflow,
 };

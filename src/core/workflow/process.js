@@ -180,6 +180,19 @@ class Process extends PersistedEntity {
     }
   }
 
+  async checkForSwitch(trx = false) {
+    const current_node = this._blueprint.fetchNode(this._state.node_id);
+    const next_node_name = current_node._spec.next;
+    const [switch_] = await process_manager.fetchSwitchForWorkflow(this._workflow_id, trx);
+    if(switch_ && switch_.active) {
+      if(switch_.node_id === next_node_name) {
+        return true;
+      }
+      return false;
+    }
+    return false;
+  }
+
   async run(actor_data, execution_input) {
     emitter.emit("PROCESS.RUN", `RUN ON PID [${this.id}]`, { process_id: this.id });
 
@@ -250,11 +263,19 @@ class Process extends PersistedEntity {
     }
   }
 
-  async continue(result_data, actor_data, trx) {
+  async continue(result_data, actor_data, trx, skipLock = false) {
     emitter.emit("PROCESS.CONTINUE", `CONTINUE ON PID [${this.id}]`, { process_id: this.id });
     if (!this.state) {
       this.state = await this.getPersist().getLastStateByProcess(this._id);
     }
+
+    if(!skipLock) {
+      const isLocked = await this.checkForSwitch(trx);
+      if(isLocked) {
+        return this._errorState();
+      }
+    }
+
     let currentNode;
 
     try {
@@ -292,7 +313,7 @@ class Process extends PersistedEntity {
         this._blueprint_spec.prepare
       );
 
-      await this._executionLoop(custom_lisp, actor_data, trx);
+      await this._executionLoop(custom_lisp, actor_data, trx, skipLock);
     }
   }
 
@@ -701,7 +722,15 @@ class Process extends PersistedEntity {
   }
 
   // eslint-disable-next-line no-unused-vars
-  async _executionLoop(custom_lisp, actor_data, input_trx = false) {
+  async _executionLoop(custom_lisp, actor_data, input_trx = false, skipLock = false) {
+    
+    if(!skipLock) {
+      const isLocked = await this.checkForSwitch(input_trx);
+      if(isLocked) {
+        return this._errorState();
+      }
+    }
+
     emitter.emit("EXECUTION_LOOP.START", `CALLED EXECUTION LOOP PID [${this.id}] STATUS [${this.status}]`, {
       process_id: this.id,
       engine_id: ENGINE_ID,

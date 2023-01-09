@@ -8,9 +8,9 @@ const { ProcessStatus } = require("../../process_state");
 
 let actualTimeout = setTimeout;
 
-function wait() {
+function wait(timeout) {
   return new Promise((resolve) => {
-    actualTimeout(resolve, 300);
+    actualTimeout(resolve, timeout || 300);
   });
 }
 
@@ -94,7 +94,7 @@ describe("Process test", () => {
         let process = await engine.createProcess(workflow.id, actors_.simpleton);
         const process_id = process.id;
         engine.runProcess(process_id, actors_.simpleton).catch(() => {});
-        await wait();
+        await wait(1000);
         process = await engine.fetchProcess(process_id);
         expect(process.status).toEqual(ProcessStatus.PENDING);
 
