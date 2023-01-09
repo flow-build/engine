@@ -1,3 +1,10 @@
+## [2.18.0-beta.4](https://github.com/flow-build/engine/compare/v2.18.0-beta.3...v2.18.0-beta.4) (2023-01-09)
+
+
+### Bug Fixes
+
+* adjust orphan_process 'select' to filter from next_node_id on active switches ([88bcb1b](https://github.com/flow-build/engine/commit/88bcb1b80111d9b851c0acaf5c785394fbcfedc6))
+
 ## [2.18.0-beta.3](https://github.com/flow-build/engine/compare/v2.18.0-beta.2...v2.18.0-beta.3) (2023-01-09)
 
 
