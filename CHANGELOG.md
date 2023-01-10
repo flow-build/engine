@@ -1,3 +1,15 @@
+## [2.18.0-alpha.7](https://github.com/flow-build/engine/compare/v2.18.0-alpha.6...v2.18.0-alpha.7) (2023-01-10)
+
+
+### Features
+
+* add possibility to get envs in react-native ([bb2ec36](https://github.com/flow-build/engine/commit/bb2ec36741faff9ce09f80a1e728f1ef2777954e))
+
+
+### Bug Fixes
+
+* adjust nodefyFunction to accept methods with params destructured ([b484d7a](https://github.com/flow-build/engine/commit/b484d7a7d2c04f04d5563f5f0fedd0bdd0a7f9b9))
+
 ## [2.18.0-alpha.6](https://github.com/flow-build/engine/compare/v2.18.0-alpha.5...v2.18.0-alpha.6) (2023-01-10)
 
 
