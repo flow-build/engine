@@ -10,6 +10,13 @@ function testFunction(firstTestArg, secondTestArg) {
   };
 }
 
+function testFunctionDestructure({ firstArg, secondArg }) {
+  return {
+    first: firstArg,
+    second: secondArg,
+  };
+}
+
 class testClass {
   firstTestMethod(firstTestArg, secondTestArg) {
     return {
@@ -36,6 +43,18 @@ describe("Nodefy Function should work", () => {
     const custom_node_class = nodefyFunction(testFunction);
     const custom_node = new custom_node_class();
     const execution_data = { firstTestArg: "first", secondTestArg: "second" };
+    const result = await custom_node._run(execution_data, null);
+    expect(result[0]).toEqual({
+      first: "first",
+      second: "second",
+    });
+    expect(result[1]).toBe("running");
+  });
+
+  test("CustomSystemTaskNode _run works correctly with function params destructured", async () => {
+    const custom_node_class = nodefyFunction(testFunctionDestructure);
+    const custom_node = new custom_node_class();
+    const execution_data = { firstArg: "first", secondArg: "second" };
     const result = await custom_node._run(execution_data, null);
     expect(result[0]).toEqual({
       first: "first",
