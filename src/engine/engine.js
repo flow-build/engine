@@ -27,8 +27,6 @@ function getActivityManagerFromData(activity_manager_data) {
   return activity_manager;
 }
 
-const sleep = (ms) => new Promise((res) => setTimeout(res, ms));
-
 class Engine {
   static get event_emitter() {
     return emitter;
