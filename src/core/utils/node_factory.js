@@ -18,7 +18,7 @@ let categories = {
   startprocess: nodes.StartProcessSystemTaskNode,
   abortprocess: nodes.AbortProcessSystemTaskNode,
   formrequest: nodes.FormRequestNode,
-  httpNoSSL: nodes.HttpNoSSLSystemTaskNode,
+  httpnossl: nodes.HttpNoSSLSystemTaskNode,
 };
 
 function getNodeTypes() {
