@@ -17,6 +17,7 @@
     "mustache": "4.2.0",
     "pg": "8.8.0",
     "qs": "6.11.0",
+    "react-native": "0.70.6",
     "react-native-lisp": "1.0.0",
     "sqlite3": "5.1.4",
     "traceparent": "1.0.0",

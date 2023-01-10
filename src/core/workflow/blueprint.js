@@ -6,6 +6,7 @@ const { Lane } = require("./lanes");
 const { Validator } = require("../validators");
 const node_factory = require("../utils/node_factory");
 const ajvValidator = require("../utils/ajvValidator");
+const { envs } = require('../utils/envs');
 
 class Blueprint {
   static get rules() {
@@ -68,16 +69,34 @@ class Blueprint {
       ambient: [],
     };
     const nodesString = JSON.stringify(spec.nodes);
-    for (const variable in spec.environment) {
-      if (!process.env[spec.environment[variable]] && spec?.environment[variable]?.toLowerCase() === variable) {
-        if (!process.env[variable.toUpperCase()]) {
-          const error_message = `Environment variable ${variable} not found in ambient`;
-          validate_info.ambient.push(error_message);
+
+    try {
+      const env = envs();
+
+      for (const variable in spec.environment) {
+        if (!env[spec.environment[variable]] && (spec?.environment[variable]?.toLowerCase() === variable)) {
+          if (!env[variable.toUpperCase()]) {
+            const error_message = `Environment variable ${variable} not found in ambient`;
+            validate_info.ambient.push (error_message);
+          }
+        }
+        if (!nodesString.includes(`environment.${variable}`)) {
+          const error_message = `Environment variable ${variable} not found in nodes`;
+          validate_info.nodes.push (error_message);
         }
       }
-      if (!nodesString.includes(`environment.${variable}`)) {
-        const error_message = `Environment variable ${variable} not found in nodes`;
-        validate_info.nodes.push(error_message);
+    } catch (err) {
+      for (const variable in spec.environment) {
+        if (!process.env[spec.environment[variable]] && spec?.environment[variable]?.toLowerCase() === variable) {
+          if (!process.env[variable.toUpperCase()]) {
+            const error_message = `Environment variable ${variable} not found in ambient`;
+            validate_info.ambient.push(error_message);
+          }
+        }
+        if (!nodesString.includes(`environment.${variable}`)) {
+          const error_message = `Environment variable ${variable} not found in nodes`;
+          validate_info.nodes.push(error_message);
+        }
       }
     }
     if (lodash.isEmpty(validate_info.nodes) && lodash.isEmpty(validate_info.ambient)) {
