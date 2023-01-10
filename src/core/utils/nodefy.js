@@ -12,11 +12,16 @@ const nodefyFunction = (method) => {
   return class CustomSystemTaskNode extends SystemTaskNode {
     // eslint-disable-next-line no-unused-vars
     async _run(execution_data, lisp) {
-      const args = params.map((param_name) => {
-        return execution_data[param_name];
-      });
       let result;
-      const response = await method(...args);
+      let response;
+      if (params.includes("{")) {
+        response = await method(execution_data);
+      } else {
+        const args = params.map((param_name) => {
+          return execution_data[param_name];
+        });
+        response = await method(...args);
+      }
       if (typeof response === "object" && !(response instanceof Array)) {
         result = response;
       } else {
