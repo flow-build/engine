@@ -1,3 +1,10 @@
+## [2.18.0-alpha.6](https://github.com/flow-build/engine/compare/v2.18.0-alpha.5...v2.18.0-alpha.6) (2023-01-10)
+
+
+### Bug Fixes
+
+* adjust httpnossl node ([8d62dc1](https://github.com/flow-build/engine/commit/8d62dc14cd7a5fd1112cf54e45b3ba323aaae3fa))
+
 ## [2.18.0-alpha.5](https://github.com/flow-build/engine/compare/v2.18.0-alpha.4...v2.18.0-alpha.5) (2023-01-05)
 
 
