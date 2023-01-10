@@ -10,10 +10,10 @@ function testFunction(firstTestArg, secondTestArg) {
   };
 }
 
-function testFunctionDestructure({ firstTestArg, secondTestArg }) {
+function testFunctionDestructure({ firstArg, secondArg }) {
   return {
-    first: firstTestArg,
-    second: secondTestArg,
+    first: firstArg,
+    second: secondArg,
   };
 }
 
@@ -54,7 +54,7 @@ describe("Nodefy Function should work", () => {
   test("CustomSystemTaskNode _run works correctly with function params destructured", async () => {
     const custom_node_class = nodefyFunction(testFunctionDestructure);
     const custom_node = new custom_node_class();
-    const execution_data = { firstTestArg: "first", secondTestArg: "second" };
+    const execution_data = { firstArg: "first", secondArg: "second" };
     const result = await custom_node._run(execution_data, null);
     expect(result[0]).toEqual({
       first: "first",

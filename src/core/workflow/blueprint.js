@@ -86,18 +86,7 @@ class Blueprint {
         }
       }
     } catch (err) {
-      for (const variable in spec.environment) {
-        if (!process.env[spec.environment[variable]] && spec?.environment[variable]?.toLowerCase() === variable) {
-          if (!process.env[variable.toUpperCase()]) {
-            const error_message = `Environment variable ${variable} not found in ambient`;
-            validate_info.ambient.push(error_message);
-          }
-        }
-        if (!nodesString.includes(`environment.${variable}`)) {
-          const error_message = `Environment variable ${variable} not found in nodes`;
-          validate_info.nodes.push(error_message);
-        }
-      }
+      throw new Error("Error while validating environment variables");
     }
     if (lodash.isEmpty(validate_info.nodes) && lodash.isEmpty(validate_info.ambient)) {
       return [true, null];
