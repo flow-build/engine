@@ -679,7 +679,7 @@ class Process extends PersistedEntity {
       process_id: this.id,
     };
     if (node._spec.category === "signal" && node._spec.type.toLowerCase() === "finish") {
-      const trigger_process_id = this.state.bag.trigger_process_id;
+      const trigger_process_id = this.state.bag.target_process_id;
       if (trigger_process_id) {
         trigger_params.target_process_id = trigger_process_id;
       }
