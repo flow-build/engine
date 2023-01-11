@@ -42,7 +42,8 @@ class Cockpit {
       .method("savePackage")
       .method("fetchPackage")
       .method("deletePackage")
-      .method("addCustomSystemCategory");
+      .method("addCustomSystemCategory")
+      .method("fetchEventsByProcess");
 
     Cockpit.instance = this;
   }

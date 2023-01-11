@@ -7,8 +7,8 @@ class WorkflowKnexPersist extends KnexPersist {
     super(db, Workflow, "workflow");
   }
 
-  async get(id) {
-    let workflow = await this._db
+  async get(id, trx) {
+    let query = this._db
       .select("*")
       .from(this._table)
       .leftJoin("extra_fields AS ef", function() {
@@ -18,10 +18,16 @@ class WorkflowKnexPersist extends KnexPersist {
       })
       .where("id", id)
       .first();
+    let workflow;
+    if(trx) {
+      workflow = await query.transacting(trx);
+    } else {
+      workflow = await query
+    };
     if (!workflow) {
       return undefined;
     }
-    const latest = await this._checkWhetherIsLatest(workflow);
+    const latest = await this._checkWhetherIsLatest(workflow, trx);
     return { ...workflow, ...{ latest } };
   }
 
@@ -106,13 +112,34 @@ class WorkflowKnexPersist extends KnexPersist {
     return { ...workflow, ...{ latest } };
   }
 
+  async getLatestVersionById(id, trx = false) {
+    const { name: workflow_name } = await this.get(id, trx);
+    
+    const query = this._db.select("*").from(this._table).where({ name: workflow_name }).orderBy("version", "desc").first();
+
+    let workflow;
+    if(trx) {
+      workflow = await query.transacting(trx);
+    } else {
+      workflow = await query;
+    }
+
+    return { ...workflow, ...{ latest: true } };
+  }
+
   async getByHash(hash) {
     return this._db.select("*").from(this._table).where({ blueprint_hash: hash });
   }
 
-  async _checkWhetherIsLatest(workflow) {
-    const latestVersion = await this._db.max("version").from(this._table).where("name", workflow.name).first();
+  async _checkWhetherIsLatest(workflow, trx) {
+    const query = this._db.max("version").from(this._table).where("name", workflow.name).first();
     const version = latestVersion.max || _.get(latestVersion, "max(`version`)") || 0;
+    let latestVersion;
+    if(trx) {
+      latestVersion = await query.transacting(trx);
+    } else {
+      latestVersion = await query;
+    }    
     return workflow.version === version;
   }
 }

@@ -8,6 +8,7 @@ const extra_nodes = require("../examples/customNodes");
 const environment = require("../examples/environment");
 const reference_environment = require("../examples/environmentReference");
 const existent_environment_variable = require("../examples/existingEnvironmentVariable");
+const http_retries = require("../examples/httpRetries");
 const identity_system_task = require("../examples/identitySystemTask");
 const identity_user_task = require("../examples/identityUserTask");
 const inexistent_environment_variable = require("../examples/inexistingEnvironmentVariable");
@@ -38,6 +39,8 @@ const user_action_with_system_task = require("../examples/userTaskAndScript");
 const user_encrypt = require("../examples/userTaskWithEncrypt");
 const user_timeout = require("../examples/userTaskWithTimeout");
 const user_timeout_one_hour = require("../examples/userTaskWithTimeoutLong");
+const trigger_finish = require("../examples/triggerFinish");
+const target_start = require("../examples/targetStart");
 
 const blueprints_ = {
   abort_process_minimal,
@@ -49,6 +52,7 @@ const blueprints_ = {
   environment,
   existent_environment_variable,
   extra_nodes,
+  http_retries,
   identity_system_task,
   identity_user_task,
   inexistent_environment_variable,
@@ -81,6 +85,8 @@ const blueprints_ = {
   timer_long,
   sub_process,
   start_with_timeout,
+  trigger_finish,
+  target_start,
 };
 
 const actors_ = {

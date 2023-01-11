@@ -5,6 +5,7 @@ const { ProcessStatus } = require("../../../core/workflow/process_state");
 const { Process } = require("../../../core/workflow/process");
 const { blueprints_, actors_ } = require("../../../core/workflow/tests/unitary/blueprint_samples");
 const { Timer } = require("../../../core/workflow/timer");
+const { Trigger } = require("../../../core/workflow/trigger");
 const { v1: uuid } = require("uuid");
 const _ = require("lodash");
 
@@ -13,7 +14,8 @@ const sleep = promisify(setTimeout);
 
 let engine;
 
-beforeAll(() => {
+beforeAll(async () => {
+  await _clean();
   engine = new Engine(...settings.persist_options);
   jest.setTimeout(60000);
 });
@@ -90,6 +92,57 @@ test("Engine create process with missing data but run fails", async () => {
   expect(process.state.result).toStrictEqual({ step_number: 2 });
   expect(process.state.bag).toStrictEqual(create_data);
 });
+
+describe('Trigger and Target on heartbeat', () => {
+  test('target should be executed properly', async () => {
+    const target_workflow = await engine.saveWorkflow(
+      "target_workflow",
+      "target_workflow",
+      blueprints_.target_start
+    );
+
+    expect(target_workflow).toBeDefined()
+
+    const trigger_workflow = await engine.saveWorkflow(
+      "trigger_workflow",
+      "trigger_workflow",
+      blueprints_.trigger_finish
+    );
+
+    expect(trigger_workflow).toBeDefined()
+
+    let trigger_process = await engine.createProcessByWorkflowName("trigger_workflow", actors_.simpleton, {});
+    trigger_process = await engine.runProcess(trigger_process.id);
+
+    await Engine._beat();
+
+    const persistor = PersistorProvider.getPersistor(...settings.persist_options);
+    const trigger_target_persist = persistor.getPersistInstance("TriggerTarget");
+    const trigger_persist = persistor.getPersistInstance("Trigger");
+    const target_persist = persistor.getPersistInstance("Target");
+    
+    const [trigger] = await trigger_persist.getByProcessId(trigger_process.id);
+    expect(trigger).toBeDefined()
+    expect(trigger.signal).toBe('test_signal')
+
+    const target = await target_persist.getByWorkflowAndSignal('test_signal')
+    expect(target).toBeDefined()
+    expect(target.signal).toBe('test_signal')
+
+    const trigger_target_list = await trigger_target_persist.getByTriggerId(trigger.id)
+    expect(trigger_target_list).toHaveLength(1)
+    
+    const [trigger_target] = trigger_target_list
+
+    expect(trigger_target.trigger_id).toBe(trigger.id)
+    expect(trigger_target.target_id).toBe(target.id)
+    expect(trigger_target.resolved).toBe(true)
+
+    const process = await engine.fetchProcess(trigger_target.target_process_id);
+    expect(process).toBeDefined()
+    expect(process._workflow_id).toBe(target_workflow.id)
+  })
+})
 
 describe("Run existing process", () => {
   async function createProcess(blueprint, actor_data) {
@@ -421,6 +474,70 @@ test("run process using environment", async () => {
     const state_user_start = process_state_history[5];
     expect(state_user_start.node_id).toEqual("5");
     expect(state_user_start.result).toEqual({ step_number: 6, limit: "O limite é 999" });
+  } finally {
+    engine.setProcessStateNotifier();
+    process.env.ENVIRONMENT = original_env_environment;
+    process.env.API_HOST = original_env_api_host;
+    process.env.PAYLOAD = original_env_payload;
+    process.env.LIMIT = original_env_limit;
+  }
+});
+
+test("run process with http retries", async () => {
+  const original_env_environment = process.env.ENVIRONMENT;
+  const original_env_api_host = process.env.API_HOST;
+  const original_env_payload = process.env.PAYLOAD;
+  const original_env_limit = process.env.LIMIT;
+
+  try {
+    process.env.ENVIRONMENT = "test";
+    process.env.API_HOST = "https://postman-echo.com/status/503";
+    process.env.PAYLOAD = "payload";
+    process.env.LIMIT = "999";
+
+    const workflow = await engine.saveWorkflow("sample", "sample", blueprints_.http_retries);
+
+    let process_state_history = [];
+    engine.setProcessStateNotifier((process_state) => process_state_history.push(process_state));
+
+    let workflow_process = await engine.createProcess(workflow.id, actors_.simpleton);
+    expect(workflow_process.state.status).toEqual("unstarted");
+
+    workflow_process = await engine.runProcess(workflow_process.id, actors_.simpleton);
+  
+    await sleep(5000)
+
+    expect(process_state_history).toHaveLength(6)
+
+    let http_script = process_state_history[2];
+    expect(http_script.node_id).toEqual("2");
+    expect(http_script.result).toEqual({
+      attempt:1,
+      data:"",
+      status:503,
+      step_number:3,
+      timeout:1
+    });
+
+    http_script = process_state_history[3];
+    expect(http_script.node_id).toEqual("2");
+    expect(http_script.result).toEqual({
+      attempt:2,
+      data:"",
+      status:503,
+      step_number:4,
+      timeout:1
+    });
+
+    http_script = process_state_history[4];
+    expect(http_script.node_id).toEqual("2");
+    expect(http_script.result).toEqual({
+      attempt:3,
+      data:"",
+      status:503,
+      step_number:5,
+      timeout:1
+    });
   } finally {
     engine.setProcessStateNotifier();
     process.env.ENVIRONMENT = original_env_environment;
@@ -897,12 +1014,21 @@ describe("Set to bag Node input parsed", () => {
 
 const _clean = async () => {
   const persistor = PersistorProvider.getPersistor(...settings.persist_options);
+  
+  const trigger_target_persist = persistor.getPersistInstance("TriggerTarget");
+  const trigger_persist = persistor.getPersistInstance("Trigger");
+  const target_persist = persistor.getPersistInstance("Target");
+  
   const activity_persist = persistor.getPersistInstance("Activity");
   const activity_manager_persist = persistor.getPersistInstance("ActivityManager");
   const process_state_persist = persistor.getPersistInstance("ProcessState");
   const process_persist = persistor.getPersistInstance("Process");
   const workflow_persist = persistor.getPersistInstance("Workflow");
   const timer_persist = persistor.getPersistInstance("Timer");
+
+  await trigger_target_persist.deleteAll();
+  await trigger_persist.deleteAll();
+  await target_persist.deleteAll();
 
   await activity_persist.deleteAll();
   await activity_manager_persist.deleteAll();

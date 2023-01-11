@@ -26,7 +26,7 @@ class ProcessKnexPersist extends KnexPersist {
         .transacting(trx);
       if (process) {
         const state = await this.getLastStateByProcess(id).transacting(trx);
-        const workflow = await Workflow.fetch(process.workflow_id);
+        const workflow = await Workflow.fetch(process.workflow_id, trx);
         return {
           ...process,
           ...{ workflow_name: workflow._name, workflow_version: workflow._version, latest_version: workflow._latest },
