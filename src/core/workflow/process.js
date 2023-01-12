@@ -151,7 +151,35 @@ class Process extends PersistedEntity {
     return this._blueprint.fetchNode(this._state.next_node_id);
   }
 
-  async create(actor_data, initial_bag) {
+  get workflow_id() {
+    return this._workflow_id;
+  }
+
+  get blueprint_spec() {
+    return this._blueprint_spec;
+  }
+
+  get current_state_id() {
+    return this._current_state_id;
+  }
+
+  get current_status() {
+    return this._current_status;
+  }
+
+  set current_status(status) {
+    this._current_status = status;
+  }
+
+  set current_state_id(id) {
+    this._current_state_id = id;
+  }
+
+  get offline(){
+    return Process.connection_status === ProcessStatus.UNAVAILABLE;
+  }
+
+  async create(actor_data, initial_bag, trx) {
     Blueprint.assert_is_valid(this._blueprint_spec);
 
     const custom_lisp = await Packages._fetchPackages(this._blueprint_spec.requirements, this._blueprint_spec.prepare);
@@ -272,9 +300,15 @@ class Process extends PersistedEntity {
     if (!this.state) {
       this.state = await this.getPersist().getLastStateByProcess(this._id);
     }
+    const SQLite = (trx?.client?.config?.dialect || trx?.context?.client?.config?.client) === "sqlite3";
 
     if(!skipLock) {
-      const isLocked = await this.checkForSwitch(trx);
+      let isLocked;
+      if (SQLite) {
+        isLocked = await this.checkForSwitch();
+      } else {
+        isLocked = await this.checkForSwitch(trx);
+      }
       if(isLocked) {
         return this._errorState();
       }
@@ -801,9 +835,16 @@ class Process extends PersistedEntity {
 
   // eslint-disable-next-line no-unused-vars
   async _executionLoop(custom_lisp, actor_data, input_trx = false, skipLock = false) {
-    
+    const db = Process.getPersist()._db;
+    const SQLite = (db?.client?.config?.dialect || db?.context?.client?.config?.client) === "sqlite3";
+
     if(!skipLock) {
-      const isLocked = await this.checkForSwitch(input_trx);
+      let isLocked;
+      if (SQLite) {
+        isLocked = await this.checkForSwitch(db);
+      } else {
+        isLocked = await this.checkForSwitch(input_trx);
+      }
       if(isLocked) {
         return this._errorState();
       }
@@ -818,13 +859,11 @@ class Process extends PersistedEntity {
     let execution_success = true;
     let [activity_manager, timer] = [null, null];
     while (execution_success && this.status === ProcessStatus.RUNNING) {
-      const db = Process.getPersist()._db;
-
-      const SQLite = (db?.client?.config?.dialect || db?.context?.client?.config?.client) === "sqlite3";
       let ps = null;
       try {
         if (SQLite) {
           [ps, activity_manager, timer] = await this._intermediaryLoop(custom_lisp, actor_data, db);
+          await this._manageSignalCreation();
         } else if (input_trx) {
           [ps, activity_manager, timer] = await this._intermediaryLoop(custom_lisp, actor_data, input_trx);
           await this._manageSignalCreation(input_trx);

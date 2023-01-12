@@ -13,7 +13,7 @@ class ProcessKnexPersist extends KnexPersist {
 
   async get(id) {
     return this._db.transaction(async (trx) => {
-      const process = await this._db
+      const query = this._db
         .select("*")
         .from(this._table)
         .leftJoin("extra_fields AS ef", function() {
@@ -22,11 +22,23 @@ class ProcessKnexPersist extends KnexPersist {
             .onIn("ef.entity_name", ["process"])
         })
         .where({ id })
-        .first()
-        .transacting(trx);
+        .first();
+      let process;
+      if (this.SQLite) {
+        process = await query;
+      } else {
+        process = await query.transacting(trx);
+      }
       if (process) {
-        const state = await this.getLastStateByProcess(id).transacting(trx);
-        const workflow = await Workflow.fetch(process.workflow_id, trx);
+        let state;
+        let workflow;
+        if (this.SQLite) {
+          workflow = await Workflow.fetch(process.workflow_id);
+          state = await this.getLastStateByProcess(id);
+        } else {
+          workflow = await Workflow.fetch(process.workflow_id, trx);
+          state = await this.getLastStateByProcess(id).transacting(trx);
+        }
         return {
           ...process,
           ...{ workflow_name: workflow._name, workflow_version: workflow._version, latest_version: workflow._latest },
@@ -77,8 +89,13 @@ class ProcessKnexPersist extends KnexPersist {
     //todo trx
     try {
       return this._db.transaction(async (trx) => {
-        await this._db(this._state_table).transacting(trx).where("process_id", id).del();
-        return await this._db(this._table).transacting(trx).del();
+        if (this.SQLite) {
+          await this._db(this._state_table).where("process_id", id).del();
+          return await this._db(this._table).del();
+        } else {
+          await this._db(this._state_table).transacting(trx).where("process_id", id).del();
+          return await this._db(this._table).transacting(trx).del();
+        }
       });
     } catch (e) {
       emitter.emit("KNEX.DELETE_PROCESS_ERROR", `Unable delete Process with PID [${this.id}]`, {
@@ -91,8 +108,13 @@ class ProcessKnexPersist extends KnexPersist {
   async deleteAll() {
     //todo trx
     return this._db.transaction(async (trx) => {
-      await this._db(this._state_table).transacting(trx).del();
-      return this._db(this._table).transacting(trx).del();
+      if (this.SQLite) {
+        await this._db(this._state_table).del();
+        return this._db(this._table).del();
+      } else {
+        await this._db(this._state_table).transacting(trx).del();
+        return this._db(this._table).transacting(trx).del();
+      }
     });
   }
 
@@ -173,18 +195,25 @@ class ProcessKnexPersist extends KnexPersist {
         const state = process.state;
         delete process["state"];
 
-        if(this.SQLite){
+        if (this.SQLite){
           process.blueprint_spec = JSON.stringify(process.blueprint_spec);
 
           state.bag = JSON.stringify(state.bag);
           state.external_input = JSON.stringify(state.external_input);
           state.result = JSON.stringify(state.result);
           state.actor_data = JSON.stringify(state.actor_data);
-        }
 
-        await this._db(this._table).transacting(trx).insert(process);
-        if (state) {
-          await this._db(this._state_table).transacting(trx).insert(state);
+          await this._db(this._table).insert(process);
+
+          if (state) {
+            await this._db(this._state_table).insert(state);
+          }
+        } else {
+          await this._db(this._table).transacting(trx).insert(process);
+
+          if (state) {
+            await this._db(this._state_table).transacting(trx).insert(state);
+          }
         }
       });
     } catch (e) {
@@ -200,13 +229,17 @@ class ProcessKnexPersist extends KnexPersist {
     delete process["state"];
     delete process["extra_fields"];
 
-    if(this.SQLite){
+    if (this.SQLite){
       process.blueprint_spec = JSON.stringify(process.blueprint_spec);
 
       state.bag = JSON.stringify(state.bag);
       state.external_input = JSON.stringify(state.external_input);
       state.result = JSON.stringify(state.result);
       state.actor_data = JSON.stringify(state.actor_data);
+
+      await this._db(this._state_table).insert(state);
+      await this._db(this._table).where("id", id).update(process);
+      return;
     }
 
     if (trx) {

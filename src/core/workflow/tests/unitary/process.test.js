@@ -1,3 +1,4 @@
+require("dotenv").config();
 const { v1: uuid } = require("uuid");
 const { PersistorProvider } = require("../../../persist/provider");
 const settings = require("../../../../../settings/tests/settings");
@@ -223,18 +224,27 @@ describe("Process test", () => {
       const workflow = await engine.saveWorkflow("sample", "sample", blueprints_.minimal);
       let workflow_process = await engine.createProcess(workflow.id, actors_.simpleton);
       const process_id = workflow_process.id;
+      const db = Process.getPersist()._db;
 
       const persistor = PersistorProvider.getPersistor(...settings.persist_options);
       const process_persist = persistor.getPersistInstance("Process");
       await process_persist._db.transaction(async (trx) => {
-        await workflow_process.__inerLoop(workflow_process._current_state_id, { actor_data: actors_.simpleton }, trx);
+        if (process.env.NODE_ENV === "sqlite") {
+          await workflow_process.__inerLoop(workflow_process._current_state_id, { actor_data: actors_.simpleton }, db);
+        } else {
+          await workflow_process.__inerLoop(workflow_process._current_state_id, { actor_data: actors_.simpleton }, trx);
+        }
       });
 
       const alternate_workflow_process = await engine.fetchProcess(process_id);
       await alternate_workflow_process.continue({}, actors_.simpleton);
 
       const transaction = process_persist._db.transaction(async (trx) => {
-        await workflow_process.__inerLoop(workflow_process._current_state_id, { actor_data: actors_.simpleton }, trx);
+        if (process.env.NODE_ENV === "sqlite") {
+          await workflow_process.__inerLoop(workflow_process._current_state_id, { actor_data: actors_.simpleton }, db);
+        } else {
+          await workflow_process.__inerLoop(workflow_process._current_state_id, { actor_data: actors_.simpleton }, trx);
+        }
       });
       await expect(transaction).rejects.toThrowError();
 
@@ -248,18 +258,27 @@ describe("Process test", () => {
       const workflow = await engine.saveWorkflow("sample", "sample", blueprints_.trigger_finish);
       let workflow_process = await engine.createProcess(workflow.id, actors_.simpleton);
       const process_id = workflow_process.id;
+      const db = Process.getPersist()._db;
 
       const persistor = PersistorProvider.getPersistor(...settings.persist_options);
       const process_persist = persistor.getPersistInstance("Process");
       await process_persist._db.transaction(async (trx) => {
-        await workflow_process.__inerLoop(workflow_process._current_state_id, { actor_data: actors_.simpleton }, trx);
+        if (process.env.NODE_ENV === "sqlite") {
+          await workflow_process.__inerLoop(workflow_process._current_state_id, { actor_data: actors_.simpleton }, db);
+        } else {
+          await workflow_process.__inerLoop(workflow_process._current_state_id, { actor_data: actors_.simpleton }, trx);
+        }
       });
 
       const alternate_workflow_process = await engine.fetchProcess(process_id);
       await alternate_workflow_process.continue({}, actors_.simpleton);
 
       const transaction = process_persist._db.transaction(async (trx) => {
-        await workflow_process.__inerLoop(workflow_process._current_state_id, { actor_data: actors_.simpleton }, trx);
+        if (process.env.NODE_ENV === "sqlite") {
+          await workflow_process.__inerLoop(workflow_process._current_state_id, { actor_data: actors_.simpleton }, db);
+        } else {
+          await workflow_process.__inerLoop(workflow_process._current_state_id, { actor_data: actors_.simpleton }, trx);
+        }
       });
       await expect(transaction).rejects.toThrowError();
 

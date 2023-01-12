@@ -37,6 +37,7 @@ test("save works", async () => {
         resource_type: 'workflow',
         resource_id: resource_id 
     });
+    target._active = true;
     const saved_target = await target.save();
     expect(saved_target.id).toBe(target.id);
 });
@@ -48,6 +49,7 @@ test("saveSignalRelation works", async () => {
         resource_type: 'workflow',
         resource_id: resource_id 
     });
+    target._active = true;
     const saved_target = await target.save();
 
     const trigger_workflow = await engine.saveWorkflow(

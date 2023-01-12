@@ -11,7 +11,7 @@ const {
   ActivityManagerKnexPersist,
   ActivityKnexPersist,
   TimerKnexPersist,
-  ExtraFieldsKnexPersist
+  ExtraFieldsKnexPersist,
   TriggerKnexPersist,
   TargetKnexPersist,
   TriggerTargetKnexPersist,

@@ -136,7 +136,7 @@ describe('Trigger and Target on heartbeat', () => {
 
     expect(trigger_target.trigger_id).toBe(trigger.id)
     expect(trigger_target.target_id).toBe(target.id)
-    expect(trigger_target.resolved).toBe(true)
+    expect(Boolean(trigger_target.resolved)).toBe(true)
 
     const process = await engine.fetchProcess(trigger_target.target_process_id);
     expect(process).toBeDefined()
@@ -600,8 +600,11 @@ test("child process has restricted input schema", async () => {
   expect(childProcessList).toHaveLength(1);
 
   const childState = await engine.fetchProcess(childProcessList[0].id);
-  expect(childState.state.status).not.toBe(ProcessStatus.UNSTARTED);
-  expect(childState.state.status).not.toBe(ProcessStatus.ERROR);
+  while (childState._state._step_number < 2) {
+    expect(childState._state._status).toBe(ProcessStatus.UNSTARTED);
+  }
+  expect(childState._state._status).not.toBe(ProcessStatus.UNSTARTED);
+  expect(childState._state._status).not.toBe(ProcessStatus.ERROR);
 });
 
 test("run process that abort another process", async () => {

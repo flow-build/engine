@@ -399,7 +399,7 @@ class ActivityManager extends PersistedEntity {
     });
 
     const db = Timer.getPersist()._db;
-    const SQLite = db.context.client.config.client === "sqlite3";
+    const SQLite = (db.client.config.dialect || db.context.client.config.client) === "sqlite3";
     
     if (time instanceof Date) {
 

@@ -14,6 +14,9 @@ class Switch extends PersistedEntity {
   }
 
   static serialize(switch_) {
+    if (switch_.opened_at) {
+      switch_.opened_at = switch_.opened_at.toISOString();
+    }
     return {
       id: switch_._id,
       created_at: switch_._created_at,
@@ -28,6 +31,11 @@ class Switch extends PersistedEntity {
   }
 
   static deserialize(serialized) {
+    if(_.isString(serialized.opening_policy)){
+      serialized.opening_policy = JSON.parse(serialized.opening_policy);
+      serialized.closing_policy = JSON.parse(serialized.closing_policy);
+      serialized.closed_at = new Date(serialized.closed_at);
+    }
     if (serialized) {
       const switch_ = new Switch({
         workflow_id: serialized.workflow_id,

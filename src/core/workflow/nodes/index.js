@@ -33,7 +33,7 @@ module.exports = {
   StartProcessSystemTaskNode: StartProcessSystemTaskNode,
   SubProcessNode: SubProcessNode,
   UserTaskNode: UserTaskNode,
-  HttpNoSSLSystemTaskNode: HttpNoSSLSystemTaskNode
+  HttpNoSSLSystemTaskNode: HttpNoSSLSystemTaskNode,
   TriggerFinishNode: TriggerFinishNode,
   TargetStartNode: TargetStartNode,
   EventNode: EventNode,

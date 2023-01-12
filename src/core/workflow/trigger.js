@@ -26,16 +26,16 @@ class Trigger extends PersistedEntity {
     if (serialized) {
       const trigger = new Trigger({
         signal: serialized.signal,
-        input: serialized.input,
-        actor_data: serialized.actor_data,
+        input: _.isString(serialized.input) ? JSON.parse(serialized.input) : serialized.input,
+        actor_data: _.isString(serialized.actor_data) ? JSON.parse(serialized.actor_data) : serialized.actor_data,
         process_id: serialized.process_id,
         target_process_id: serialized.target_process_id
       });
 
       trigger._id = serialized.id;
       trigger._created_at = serialized.created_at;
-      trigger._active = serialized.active;
-      trigger._actor_data = serialized.actor_data;
+      trigger._active = Boolean(serialized.active);
+      trigger._actor_data = _.isString(serialized.actor_data) ? JSON.parse(serialized.actor_data) : serialized.actor_data;
       trigger._process_id = serialized.process_id;
 
       return trigger;
@@ -86,16 +86,16 @@ class Trigger extends PersistedEntity {
     return this._expires_at;
   }
 
-  async _fetchWorkflowTargets(trx = false) {
-    return await trx("target")
+  async _fetchWorkflowTargets() {
+    return await this.getPersist()._db("target")
                   .select("*")
                   .where("active", true)
                   .where("signal", this.signal)
                   .where("resource_type", "workflow");
   }
 
-  async _fetchProcessTargets(trx = false) {
-    return await trx("target")
+  async _fetchProcessTargets() {
+    return await this.getPersist()._db("target")
                   .select("*")
                   .where("active", true)
                   .where("signal", this.signal)
@@ -103,11 +103,11 @@ class Trigger extends PersistedEntity {
                   .where("resource_id", this.target_process_id);
   }
 
-  async fetchTargets(trx) {
+  async fetchTargets() {
     if(this.target_process_id) {
-      return await this._fetchProcessTargets(trx)
+      return await this._fetchProcessTargets();
     }
-    return await this._fetchWorkflowTargets(trx)
+    return await this._fetchWorkflowTargets();
   }
 
   async run(trx = false, engine = false) {
@@ -116,7 +116,7 @@ class Trigger extends PersistedEntity {
 
     try {
       emitter.emit("ENGINE.TARGET_FETCHING", `FETCHING TARGET PROCESSES AS RESULT OF TRIGGER ${this.signal}`);  
-      const targets = await this.fetchTargets(trx)
+      const targets = await this.fetchTargets();
       if(targets.length) {
         return await Promise.all(targets.map(async (l_target) => {
           const target = await Target.validate_deserialize(l_target);

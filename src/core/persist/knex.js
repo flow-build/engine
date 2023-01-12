@@ -29,7 +29,7 @@ class KnexPersist {
     return "create";
   }
 
-  async delete(obj_id, trx) {
+  async delete(obj_id, trx = false) {
     if (trx) {
       return await this._db(this._table).where("id", obj_id).transacting(trx).del();
     } else {
@@ -218,6 +218,12 @@ class ActivityManagerKnexPersist extends KnexPersist {
       })
       .where("am.id", "=", obj_id)
       .first();
+    let activity_data;
+    if (trx) {
+      activity_data = await query.transacting(trx);
+    } else {
+      activity_data = await query;
+    }
     return this._parseToJson(activity_data);
   }
 
@@ -235,10 +241,6 @@ class ActivityManagerKnexPersist extends KnexPersist {
         .select('*')
         .from('activity_manager')
         .where('process_state_id', '=', process_state_id);
-    if (trx) {
-      return await query.transacting(trx);
-    }
-    return await query;
   }
 
   async getActivities(activity_manager_id) {
@@ -281,12 +283,12 @@ class ActivityManagerKnexPersist extends KnexPersist {
         });
     }
 
-    if(this.SQLite){
+    if (this.SQLite){
       obj.parameters = JSON.stringify(obj.parameters);
       obj.props = JSON.stringify(obj.props);
     }
 
-    return super.save(obj, ...args);
+    return await super.save(obj, ...args);
   }
 }
 
@@ -308,12 +310,12 @@ class ActivityKnexPersist extends KnexPersist {
         });
     }
 
-    if(this.SQLite){
+    if (this.SQLite){
       obj.actor_data = JSON.stringify(obj.actor_data);
       obj.data = JSON.stringify(obj.data || {});
     }
 
-    return super.save(obj, ...args);
+    return await super.save(obj, ...args);
   }
 }
 
@@ -334,7 +336,7 @@ class TimerKnexPersist extends KnexPersist {
       obj.expires_at = obj.expires_at.toISOString()
     }
 
-    return super.save(obj, ...args);
+    return await super.save(obj, ...args);
   }
 }
 
@@ -479,6 +481,15 @@ class TriggerKnexPersist extends KnexPersist {
       targets,
     };
   }
+
+  async save(obj, ...args) {
+    if (this.SQLite) {
+      obj.input = JSON.stringify(obj.input);
+      obj.actor_data = JSON.stringify(obj.actor_data);
+    } 
+
+    return await super.save(obj, ...args);
+  }
 }
 
 class TargetKnexPersist extends KnexPersist {
@@ -526,7 +537,7 @@ class TargetKnexPersist extends KnexPersist {
     return "create";
   }
 
-  async saveSignalRelation(trx, obj) {
+  async saveSignalRelation(trx = false, obj) {
     if (trx) {
       return await this._db(this._trigger_target_table).transacting(trx).insert({
         ...obj,
@@ -540,7 +551,7 @@ class TargetKnexPersist extends KnexPersist {
     }
   }
 
-  async getSignalRelation(trx, target_id) {
+  async getSignalRelation(trx = false, target_id) {
     if (trx) {
       return await this._db.transacting(trx)
         .select("*")
@@ -585,12 +596,22 @@ class SwitchKnexPersist extends KnexPersist {
     super(db, Switch, "switch");
   }
 
-  async getByWorkflowId(workflow_id, trx) {
+  async getByWorkflowId(workflow_id, trx = false) {
     if (trx) {
       return await this._db(this._table).where("workflow_id", workflow_id).transacting(trx);
     } else {
       return await this._db(this._table).where("workflow_id", workflow_id);
     }
+  }
+
+  async save(obj, ...args) {
+    if (this.SQLite){
+      obj.opening_policy = JSON.stringify(obj.opening_policy);
+      obj.closing_policy = JSON.stringify(obj.closing_policy);
+      obj.closed_at = obj.closed_at.toISOString();
+    }
+
+    return await super.save(obj, ...args);
   }
 }
 

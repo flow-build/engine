@@ -19,15 +19,20 @@ class WorkflowKnexPersist extends KnexPersist {
       .where("id", id)
       .first();
     let workflow;
-    if(trx) {
-      workflow = await query.transacting(trx);
+    let latest;
+    if (this.SQLite || !trx) {
+      workflow = await query;
     } else {
-      workflow = await query
-    };
+      workflow = await query.transacting(trx);
+    }
     if (!workflow) {
       return undefined;
     }
-    const latest = await this._checkWhetherIsLatest(workflow, trx);
+    if (this.SQLite || !trx) {
+      latest = await this._checkWhetherIsLatest(workflow);
+    } else {
+      latest = await this._checkWhetherIsLatest(workflow, trx);
+    }
     return { ...workflow, ...{ latest } };
   }
 
@@ -45,7 +50,7 @@ class WorkflowKnexPersist extends KnexPersist {
   }
 
   async save(workflow) {
-    if(this.SQLite){
+    if (this.SQLite){
       workflow.blueprint_spec = JSON.stringify(workflow?.blueprint_spec);
       workflow.extra_fields = JSON.stringify(workflow?.extra_fields);
     }
@@ -65,13 +70,16 @@ class WorkflowKnexPersist extends KnexPersist {
     await this._db.transaction(async (trx) => {
       const current_version = await this._db(this._table).max("version").where({ name: workflow.name }).first()
       const version = current_version.max || _.get(current_version, "max(`version`)") || 0;
-
-      return this._db(this._table)
-        .transacting(trx)
+      const query = this._db(this._table)
         .insert({
           ...workflow,
           version: version + 1,
         });
+      if (this.SQLite) {
+        return await query;
+      } else {
+        return await query.transacting(trx);
+      }
     });
     return "create";
   }
@@ -118,10 +126,10 @@ class WorkflowKnexPersist extends KnexPersist {
     const query = this._db.select("*").from(this._table).where({ name: workflow_name }).orderBy("version", "desc").first();
 
     let workflow;
-    if(trx) {
-      workflow = await query.transacting(trx);
-    } else {
+    if (this.SQLite || !trx) {
       workflow = await query;
+    } else {
+      workflow = await query.transacting(trx);
     }
 
     return { ...workflow, ...{ latest: true } };
@@ -133,13 +141,13 @@ class WorkflowKnexPersist extends KnexPersist {
 
   async _checkWhetherIsLatest(workflow, trx) {
     const query = this._db.max("version").from(this._table).where("name", workflow.name).first();
-    const version = latestVersion.max || _.get(latestVersion, "max(`version`)") || 0;
     let latestVersion;
-    if(trx) {
-      latestVersion = await query.transacting(trx);
-    } else {
+    if (this.SQLite || !trx) {
       latestVersion = await query;
-    }    
+    } else {
+      latestVersion = await query.transacting(trx);
+    }
+    const version = latestVersion.max || _.get(latestVersion, "max(`version`)") || 0;
     return workflow.version === version;
   }
 }
