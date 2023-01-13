@@ -7,6 +7,9 @@ const { ENGINE_ID } = require("../core/workflow/process_state");
 const { Packages } = require("../core/workflow/packages");
 const { PersistorProvider } = require("../core/persist/provider");
 const { Timer } = require("../core/workflow/timer");
+const { Trigger } = require("../core/workflow/trigger");
+const { Target } = require("../core/workflow/target");
+const { Switch } = require("../core/workflow/switch");
 const { ActivityManager } = require("../core/workflow/activity_manager");
 const { ActivityStatus } = require("../core/workflow/activity");
 const { setProcessStateNotifier, setActivityManagerNotifier } = require("../core/notifier_manager");
@@ -69,7 +72,9 @@ class Engine {
     this.emitter = emitter;
     if (heartBeat === true || heartBeat === "true") {
       try {
-        Engine.heart = Engine.setNextHeartBeat();
+        const beatMode = process.env.BEAT_MODE || 'parallel';
+        const initialBeat = beatMode === 'parallel' ? 'ALL' : 'ORPHAN_PROCESSES';
+        Engine.heart = Engine.setNextHeartBeat(beatMode, initialBeat);
         emitter.emit("ENGINE.CONTRUCTOR", "HEARTBEAT INITIALIZED", {});
       } catch (e) {
         emitter.emit("ENGINE.ERROR", "ERROR AT ENGINE SUPER", { error: e });
@@ -79,64 +84,26 @@ class Engine {
     }
   }
 
-  static async _beat() {
-    const TIMER_BATCH = process.env.TIMER_BATCH || 40;
-    const ORPHAN_BATCH = process.env.ORPHAN_BATCH || 10;
-    emitter.emit("ENGINE.HEARTBEAT", `HEARTBEAT @ [${new Date().toISOString()}]`);
-    await Timer.getPersist()._db.transaction(async (trx) => {
-      const SQLite = (trx?.client?.config?.dialect || trx?.context?.client?.config?.client) === "sqlite3";
-      try {
-        emitter.emit("ENGINE.FETCHING_TIMERS", `  FETCHING TIMERS ON HEARTBEAT BATCH [${TIMER_BATCH}]`);
-        let locked_timers;
-        if (!SQLite) {
-          locked_timers = await trx("timer")
-            .where("expires_at", "<", new Date())
-            .andWhere("active", true)
-            .limit(TIMER_BATCH)
-            .forUpdate()
-            .skipLocked();
-        } else {
-          locked_timers = await trx("timer")
-            .where("expires_at", "<", new Date().toISOString())
-            .andWhere("active", true)
-            .limit(TIMER_BATCH);
-        }
-        emitter.emit("ENGINE.TIMERS", `  FETCHED [${locked_timers.length}] TIMERS ON HEARTBEAT`, {
-          timers: locked_timers.length,
-        });
-        await Promise.all(
-          locked_timers.map((t_lock) => {
-            emitter.emit("ENGINE.FIRING_TIMER", `  FIRING TIMER [${t_lock.id}] ON HEARTBEAT`, { timer_id: t_lock.id });
-            const timer = Timer.deserialize(t_lock);
-            return timer.run(trx);
-          })
-        );
-      } catch (e) {
-        throw new Error(e);
-      }
-    });
-    const orphan_process = await Process.getPersist()._db.transaction(async (trx) => {
-      const SQLite = (trx?.client?.config?.dialect || trx?.context?.client?.config?.client) === "sqlite3";
+  static async resolveOrphanProcesses(ORPHAN_BATCH) {
+    const db = Process.getPersist()._db;
+    const orphan_process = await db.transaction(async (trx) => {
       try {
         emitter.emit("ENGINE.ORPHANS_FETCHING", `FETCHING ORPHAN PROCESSES ON HEARTBEAT BATCH [${ORPHAN_BATCH}]`);
-        let locked_orphans;
-        if (!SQLite) {
-          locked_orphans = await trx("process")
-            .select("process.*")
-            .join("process_state", "process_state.id", "process.current_state_id")
-            .where("engine_id", "!=", ENGINE_ID)
-            .where("current_status", "running")
-            .limit(ORPHAN_BATCH)
-            .forUpdate()
-            .skipLocked();
-        } else {
-          locked_orphans = await trx("process")
-            .select("process.*")
-            .join("process_state", "process_state.id", "process.current_state_id")
-            .where("engine_id", "!=", ENGINE_ID)
-            .where("current_status", "running")
-            .limit(ORPHAN_BATCH);
-        }
+        const locked_orphans = await trx("process")
+          .select("process.*")
+          .join("process_state", "process_state.id", "process.current_state_id")
+          .fullOuterJoin("switch", "switch.workflow_id", "process.workflow_id")
+          .where("process.current_status", "running")
+          .andWhere(function() {
+            this.whereNull("switch").orWhere(function() {
+              this.whereNot("switch.active", true).orWhere(function() {
+                this.where("switch.active", true).andWhere("switch.node_id", "process_state.next_node_id")
+              })
+            })
+          })
+          .limit(ORPHAN_BATCH)
+          .forUpdate("process", "process_state")
+          .skipLocked();
         emitter.emit("ENGINE.ORPHANS_FETCHED", `  FETCHED [${locked_orphans.length}] ORPHANS ON HEARTBEAT`, {
           orphans: locked_orphans.length,
         });
@@ -145,20 +112,13 @@ class Engine {
             emitter.emit("ENGINE.ORPHAN_FETCHING", `  FETCHING PS FOR ORPHAN [${orphan.id}] ON HEARTBEAT`, {
               process_id: orphan.id,
             });
-            if (!SQLite) {
-              orphan.state = await trx("process_state")
-                .select()
-                .where("id", orphan.current_state_id)
-                .where("engine_id", "!=", ENGINE_ID)
-                .forUpdate()
-                .noWait()
-                .first();
-            } else {
-              orphan.state = await trx("process_state")
-                .select()
-                .where("id", orphan.current_state_id)
-                .where("engine_id", "!=", ENGINE_ID);
-            }
+            orphan.state = await trx("process_state")
+              .select()
+              .where("id", orphan.current_state_id)
+              .where("engine_id", "!=", ENGINE_ID)
+              .forUpdate()
+              .noWait()
+              .first();
             emitter.emit("ENGINE.ORPHAN_FETCHED", `  FETCHED PS FOR ORPHAN [${orphan.id}] ON HEARTBEAT`, {
               process_id: orphan.id,
             });
@@ -188,17 +148,279 @@ class Engine {
     await Promise.all(continue_promises);
   }
 
-  static setNextHeartBeat() {
+  static async resolveOrphanProcessesSQLite(ORPHAN_BATCH) {
+    const db = Process.getPersist()._db;
+    let orphan_process;
+    try {
+      emitter.emit("ENGINE.ORPHANS_FETCHING", `FETCHING ORPHAN PROCESSES ON HEARTBEAT BATCH [${ORPHAN_BATCH}]`);
+      const locked_orphans = await db("process")
+        .select("process.*")
+        .join("process_state", "process_state.id", "process.current_state_id")
+        .fullOuterJoin("switch", "switch.workflow_id", "process.workflow_id")
+        .where("process.current_status", "running")
+        .andWhere(function() {
+          this.whereNull("switch.active").orWhere(function() {
+            this.whereNot("switch.active", 1).orWhere(function() {
+              this.where("switch.active", 1).andWhere("switch.node_id", "process_state.next_node_id")
+            })
+          })
+        })
+        .limit(ORPHAN_BATCH);
+      emitter.emit("ENGINE.ORPHANS_FETCHED", `  FETCHED [${locked_orphans.length}] ORPHANS ON HEARTBEAT`, {
+        orphans: locked_orphans.length,
+      });
+      orphan_process = await Promise.all(
+        locked_orphans.map(async (orphan) => {
+          emitter.emit("ENGINE.ORPHAN_FETCHING", `  FETCHING PS FOR ORPHAN [${orphan.id}] ON HEARTBEAT`, {
+            process_id: orphan.id,
+          });
+          orphan.state = await trx("process_state")
+            .select()
+            .where("id", orphan.current_state_id)
+            .where("engine_id", "!=", ENGINE_ID)
+            .first();
+          emitter.emit("ENGINE.ORPHAN_FETCHED", `  FETCHED PS FOR ORPHAN [${orphan.id}] ON HEARTBEAT`, {
+            process_id: orphan.id,
+          });
+          if (orphan.state) {
+            return Process.deserialize(orphan);
+          }
+        })
+      );
+    } catch (e) {
+      emitter.emit("ENGINE.ORPHANS.ERROR", "  ERROR FETCHING ORPHANS ON HEARTBEAT", { error: e });
+      throw new Error(e);
+    }
+    const continue_promises = orphan_process.map((process) => {
+      if (process) {
+        emitter.emit(
+          "ENGINE.ORPHAN.CONTINUE",
+          `    START CONTINUE ORPHAN PID [${process.id}] AND STATE [${process.state.id}] ON HEARTBEAT`,
+          {
+            process_id: process.id,
+            process_state_id: process.state.id,
+          }
+        );
+        return process.continue({}, process.state._actor_data);
+      }
+    });
+    await Promise.all(continue_promises);
+  }
+
+  static async resolveTimers(TIMER_BATCH) {
+    await Timer.getPersist()._db.transaction(async (trx) => {
+      try {
+        emitter.emit("ENGINE.FETCHING_TIMERS", `  FETCHING TIMERS ON HEARTBEAT BATCH [${TIMER_BATCH}]`);
+        const locked_timers = await trx("timer")
+          .where("expires_at", "<", new Date())
+          .andWhere("active", true)
+          .limit(TIMER_BATCH)
+          .forUpdate()
+          .skipLocked();
+        emitter.emit("ENGINE.TIMERS", `  FETCHED [${locked_timers.length}] TIMERS ON HEARTBEAT`, {
+          timers: locked_timers.length,
+        });
+        await Promise.all(
+          locked_timers.map((t_lock) => {
+            emitter.emit("ENGINE.FIRING_TIMER", `  FIRING TIMER [${t_lock.id}] ON HEARTBEAT`, { timer_id: t_lock.id });
+            const timer = Timer.deserialize(t_lock);
+            return timer.run(trx);
+          })
+        );
+      } catch (e) {
+        throw new Error(e);
+      }
+    });
+  }
+
+  static async resolveTimersSQLite(TIMER_BATCH) {
+    const db = Timer.getPersist()._db;
+    try {
+      emitter.emit("ENGINE.FETCHING_TIMERS", `  FETCHING TIMERS ON HEARTBEAT BATCH [${TIMER_BATCH}]`);
+      const locked_timers = await db("timer")
+          .where("expires_at", "<", new Date().toISOString())
+          .andWhere("active", 1)
+          .limit(TIMER_BATCH);
+      emitter.emit("ENGINE.TIMERS", `  FETCHED [${locked_timers.length}] TIMERS ON HEARTBEAT`, {
+        timers: locked_timers.length,
+      });
+      await Promise.all(
+        locked_timers.map((t_lock) => {
+          emitter.emit("ENGINE.FIRING_TIMER", `  FIRING TIMER [${t_lock.id}] ON HEARTBEAT`, { timer_id: t_lock.id });
+          const timer = Timer.deserialize(t_lock);
+          return timer.run();
+        })
+      );
+    } catch (e) {
+      throw new Error(e);
+    }
+  }
+
+  static async resolveTriggers(TRIGGER_BATCH) {
+    await Process.getPersist()._db.transaction(async (trx) => {
+      try {
+        emitter.emit("ENGINE.SIGNAL_FETCHING", `FETCHING SIGNAL PROCESSES ON HEARTBEAT BATCH [${TRIGGER_BATCH}]`);
+        const signals = await trx("trigger")
+            .select("*")
+            .where("active", true)
+            .limit(TRIGGER_BATCH)
+            .forUpdate()
+            .skipLocked();
+        return await Promise.all(signals.map((l_trigger) => {
+          const trigger = Trigger.deserialize(l_trigger);
+          return trigger.run(trx, this);
+        }))
+      } catch (e) {
+        emitter.emit("ENGINE.SIGNAL.ERROR", "  ERROR FETCHING SIGNALS ON HEARTBEAT", { error: e });
+      }
+    });
+  }
+
+  static async resolveTriggersSQLite(TRIGGER_BATCH) {
+    const db = Process.getPersist()._db;
+    try {
+      emitter.emit("ENGINE.SIGNAL_FETCHING", `FETCHING SIGNAL PROCESSES ON HEARTBEAT BATCH [${TRIGGER_BATCH}]`);
+      const signals = await db("trigger")
+          .select("*")
+          .where("active", 1)
+          .limit(TRIGGER_BATCH);
+      return await Promise.all(signals.map((l_trigger) => {
+        const trigger = Trigger.deserialize(l_trigger);
+        return trigger.run(false, this)
+      }))
+    } catch (e) {
+      emitter.emit("ENGINE.SIGNAL.ERROR", "  ERROR FETCHING SIGNALS ON HEARTBEAT", { error: e });
+    }
+  }
+
+  static async resolveSwitches(SWITCH_BATCH) {
+    await Process.getPersist()._db.transaction(async (trx) => {
+      try {
+        emitter.emit("ENGINE.SWITCH_FETCHING", `FETCHING SWITCH ON PROCESSES ON HEARTBEAT BATCH [${SWITCH_BATCH}]`);
+        const switches = await trx("switch")
+            .select("*")
+            .where("active", true)
+            .limit(SWITCH_BATCH)
+            .forUpdate()
+            .skipLocked();
+        
+        return await Promise.all(switches.map((l_switch) => {
+          const switch_ = Switch.deserialize(l_switch);
+          return switch_.validate(trx);
+        }))
+      } catch (e) {
+        emitter.emit("ENGINE.SWITCHES.ERROR", "  ERROR FETCHING SWITCHES ON HEARTBEAT", { error: e });
+      }
+    });
+  }
+
+  static async resolveSwitchesSQLite(SWITCH_BATCH) {
+    const db = Process.getPersist()._db;
+    try {
+      emitter.emit("ENGINE.SWITCH_FETCHING", `FETCHING SWITCH ON PROCESSES ON HEARTBEAT BATCH [${SWITCH_BATCH}]`);
+      const switches = await db("switch")
+          .select("*")
+          .where("active", 1)
+          .limit(SWITCH_BATCH);      
+      return await Promise.all(switches.map((l_switch) => {
+        const switch_ = Switch.deserialize(l_switch);
+        return switch_.validate();
+      }))
+    } catch (e) {
+      emitter.emit("ENGINE.SWITCHES.ERROR", "  ERROR FETCHING SWITCHES ON HEARTBEAT", { error: e });
+    }
+  }
+
+  static async _beat(action = 'ALL') {
+    const TIMER_BATCH = process.env.TIMER_BATCH || 40;
+    const ORPHAN_BATCH = process.env.ORPHAN_BATCH || 10;
+    const TRIGGER_BATCH = process.env.TRIGGER_BATCH || 10;
+    const SWITCH_BATCH = process.env.SWITCH_BATCH || 10;
+    const db = Process.getPersist()._db;
+    const SQLite = db.context.client.config.client === "sqlite3";
+
+    emitter.emit("ENGINE.HEARTBEAT", `HEARTBEAT @ [${new Date().toISOString()}]`);
+
+    if (SQLite) {
+      switch(action) {
+        case 'ORPHAN_PROCESSES':
+          await Engine.resolveOrphanProcessesSQLite(ORPHAN_BATCH);
+          break;
+        case 'TIMERS':
+          await Engine.resolveTimersSQLite(TIMER_BATCH);
+          break;
+        case 'TRIGGERS':
+          await Engine.resolveTriggersSQLite(TRIGGER_BATCH);
+          break;
+        case 'SWITCHES':
+          await Engine.resolveSwitchesSQLite(SWITCH_BATCH);
+          break;
+        default:
+          await Engine.resolveOrphanProcessesSQLite(ORPHAN_BATCH);
+          await Engine.resolveTimersSQLite(TIMER_BATCH);
+          await Engine.resolveTriggersSQLite(TRIGGER_BATCH);
+          await Engine.resolveSwitchesSQLite(SWITCH_BATCH);
+          break;
+      }
+    } else {
+      switch(action) {
+        case 'ORPHAN_PROCESSES':
+          await Engine.resolveOrphanProcesses(ORPHAN_BATCH);
+          break;
+        case 'TIMERS':
+          await Engine.resolveTimers(TIMER_BATCH);
+          break;
+        case 'TRIGGERS':
+          await Engine.resolveTriggers(TRIGGER_BATCH);
+          break;
+        case 'SWITCHES':
+          await Engine.resolveSwitches(SWITCH_BATCH);
+          break;
+        default:
+          await Engine.resolveOrphanProcesses(ORPHAN_BATCH);
+          await Engine.resolveTimers(TIMER_BATCH);
+          await Engine.resolveTriggers(TRIGGER_BATCH);
+          await Engine.resolveSwitches(SWITCH_BATCH);
+          break;
+      }
+    }
+  }
+
+  static setNextHeartBeat(beatMode = 'parallel', action = 'ALL') {
+    const beatConfiguration = [
+      {
+        action: 'ORPHAN_PROCESSES',
+        next: 'TIMERS'
+      },
+      {
+        action: 'TIMERS',
+        next: 'TRIGGERS'
+      },
+      {
+        action: 'TRIGGERS',
+        next: 'SWITCHES'
+      },
+      {
+        action: 'SWITCHES',
+        next: 'ORPHAN_PROCESSES'
+      },
+      {
+        action: 'ALL',
+        next: 'ALL'
+      },
+    ];
+
     return setTimeout(async () => {
       try {
-        await Engine._beat();
+        await Engine._beat(action);
       } catch (e) {
         emitter.emit("ENGINE.HEART.ERROR", `HEART FAILURE @ ENGINE_ID [${ENGINE_ID}]`, {
           engine_id: ENGINE_ID,
           error: e,
         });
       } finally {
-        Engine.heart = Engine.setNextHeartBeat();
+        const actionObj = beatMode === 'sequential' ? beatConfiguration.find(b => b.action === action) : { next: 'ALL' };
+        Engine.heart = Engine.setNextHeartBeat(beatMode, actionObj.next);
         emitter.emit("ENGINE.NEXT", "NEXT HEARTBEAT SET");
       }
     }, process.env.HEART_BEAT || 1000);
@@ -397,7 +619,7 @@ class Engine {
     }
   }
 
-  async submitActivity(activity_manager_id, actor_data, external_input) {
+  async submitActivity(activity_manager_id, actor_data, external_input, disable_target = true) {
     try {
       if(!uuidValidate(activity_manager_id)){
         throw new Error('invalid input syntax for type uuid');
@@ -422,6 +644,15 @@ class Engine {
             };
           }
           const [is_completed, activities] = await activity_manager.pushActivity(activity_manager_data.process_id);
+          
+          if(disable_target) {
+            const target = await Target.fetchTargetByProcessStateId(activity_manager_data.process_state_id);
+            if(target && target.active) {
+              target._active = false;
+              await target.save()
+            }
+          }
+          
           let process_promise;
           if (is_completed && activity_manager_data.type !== "notify") {
             const result = await process_manager.notifyCompletedActivityManager(
@@ -542,7 +773,15 @@ class Engine {
 
     Blueprint.assert_is_valid(blueprint_spec);
 
-    return await new Workflow(name, description, blueprint_spec, workflow_id, extra_fields).save();
+    const workflow = await new Workflow(name, description, blueprint_spec, workflow_id, extra_fields).save();
+
+    const target = Target.target_workflow_creation(workflow);
+    if(target) {
+      target._active = true;
+      target.saveByWorkflow()
+    }
+
+    return workflow
   }
 
   async fetchWorkflow(workflow_id) {
@@ -575,6 +814,10 @@ class Engine {
 
   async deletePackage(package_id) {
     return await Packages.delete(package_id);
+  }
+
+  async fetchEventsByProcess(process_id, filters = {}) {
+    return await Trigger.fetchEventDataByProcessId(process_id, filters);
   }
 
   async continueProcess(process_id, actor_data, result = {}) {

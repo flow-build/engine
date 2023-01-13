@@ -4,6 +4,10 @@ const { ActivityManager } = require("../workflow/activity_manager");
 const { Activity } = require("../workflow/activity");
 const { ExtraFields } = require("../workflow/extra_fields");
 const { Timer } = require("../workflow/timer");
+const { Trigger } = require("../workflow/trigger");
+const { Target } = require("../workflow/target");
+const { Switch } = require("../workflow/switch");
+const { v1: uuid } = require("uuid");
 
 class KnexPersist {
   constructor(db, class_, table) {
@@ -25,7 +29,7 @@ class KnexPersist {
     return "create";
   }
 
-  async delete(obj_id, trx) {
+  async delete(obj_id, trx = false) {
     if (trx) {
       return await this._db(this._table).where("id", obj_id).transacting(trx).del();
     } else {
@@ -179,8 +183,8 @@ class ActivityManagerKnexPersist extends KnexPersist {
         .where("status", "completed");
   }
 
-  async getActivityDataFromId(obj_id) {
-    const activity_data = await this._db
+  async getActivityDataFromId(obj_id, trx = false) {
+    const query = this._db
       .select(
         "am.id",
         "am.created_at",
@@ -214,6 +218,12 @@ class ActivityManagerKnexPersist extends KnexPersist {
       })
       .where("am.id", "=", obj_id)
       .first();
+    let activity_data;
+    if (trx) {
+      activity_data = await query.transacting(trx);
+    } else {
+      activity_data = await query;
+    }
     return this._parseToJson(activity_data);
   }
 
@@ -273,12 +283,12 @@ class ActivityManagerKnexPersist extends KnexPersist {
         });
     }
 
-    if(this.SQLite){
+    if (this.SQLite){
       obj.parameters = JSON.stringify(obj.parameters);
       obj.props = JSON.stringify(obj.props);
     }
 
-    return super.save(obj, ...args);
+    return await super.save(obj, ...args);
   }
 }
 
@@ -300,12 +310,12 @@ class ActivityKnexPersist extends KnexPersist {
         });
     }
 
-    if(this.SQLite){
+    if (this.SQLite){
       obj.actor_data = JSON.stringify(obj.actor_data);
       obj.data = JSON.stringify(obj.data || {});
     }
 
-    return super.save(obj, ...args);
+    return await super.save(obj, ...args);
   }
 }
 
@@ -326,13 +336,282 @@ class TimerKnexPersist extends KnexPersist {
       obj.expires_at = obj.expires_at.toISOString()
     }
 
-    return super.save(obj, ...args);
+    return await super.save(obj, ...args);
   }
 }
 
 class ExtraFieldsKnexPersist extends KnexPersist {
   constructor(db) {
     super(db, ExtraFields, "extra_fields");
+  }
+}
+
+class TriggerKnexPersist extends KnexPersist {
+  constructor(db) {
+    super(db, Trigger, "trigger");
+  }
+
+  async getByProcessId(id) {
+    return await this._db.select("*").from(this._table).where("process_id", id);
+  }
+
+  async getTriggerEvents(process_id, family) {
+    if(family.includes('trigger')) {
+      return this._db
+      .select(
+        "tr.id",
+        "tr.created_at",
+        "tr.signal",
+        "tr.process_id",
+        "tr.active",
+        "tr.input",
+        "tr.actor_data",
+        "tt.resolved",
+        "tt.target_process_id",
+        "ta.id as target_id",
+        "ta.created_at as target_created_at",
+        "ta.signal as target_signal",
+        "ta.resource_type as target_resource_type",
+        "ta.resource_id as target_resource_id",
+        "ta.active as target_active"
+      )
+      .from("trigger as tr")
+      .join("trigger_target as tt", "tr.id", "tt.trigger_id")
+      .join("target as ta", "tt.target_id", "ta.id")
+      .where("tr.process_id", process_id)
+      .then((resp) => {
+        return resp.reduce((acc, item) => {
+          const item_target = {
+            id: item.target_id,
+            created_at: item.target_created_at,
+            resolved: item.resolved,
+            process_id: item.target_process_id,
+            signal: item.target_signal,
+            resource_type: item.target_resource_type,
+            resource_id: item.target_resource_id,
+            active: item.target_active,
+          };
+          const found_trigger = acc.find((tr) => tr.id === item.id)
+          if(found_trigger) {
+            found_trigger.targets.push(item_target);
+            return acc;
+          }
+          acc.push({
+            id: item.id,
+            created_at: item.created_at,
+            signal: item.signal,
+            process_id: item.process_id,
+            active: item.active,
+            input: item.input,
+            actor_data: item.actor_data,
+            targets: [item_target],
+          })
+          return acc;
+        }, [])
+      });
+    };
+    return [];
+  }
+
+  async getTargetEvents(process_id, family) {
+    if(family.includes('target')) {
+      return this._db
+      .select(
+        "ta.id",
+        "ta.created_at",
+        "ta.signal",
+        "ta.resource_type",
+        "ta.resource_id",
+        "ta.active",
+        "tt.resolved",
+        "tr.id as trigger_id",
+        "tr.created_at as trigger_created_at",
+        "tr.signal as trigger_signal",
+        "tr.process_id as trigger_process_id",
+        "tr.active as trigger_active",
+        "tr.input as trigger_input",
+        "tr.actor_data as trigger_actor_data",
+      )
+      .from("target as ta")
+      .join("trigger_target as tt", "ta.id", "tt.target_id")
+      .join("trigger as tr", "tt.trigger_id", "tr.id")
+      .where("tt.target_process_id", process_id)
+      .then((resp) => {
+        return resp.reduce((acc, item) => {
+          const item_trigger = {
+            id: item.trigger_id,
+            created_at: item.trigger_created_at,
+            process_id: item.trigger_process_id,
+            signal: item.trigger_signal,
+            active: item.trigger_active,
+            input: item.trigger_input,
+            actor_data: item.trigger_actor_data,
+          };
+          const found_target = acc.find((ta) => ta.id === item.id)
+          if(found_target) {
+            found_target.triggers.push(item_trigger);
+            return acc;
+          }
+          acc.push({
+            id: item.id,
+            created_at: item.created_at,
+            signal: item.signal,
+            resource_type: item.resource_type,
+            resource_id: item.resource_id,
+            active: item.active,
+            triggers: [item_trigger],
+          })
+          return acc;
+        }, [])
+      });
+    };
+    return [];
+  }
+
+  async getEventDataByProcessId(process_id, filters = {}) {
+    const family = filters?.family || [];
+
+    const [triggers, targets] = await Promise.all([
+      this.getTriggerEvents(process_id, family),
+      this.getTargetEvents(process_id, family)
+    ]);
+
+    return {
+      triggers,
+      targets,
+    };
+  }
+
+  async save(obj, ...args) {
+    if (this.SQLite) {
+      obj.input = JSON.stringify(obj.input);
+      obj.actor_data = JSON.stringify(obj.actor_data);
+    } 
+
+    return await super.save(obj, ...args);
+  }
+}
+
+class TargetKnexPersist extends KnexPersist {
+  constructor(db) {
+    super(db, Target, "target");
+    this._trigger_target_table = "trigger_target";
+  }
+
+  async getTargetedWorkflows(obj) {
+    return await this._db
+      .select(
+        "wf.id",
+        "wf.version"
+      )
+      .from("workflow AS wf")
+      .where("wf.name", "=", 
+        this._db
+            .select(
+              "wf.name"
+            )
+            .from("workflow AS wf")
+            .where("wf.id", obj.resource_id)
+      )
+      .orderBy("version", "desc");
+  }
+
+  async getByWorkflowAndSignal(signal) {
+    return await this._db
+      .select("*")
+      .from("target AS tg")
+      .where("tg.signal", "=", signal)
+      .first();
+  }
+
+  async saveByWorkflow(obj, ...args) {
+    const [latestWorkflow] = await this.getTargetedWorkflows(obj);
+    const registered_target = await this.getByWorkflowAndSignal(obj.signal)
+    const is_update = registered_target && latestWorkflow && latestWorkflow.version > 1;
+    if (is_update) {
+      obj.id = registered_target.id
+      await this._update(registered_target.id, obj, ...args);
+      return "update";
+    }
+    await this._create(obj, ...args);
+    return "create";
+  }
+
+  async saveSignalRelation(trx = false, obj) {
+    if (trx) {
+      return await this._db(this._trigger_target_table).transacting(trx).insert({
+        ...obj,
+        id: uuid()
+      });
+    } else {
+      return await this._db(this._trigger_target_table).insert({
+        ...obj,
+        id: uuid()
+      });
+    }
+  }
+
+  async getSignalRelation(trx = false, target_id) {
+    if (trx) {
+      return await this._db.transacting(trx)
+        .select("*")
+        .from(this._trigger_target_table)
+        .where("target_id", target_id);
+    } else {
+      return await this._db
+        .select("*")
+        .from(this._trigger_target_table)
+        .where("target_id", target_id);
+    }
+  }
+
+  async getActivityManagerByProcessStateId(process_state_id) {
+    return await this._db
+      .select("*")
+      .from("activity_manager AS am")
+      .where("am.process_state_id", "=", process_state_id)
+      .first();
+  }
+
+  async getByProcessStateId(process_state_id) {
+    return await this._db(this._table)
+      .select("*")
+      .where("process_state_id", "=", process_state_id)
+      .first();
+  }
+}
+
+class TriggerTargetKnexPersist extends KnexPersist {
+  constructor(db) {
+    super(db, Target, "trigger_target");
+  }
+
+  async getByTriggerId(id) {
+    return await this._db.select("*").from(this._table).where("trigger_id", id);
+  }
+}
+
+class SwitchKnexPersist extends KnexPersist {
+  constructor(db) {
+    super(db, Switch, "switch");
+  }
+
+  async getByWorkflowId(workflow_id, trx = false) {
+    if (trx) {
+      return await this._db(this._table).where("workflow_id", workflow_id).transacting(trx);
+    } else {
+      return await this._db(this._table).where("workflow_id", workflow_id);
+    }
+  }
+
+  async save(obj, ...args) {
+    if (this.SQLite){
+      obj.opening_policy = JSON.stringify(obj.opening_policy);
+      obj.closing_policy = JSON.stringify(obj.closing_policy);
+      obj.closed_at = obj.closed_at.toISOString();
+    }
+
+    return await super.save(obj, ...args);
   }
 }
 
@@ -343,4 +622,8 @@ module.exports = {
   ActivityKnexPersist: ActivityKnexPersist,
   TimerKnexPersist: TimerKnexPersist,
   ExtraFieldsKnexPersist: ExtraFieldsKnexPersist,
+  TriggerKnexPersist: TriggerKnexPersist,
+  TargetKnexPersist: TargetKnexPersist,
+  TriggerTargetKnexPersist: TriggerTargetKnexPersist,
+  SwitchKnexPersist: SwitchKnexPersist,
 };

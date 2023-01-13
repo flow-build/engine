@@ -9,6 +9,8 @@ const { ProcessStatus } = require("./process_state");
 const { Blueprint } = require("../workflow/blueprint");
 const { Lane } = require("../workflow/lanes");
 const { Timer } = require("./timer");
+const { Trigger } = require("./trigger");
+const { Target } = require("./target");
 const { getProcessStateNotifier, getActivityManagerNotifier } = require("../notifier_manager");
 const { getAllowedStartNodes } = require("../utils/blueprint");
 const { ActivityManager } = require("./activity_manager");
@@ -177,7 +179,7 @@ class Process extends PersistedEntity {
     return Process.connection_status === ProcessStatus.UNAVAILABLE;
   }
 
-  async create(actor_data, initial_bag) {
+  async create(actor_data, initial_bag, trx) {
     Blueprint.assert_is_valid(this._blueprint_spec);
 
     const custom_lisp = await Packages._fetchPackages(this._blueprint_spec.requirements, this._blueprint_spec.prepare);
@@ -203,11 +205,24 @@ class Process extends PersistedEntity {
         actor_data,
         null
       );
-      await this.save();
+      await this.save(trx);
       await this._notifyProcessState(actor_data);
 
       return this;
     }
+  }
+
+  async checkForSwitch(trx = false) {
+    const current_node = this._blueprint.fetchNode(this._state.node_id);
+    const next_node_name = current_node._spec.next;
+    const [switch_] = await process_manager.fetchSwitchForWorkflow(this._workflow_id, trx);
+    if(switch_ && switch_.active) {
+      if(switch_.node_id === next_node_name) {
+        return true;
+      }
+      return false;
+    }
+    return false;
   }
 
   async run(actor_data, execution_input) {
@@ -280,11 +295,25 @@ class Process extends PersistedEntity {
     }
   }
 
-  async continue(result_data, actor_data, trx) {
+  async continue(result_data, actor_data, trx, skipLock = false) {
     emitter.emit("PROCESS.CONTINUE", `CONTINUE ON PID [${this.id}]`, { process_id: this.id });
     if (!this.state) {
       this.state = await this.getPersist().getLastStateByProcess(this._id);
     }
+    const SQLite = (trx?.client?.config?.dialect || trx?.context?.client?.config?.client) === "sqlite3";
+
+    if(!skipLock) {
+      let isLocked;
+      if (SQLite) {
+        isLocked = await this.checkForSwitch();
+      } else {
+        isLocked = await this.checkForSwitch(trx);
+      }
+      if(isLocked) {
+        return this._errorState();
+      }
+    }
+
     let currentNode;
 
     try {
@@ -322,7 +351,7 @@ class Process extends PersistedEntity {
         this._blueprint_spec.prepare
       );
 
-      await this._executionLoop(custom_lisp, actor_data, trx);
+      await this._executionLoop(custom_lisp, actor_data, trx, skipLock);
     }
   }
 
@@ -621,9 +650,9 @@ class Process extends PersistedEntity {
       await this._notifyProcessState(actor_data);
 
       if (
-        (result_state.status === ProcessStatus.PENDING || result_state.status === ProcessStatus.WAITING) 
-          && result_state.result.timeout) 
-          {
+        (result_state.status === ProcessStatus.PENDING || result_state.status === ProcessStatus.WAITING) &&
+        result_state.result.timeout
+      ) {
         emitter.emit("PROCESS.TIMER.CREATING", `      CREATING NEW TIMER ON PID [${process_lock.id}]`, {
           process_id: process_lock.id,
         });
@@ -753,9 +782,74 @@ class Process extends PersistedEntity {
 
     return inner_loop_result;
   }
+  async _manageSignalCreation(input_trx) {
+    const node = this._blueprint.fetchNode(this._state.node_id);
+    const trigger_params = {
+      signal: this.state.result.signal,
+      input: this.state.result.trigger_payload,
+      actor_data: this.state.actor_data,
+      process_id: this.id,
+    };
+    if (node._spec.category === "signal" && node._spec.type.toLowerCase() === "finish") {
+      const trigger_process_id = this.state.bag.trigger_process_id;
+      if (trigger_process_id) {
+        trigger_params.target_process_id = trigger_process_id;
+      }
+      const trigger = new Trigger(trigger_params);
+      await trigger.save(input_trx);
+    }
+
+    if (
+      (node._spec.type.toLowerCase() === "event" && !this.state.result.target_data) ||
+      (node._spec.type.toLowerCase() === "usertask" &&
+        node._spec.category === "signal" &&
+        this._current_status === "waiting")
+    ) {
+      const events = this.state.result.events;
+      await Promise.all(
+        events.map((event) => {
+          if (event.family === "trigger") {
+            const tr_params = {
+              signal: event.definition,
+              input: this.state.result.trigger_payload,
+              actor_data: this.state.actor_data,
+              process_id: this.id,
+            };
+            const trigger = new Trigger(tr_params);
+            return trigger.save(input_trx);
+          }
+          if (event.family === "target") {
+            const target_params = {
+              signal: event.definition,
+              resource_type: "process",
+              resource_id: this.id,
+              process_state_id: this._current_state_id,
+            };
+            const target = new Target(target_params);
+            return target.save(input_trx);
+          }
+        })
+      );
+    }
+  }
 
   // eslint-disable-next-line no-unused-vars
-  async _executionLoop(custom_lisp, actor_data, input_trx = false) {
+  async _executionLoop(custom_lisp, actor_data, input_trx = false, skipLock = false) {
+    const db = Process.getPersist()._db;
+    const SQLite = (db?.client?.config?.dialect || db?.context?.client?.config?.client) === "sqlite3";
+
+    if(!skipLock) {
+      let isLocked;
+      if (SQLite) {
+        isLocked = await this.checkForSwitch(db);
+      } else {
+        isLocked = await this.checkForSwitch(input_trx);
+      }
+      if(isLocked) {
+        return this._errorState();
+      }
+    }
+
     emitter.emit("EXECUTION_LOOP.START", `CALLED EXECUTION LOOP PID [${this.id}] STATUS [${this.status}]`, {
       process_id: this.id,
       engine_id: ENGINE_ID,
@@ -765,18 +859,18 @@ class Process extends PersistedEntity {
     let execution_success = true;
     let [activity_manager, timer] = [null, null];
     while (execution_success && this.status === ProcessStatus.RUNNING) {
-      const db = Process.getPersist()._db;
-
-      const SQLite = (db?.client?.config?.dialect || db?.context?.client?.config?.client) === "sqlite3";
       let ps = null;
       try {
         if (SQLite) {
           [ps, activity_manager, timer] = await this._intermediaryLoop(custom_lisp, actor_data, db);
+          await this._manageSignalCreation();
         } else if (input_trx) {
           [ps, activity_manager, timer] = await this._intermediaryLoop(custom_lisp, actor_data, input_trx);
+          await this._manageSignalCreation(input_trx);
         } else {
           await db.transaction(async (trx) => {
             [ps, activity_manager, timer] = await this._intermediaryLoop(custom_lisp, actor_data, trx);
+            await this._manageSignalCreation(trx);
           });
         }
 
@@ -833,7 +927,7 @@ class Process extends PersistedEntity {
         await ActivityManager.interruptActivityManagerForProcess(this._id);
         break;
       case ProcessStatus.FINISHED:
-        await ActivityManager.finishActivityManagerForProcess(this._id, input_trx);  
+        await ActivityManager.finishActivityManagerForProcess(this._id, input_trx);
         break;
       case ProcessStatus.FORBIDDEN:
         await ActivityManager.finishActivityManagerForProcess(this._id);

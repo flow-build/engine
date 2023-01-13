@@ -1,7 +1,9 @@
+require("dotenv").config();
 const _ = require("lodash");
 const settings = require("../../../../../settings/tests/settings");
 const { Workflow } = require("../../../workflow/workflow");
 const { ProcessStatus } = require("../../../workflow/process_state");
+const { Process } = require("../../../workflow/process");
 const { Engine } = require("../../../../engine/engine");
 const { ActivityManager } = require("../../activity_manager");
 const { PersistorProvider } = require("../../../persist/provider");
@@ -106,17 +108,26 @@ describe("process with extra_fields", () => {
     let workflow_process = await engine.createProcess(workflow.id, actor_data);
     const process_id = workflow_process.id;
 
+    const db = Process.getPersist()._db;
     const persistor = PersistorProvider.getPersistor(...settings.persist_options);
     const process_persist = persistor.getPersistInstance("Process");
     await process_persist._db.transaction(async (trx) => {
-      await workflow_process.__inerLoop(workflow_process._current_state_id, { actor_data }, trx);
+      if (process.env.NODE_ENV === "sqlite") {
+        await workflow_process.__inerLoop(workflow_process._current_state_id, { actor_data }, db);
+      } else {
+        await workflow_process.__inerLoop(workflow_process._current_state_id, { actor_data }, trx);
+      }
     });
 
     const alternate_workflow_process = await engine.fetchProcess(process_id);
     await alternate_workflow_process.continue({}, actors_.simpleton);
 
     const transaction = process_persist._db.transaction(async (trx) => {
-      await workflow_process.__inerLoop(workflow_process._current_state_id, { actor_data }, trx);
+      if (process.env.NODE_ENV === "sqlite") {
+        await workflow_process.__inerLoop(workflow_process._current_state_id, { actor_data }, db);
+      } else {
+        await workflow_process.__inerLoop(workflow_process._current_state_id, { actor_data }, trx);
+      }
     });
     await expect(transaction).rejects.toThrowError();
 

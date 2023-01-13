@@ -117,10 +117,10 @@ class ActivityManager extends PersistedEntity {
     return result;
   }
 
-  static async fetch(activity_manager_id) {
-    const activity_manager = await this.getPersist().getActivityDataFromId(activity_manager_id);
+  static async fetch(activity_manager_id, trx = false) {
+    const activity_manager = await this.getPersist().getActivityDataFromId(activity_manager_id, trx);
     if (activity_manager) {
-      activity_manager.activities = await this.getPersist().getActivities(activity_manager.id);
+      activity_manager.activities = await this.getPersist().getActivities(activity_manager.id, trx);
     }
     return activity_manager;
   }
@@ -366,7 +366,7 @@ class ActivityManager extends PersistedEntity {
       timer_id: timer.id,
     });
 
-    const activity_manager_data = await ActivityManager.fetch(timer.resource_id);
+    const activity_manager_data = await ActivityManager.fetch(timer.resource_id, trx);
     if (
       activity_manager_data &&
       activity_manager_data.parameters.timeout_id === timer.id &&
@@ -386,6 +386,7 @@ class ActivityManager extends PersistedEntity {
             activities: activity_manager_data.activities,
           },
           timer.params.next_step_number,
+          undefined,
           trx
         );
       }
@@ -398,7 +399,7 @@ class ActivityManager extends PersistedEntity {
     });
 
     const db = Timer.getPersist()._db;
-    const SQLite = db.context.client.config.client === "sqlite3";
+    const SQLite = (db.client.config.dialect || db.context.client.config.client) === "sqlite3";
     
     if (time instanceof Date) {
 
