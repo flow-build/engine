@@ -1,3 +1,10 @@
+## [3.0.0-alpha.2](https://github.com/flow-build/engine/compare/v3.0.0-alpha.1...v3.0.0-alpha.2) (2023-01-13)
+
+
+### Bug Fixes
+
+* update axios version to adjust httpNoSSL node ([90d472f](https://github.com/flow-build/engine/commit/90d472fefc54748b4b29fec2cb085c79d674f161))
+
 ## [3.0.0-alpha.1](https://github.com/flow-build/engine/compare/v2.19.0-alpha.1...v3.0.0-alpha.1) (2023-01-13)
 
 
