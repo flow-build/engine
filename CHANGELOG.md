@@ -1,3 +1,29 @@
+## [2.18.0-alpha.7](https://github.com/flow-build/engine/compare/v2.18.0-alpha.6...v2.18.0-alpha.7) (2023-01-10)
+
+
+### Features
+
+* add possibility to get envs in react-native ([bb2ec36](https://github.com/flow-build/engine/commit/bb2ec36741faff9ce09f80a1e728f1ef2777954e))
+
+
+### Bug Fixes
+
+* adjust nodefyFunction to accept methods with params destructured ([b484d7a](https://github.com/flow-build/engine/commit/b484d7a7d2c04f04d5563f5f0fedd0bdd0a7f9b9))
+
+## [2.18.0-alpha.6](https://github.com/flow-build/engine/compare/v2.18.0-alpha.5...v2.18.0-alpha.6) (2023-01-10)
+
+
+### Bug Fixes
+
+* adjust httpnossl node ([8d62dc1](https://github.com/flow-build/engine/commit/8d62dc14cd7a5fd1112cf54e45b3ba323aaae3fa))
+
+## [2.18.0-alpha.5](https://github.com/flow-build/engine/compare/v2.18.0-alpha.4...v2.18.0-alpha.5) (2023-01-05)
+
+
+### Features
+
+* change extra_fields to not be nested on extra_fields ([a31dfb4](https://github.com/flow-build/engine/commit/a31dfb4bee50f2bf2c255f4f1cffb29f0ec688a2))
+
 ## [2.18.0-alpha.4](https://github.com/flow-build/engine/compare/v2.18.0-alpha.3...v2.18.0-alpha.4) (2023-01-04)
 
 
