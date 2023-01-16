@@ -1,3 +1,10 @@
+### [2.18.1](https://github.com/flow-build/engine/compare/v2.18.0...v2.18.1) (2023-01-16)
+
+
+### Bug Fixes
+
+* adjust transaction on timer treatment of activity managers ([90cf5f6](https://github.com/flow-build/engine/commit/90cf5f6cd3aff476fd5251ba199f5b0e6576d719))
+
 ## [2.18.0](https://github.com/flow-build/engine/compare/v2.17.0...v2.18.0) (2022-12-12)
 
 
