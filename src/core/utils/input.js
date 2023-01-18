@@ -36,11 +36,13 @@ function prepare(source, context = {}, interpreters = {}) {
     return source.map((item) => prepare(item, context, interpreters));
   }
 
-  const op = Object.keys(source).filter(key => key[0] === "$");
+  const opKeys = Object.keys(source).filter(key => key[0] === "$");
 
-  if (op.length > 1) {
+  if (opKeys.length > 1) {
     throw new Error("More than one '$' found");
   }
+
+  const op = opKeys[0]
 
   const operators = {
     $ref: (sourceContent, context) => _.get(context, sourceContent),
@@ -56,13 +58,17 @@ function prepare(source, context = {}, interpreters = {}) {
     },
   }
 
-  const processor = operators[op[0]]
+  const processor = operators[op]
 
   if(typeof processor === 'undefined'){
     return Object.keys(source).reduce((obj, key) => ({ ...obj, [key]: prepare(source[key], context, interpreters) }), {})
   }
 
-  return processor(source[op[0]], context, interpreters);
+  try{
+    return processor(source[op], context, interpreters);
+  }catch(cause){
+    throw new Error(`Error while evaluating ${op}: ${source[op]}`, {cause})
+  }
 }
 
 module.exports = {
