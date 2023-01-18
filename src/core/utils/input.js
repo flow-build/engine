@@ -36,17 +36,13 @@ function prepare(source, context = {}, interpreters = {}) {
   }
 
   let last_result;
-  let op;
-  for (let key of Object.keys(source)) {
-    if (key[0] === "$") {
-      if (op) {
-        throw new Error("More than one '$' found");
-      }
-      op = key;
-    }
+  const op = Object.keys(source).filter(key => key[0] === "$")
+
+  if(op.length > 1){
+    throw new Error("More than one '$' found");
   }
 
-  switch (op) {
+  switch (op[0]) {
     case "$ref": {
       last_result = _.get(context, source[op]);
       break;
