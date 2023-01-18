@@ -139,8 +139,8 @@ class ActivityManagerKnexPersist extends KnexPersist {
     return await this.getActivityDataFromStatusQuery(status, filters)
   }
 
-  async getActivityDataFromId(obj_id) {
-    return await this._db
+  async getActivityDataFromId(obj_id, trx = false) {
+    const query = this._db
       .select(
         "am.id",
         "am.created_at",
@@ -168,10 +168,18 @@ class ActivityManagerKnexPersist extends KnexPersist {
       .rightJoin("workflow AS wf", "p.workflow_id", "wf.id")
       .where("am.id", "=", obj_id)
       .first();
+    if (trx) {
+      return await query.transacting(trx);
+    }
+    return await query;
   }
 
-  async getActivities(activity_manager_id) {
-    return await this._db.select().from(this._activity_table).where("activity_manager_id", activity_manager_id);
+  async getActivities(activity_manager_id, trx = false) {
+    const query = this._db.select().from(this._activity_table).where("activity_manager_id", activity_manager_id);
+    if(trx) {
+      return await query.transacting(trx);
+    }
+    return await query;
   }
 
   async getTimerfromResourceId(resource_id) {
