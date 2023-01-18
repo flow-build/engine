@@ -1,3 +1,10 @@
+### [2.18.2](https://github.com/flow-build/engine/compare/v2.18.1...v2.18.2) (2023-01-18)
+
+
+### Bug Fixes
+
+* forces version update with fix ([7223320](https://github.com/flow-build/engine/commit/7223320a4c87fef598140eff1f3209460541d373))
+
 ### [2.18.1](https://github.com/flow-build/engine/compare/v2.18.0...v2.18.1) (2023-01-16)
 
 
