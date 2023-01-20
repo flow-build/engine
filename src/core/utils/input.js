@@ -67,7 +67,7 @@ function prepare(source, context = {}, interpreters = {}) {
   try{
     return processor(source[op], context, interpreters);
   }catch(cause){
-    throw new Error(`Error while evaluating ${op}: ${source[op]}`, {cause})
+    throw new Error(`Error while evaluating ${op}: ${source[op]}\n${cause.message}`, {cause})
   }
 }
 
