@@ -1,3 +1,10 @@
+### [2.18.3](https://github.com/flow-build/engine/compare/v2.18.2...v2.18.3) (2023-01-20)
+
+
+### Bug Fixes
+
+* adjust transaction handling on n 'interrupt activity manager' method ([4d74b04](https://github.com/flow-build/engine/commit/4d74b04716ceaca96b4f975500edbb79dd61dd91))
+
 ### [2.18.2](https://github.com/flow-build/engine/compare/v2.18.1...v2.18.2) (2023-01-18)
 
 
