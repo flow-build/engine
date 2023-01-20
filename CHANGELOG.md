@@ -1,3 +1,11 @@
+## [2.19.0-beta.3](https://github.com/flow-build/engine/compare/v2.19.0-beta.2...v2.19.0-beta.3) (2023-01-20)
+
+
+### Bug Fixes
+
+* adjust transaction handling on n 'interrupt activity manager' method ([4d74b04](https://github.com/flow-build/engine/commit/4d74b04716ceaca96b4f975500edbb79dd61dd91))
+* forces version update with fix ([7223320](https://github.com/flow-build/engine/commit/7223320a4c87fef598140eff1f3209460541d373))
+
 ## [2.19.0-beta.2](https://github.com/flow-build/engine/compare/v2.19.0-beta.1...v2.19.0-beta.2) (2023-01-11)
 
 
