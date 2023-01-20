@@ -60,14 +60,14 @@ function prepare(source, context = {}, interpreters = {}) {
 
   const processor = operators[op]
 
-  if(typeof processor === 'undefined'){
+  if (typeof processor === 'undefined') {
     return Object.keys(source).reduce((obj, key) => ({ ...obj, [key]: prepare(source[key], context, interpreters) }), {})
   }
 
-  try{
+  try {
     return processor(source[op], context, interpreters);
-  }catch(cause){
-    throw new Error(`Error while evaluating ${op}: ${source[op]}\n${cause.message}`, {cause})
+  } catch (cause) {
+    throw new Error(`Error while evaluating ${op}: ${source[op]}\n${cause.message}`, { cause })
   }
 }
 
