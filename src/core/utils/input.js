@@ -2,6 +2,7 @@
 const _ = require("lodash");
 const mustache = require("mustache");
 const handlebars = require("handlebars");
+const safeEval = require("safe-eval");
 const crypto_manager = require("../crypto_manager");
 
 
@@ -46,7 +47,7 @@ function prepare(source, context = {}, interpreters = {}) {
 
   const operators = {
     $ref: (sourceContent, context) => _.get(context, sourceContent),
-    $js: (sourceContent, context) => eval(sourceContent)(_.cloneDeep(context)),
+    $js: (sourceContent, context) => safeEval(sourceContent)(_.cloneDeep(context)),
     $mustache: (sourceContent, context) => mustache.render(sourceContent, context),
     $handlebars: (sourceContent, context) => handlebars.compile(sourceContent)(context),
     $minimal: (sourceContent, context, interpreters) => interpreters['$minimal'].eval(["let", _.flatten(Object.entries(context)), sourceContent]),
