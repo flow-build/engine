@@ -131,13 +131,12 @@ class HttpSystemTaskNode extends SystemTaskNode {
     const request_id = crypto.randomBytes(16).toString("hex");
     const process_id = execution_data.process_id;
     const request_attempt = execution_data.HTTP_REQUEST_ATTEMPT || 0;
-    delete execution_data.process_id;
-    delete execution_data.HTTP_REQUEST_ATTEMPT;
+    const payload = execution_data.payload;
 
     emitter.emit("HTTP.NODE.REQUEST", {
       verb,
       endpoint,
-      payload: execution_data,
+      payload,
       headers,
       configs: {
         http_timeout,
@@ -147,7 +146,7 @@ class HttpSystemTaskNode extends SystemTaskNode {
 
     let result;
     try {
-      result = await request[verb](endpoint, execution_data, headers, { http_timeout, max_content_length });
+      result = await request[verb](endpoint, payload, headers, { http_timeout, max_content_length });
     } catch (err) {
       if (err.response || err.code === 'ECONNABORTED') {
         result = {
@@ -180,7 +179,7 @@ class HttpSystemTaskNode extends SystemTaskNode {
   _preProcessing({ bag, input, actor_data, environment, parameters }) {
     this.request = prepare(this._spec.parameters.request, { bag, result: input, actor_data, environment, parameters });
     const pre_processed = super._preProcessing({ bag, input, actor_data, environment, parameters });
-    return { process_id: parameters?.process_id || "unknown", HTTP_REQUEST_ATTEMPT: input.attempt || 0, ...pre_processed };
+    return { process_id: parameters?.process_id || "unknown", HTTP_REQUEST_ATTEMPT: input.attempt || 0, payload: pre_processed };
   }
 }
 
