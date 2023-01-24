@@ -389,8 +389,8 @@ class Process extends PersistedEntity {
     return this;
   }
 
-  async getNextStepNumber() {
-    const last_step_number = await this.getPersist().getLastStepNumber(this._id);
+  async getNextStepNumber(trx = false) {
+    const last_step_number = await this.getPersist().getLastStepNumber(this._id, trx);
     return Process.calculateNextStep(last_step_number);
   }
 
@@ -425,7 +425,7 @@ class Process extends PersistedEntity {
       process_state_id: ps_lock.id,
     });
 
-    const next_step_number = await this.getNextStepNumber();
+    const next_step_number = await this.getNextStepNumber(trx);
     let max_step_number;
 
     if (process.env.MAX_STEP_NUMBER || (this._blueprint._spec.parameters || {}).max_step_number) {
