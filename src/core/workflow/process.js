@@ -496,10 +496,11 @@ class Process extends PersistedEntity {
       result_state = await this._createStateFromNodeResult(
         node_result_error,
         actor_data,
-        this.next_node._spec.result_schema
+        this.next_node._spec.result_schema,
+        trx
       );
     } else {
-      result_state = await this._createStateFromNodeResult(node_result, actor_data, this.next_node._spec.result_schema);
+      result_state = await this._createStateFromNodeResult(node_result, actor_data, this.next_node._spec.result_schema, trx);
     }
 
     emitter.emit("PROCESS.END_NODE_RUN", `      END NODE RUN STATUS [${node_result.status}]`, {
@@ -803,9 +804,10 @@ class Process extends PersistedEntity {
   async _createStateFromNodeResult(
     { node_id, bag, external_input, result, error, status, next_node_id, time_elapsed },
     actor_data,
-    result_schema = ""
+    result_schema = "",
+    trx = false
   ) {
-    const step_number = await this.getNextStepNumber();
+    const step_number = await this.getNextStepNumber(trx);
 
     if (error) {
       this._errorState(error);
