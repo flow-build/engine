@@ -98,9 +98,15 @@ class ProcessKnexPersist extends KnexPersist {
       .first();
   }
 
-  async getLastStepNumber(id) {
-    const last_step = await this._db(this._state_table).max("step_number").where("process_id", id).first();
-    const count = Number(last_step.max);
+  async getLastStepNumber(id, trx = false) {
+    const query = this._db(this._state_table).max("step_number").where("process_id", id).first();
+    let result;
+    if(trx) {
+      result = await query.transacting(trx);
+    } else {
+      result = await query;
+    }
+    const count = Number(result.max);
     return count;
   }
 
