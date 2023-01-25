@@ -1,3 +1,10 @@
+## [2.19.0-beta.6](https://github.com/flow-build/engine/compare/v2.19.0-beta.5...v2.19.0-beta.6) (2023-01-25)
+
+
+### Bug Fixes
+
+* **input.prepare:** :pushpin: Point safe-eval to a specific version ([df24be4](https://github.com/flow-build/engine/commit/df24be436c04e5e885181dd67cd3301671550f04))
+
 ## [2.19.0-beta.5](https://github.com/flow-build/engine/compare/v2.19.0-beta.4...v2.19.0-beta.5) (2023-01-24)
 
 
