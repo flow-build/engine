@@ -266,7 +266,7 @@ class Process extends PersistedEntity {
   async continue(result_data, actor_data, trx, skipLock = false) {
     emitter.emit("PROCESS.CONTINUE", `CONTINUE ON PID [${this.id}]`, { process_id: this.id });
     if (!this.state) {
-      this.state = await this.getPersist().getLastStateByProcess(this._id);
+      this.state = await this.getPersist().getLastStateByProcess(this._id, trx);
     }
 
     if(!skipLock) {
@@ -319,7 +319,7 @@ class Process extends PersistedEntity {
 
   async runPendingProcess(actor_data, trx = false) {
     emitter.emit("PROCESS.RUN_PENDING", `RUN PENDING PID [${this.id}]`, { process_id: this.id });
-    this.state = await this.getPersist().getLastStateByProcess(this._id);
+    this.state = await this.getPersist().getLastStateByProcess(this._id, trx);
     if (this.status !== ProcessStatus.PENDING) {
       throw new Error(`Process on invalid status ${this.status}`);
     }
@@ -826,7 +826,7 @@ class Process extends PersistedEntity {
       timer_id: timer.id,
     });
 
-    this.state = await this.getPersist().getLastStateByProcess(this._id);
+    this.state = await this.getPersist().getLastStateByProcess(this._id, trx);
     switch (this.status) {
       case ProcessStatus.ERROR:
       case ProcessStatus.FINISHED:

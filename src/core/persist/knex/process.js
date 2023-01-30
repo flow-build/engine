@@ -89,13 +89,17 @@ class ProcessKnexPersist extends KnexPersist {
     return this._db.select("*").from(this._state_table).where("process_id", id).orderBy("step_number", "desc");
   }
 
-  getLastStateByProcess(id) {
-    return this._db
+  getLastStateByProcess(id, trx = false) {
+    const query = this._db
       .select(`${this._state_table}.*`)
       .from(this._table)
       .innerJoin(this._state_table, "process_state.id", "current_state_id")
       .where("process.id", id)
       .first();
+    if(trx) {
+      return query.transacting(trx);
+    }
+    return query;
   }
 
   async getLastStepNumber(id, trx = false) {
