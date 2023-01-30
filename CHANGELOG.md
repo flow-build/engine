@@ -1,3 +1,10 @@
+## [2.19.0-beta.7](https://github.com/flow-build/engine/compare/v2.19.0-beta.6...v2.19.0-beta.7) (2023-01-30)
+
+
+### Bug Fixes
+
+* adds transaction input on 'getLastStateByProcess' method ([a2a33d0](https://github.com/flow-build/engine/commit/a2a33d0eedcd9c041774ac69672424dadcf4a61c))
+
 ## [2.19.0-beta.6](https://github.com/flow-build/engine/compare/v2.19.0-beta.5...v2.19.0-beta.6) (2023-01-25)
 
 
