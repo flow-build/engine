@@ -250,4 +250,17 @@ describe("node factory", () => {
       expect(response.custom).toBeDefined();
     });
   });
+
+  describe("addNodesBlackList", () => {
+    const black_list_to_add = ["test", "example"];
+
+    test("add black list", () => {
+      node_factory.addNodesBlackList(black_list_to_add);
+
+      const nodes_black_list = node_factory.getNodesBlackList();
+
+      expect(nodes_black_list).toBeDefined();
+      expect(nodes_black_list).toHaveLength(2);
+    });
+  });
 });

@@ -13,7 +13,7 @@ const { Switch } = require("../core/workflow/switch");
 const { ActivityManager } = require("../core/workflow/activity_manager");
 const { ActivityStatus } = require("../core/workflow/activity");
 const { setProcessStateNotifier, setActivityManagerNotifier } = require("../core/notifier_manager");
-const { addSystemTaskCategory } = require("../core/utils/node_factory");
+const { addSystemTaskCategory, addNodesBlackList } = require("../core/utils/node_factory");
 const process_manager = require("../core/workflow/process_manager");
 const crypto_manager = require("../core/crypto_manager");
 const startEventListener = require("../core/utils/eventEmitter");
@@ -444,6 +444,10 @@ class Engine {
 
   addCustomSystemCategory(extra_system_tasks) {
     addSystemTaskCategory(extra_system_tasks);
+  }
+
+  addNodesCategoriesBlackList(nodes_black_list) {
+    addNodesBlackList(nodes_black_list);
   }
 
   buildCrypto(type, data) {

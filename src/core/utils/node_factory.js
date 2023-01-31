@@ -1,5 +1,6 @@
 /* eslint-disable indent */
 const nodes = require("../workflow/nodes/index.js");
+let NodesBlackList = [];
 
 const types = {
   start: nodes.StartNode,
@@ -81,9 +82,19 @@ function addSystemTaskCategory(customCategories) {
   }
 }
 
+function getNodesBlackList() {
+  return NodesBlackList;
+}
+
+function addNodesBlackList(nodesBlackList) {
+  NodesBlackList = nodesBlackList;
+}
+
 module.exports = {
   getNode,
   getNodeTypes,
   getNodeCategories,
   addSystemTaskCategory,
+  getNodesBlackList,
+  addNodesBlackList,
 };
