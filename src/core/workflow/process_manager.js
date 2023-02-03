@@ -1,6 +1,7 @@
 const processDependency = require("./process");
 const { ProcessStatus } = require("./process_state");
 const workflowDependency = require("./workflow");
+const switchDependency = require("./switch");
 
 async function abortProcess(processIds) {
   const abort_promises = processIds.map(async (id) => {
@@ -18,14 +19,45 @@ async function abortProcess(processIds) {
   return Promise.allSettled(abort_promises);
 }
 
-async function continueProcess(process_id, result_data, expected_step_number, trx = false) {
+async function continueProcess(
+  process_id,
+  result_data,
+  expected_step_number = undefined,
+  actor_data = {},
+  trx = false
+) {
   const process = await processDependency.Process.fetch(process_id);
   const next_step_number = processDependency.Process.calculateNextStep(process.state.step_number);
-  if (process && next_step_number === expected_step_number) {
-    return await process.continue(result_data, process.state.actor_data, trx);
+  if (process && expected_step_number && next_step_number === expected_step_number) {
+    return await process.continue(result_data, actor_data || process.state.actor_data, trx);
   } else {
     return undefined;
   }
+}
+
+async function fetchLatestWorkflowVersionById(workflow_id) {
+  return await workflowDependency.Workflow.fetchLatestWorkflowVersionById(workflow_id);
+}
+
+async function fetchProcess(process_id) {
+  return await processDependency.Process.fetch(process_id);
+}
+
+async function fetchWorkflowByProcessId(process_id) {
+  const process = await processDependency.Process.fetch(process_id);
+  return await workflowDependency.Workflow.fetch(process._workflow_id);
+}
+
+async function fetchStateHistory(process_id) {
+  return await processDependency.Process.fetchStateHistory(process_id);
+}
+
+async function createProcessByWorkflowId(workflow_id, actor_data, initial_bag = {}, trx = false) {
+  const workflow = await workflowDependency.Workflow.fetchLatestWorkflowVersionById(workflow_id, trx);
+  if (workflow) {
+    return await workflow.createProcess(actor_data, initial_bag, trx);
+  }
+  return undefined;
 }
 
 async function createProcessByWorkflowName(workflow_name, actor_data, initial_bag = {}) {
@@ -78,11 +110,21 @@ async function runProcess(process_id, actor_data, external_input) {
   return undefined;
 }
 
+async function fetchSwitchForWorkflow(workflow_id, trx = false) {
+  return await switchDependency.Switch.fetchByWorkflowId(workflow_id, trx);
+}
+
 module.exports = {
   abortProcess,
   continueProcess,
+  fetchLatestWorkflowVersionById,
+  fetchProcess,
+  fetchWorkflowByProcessId,
+  fetchStateHistory,
+  createProcessByWorkflowId,
   createProcessByWorkflowName,
   notifyCompletedActivityManager,
   notifyParentProcess,
   runProcess,
+  fetchSwitchForWorkflow,
 };

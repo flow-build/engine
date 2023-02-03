@@ -162,7 +162,6 @@ describe("prepare", () => {
         })
     });
 
-
     describe("$js", () => {
         it("javascript simple", () => {
             const source = {
@@ -563,5 +562,22 @@ describe("prepare", () => {
                 ]
             });
         });
+    });
+
+    describe("error msgs", () => {
+        it("malformed js", () => {
+            const source = {
+                $js: "() => undefined.foo()"
+            };
+            expect(() => prepare(source)).toThrow(Error);
+        })
+
+        it("malformed object", () => {
+            const source = {
+                $js: "() => 2 + 2",
+                $handlebars: "simple string"
+            };
+            expect(() => prepare(source)).toThrow(Error);
+        })
     });
 })

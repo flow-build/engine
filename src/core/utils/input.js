@@ -2,7 +2,9 @@
 const _ = require("lodash");
 const mustache = require("mustache");
 const handlebars = require("handlebars");
+const safeEval = require("safe-eval");
 const crypto_manager = require("../crypto_manager");
+
 
 handlebars.registerHelper("centesimal", function (number) {
   const retval = "" + (Number(number) / 100).toFixed(2);
@@ -26,75 +28,48 @@ handlebars.registerHelper("div", function (a, b) {
 });
 
 function prepare(source, context = {}, interpreters = {}) {
-  let last_result;
-  if (source && typeof source === "object") {
-    if (source instanceof Array) {
-      last_result = source.map((item) => prepare(item, context));
-    } else {
-      let op;
-      for (let key of Object.keys(source)) {
-        if (key[0] === "$") {
-          if (op) {
-            throw new Error("More than one '$' found");
-          }
-          op = key;
-        }
-      }
 
-      switch (op) {
-        case "$ref": {
-          last_result = _.get(context, source[op]);
-          break;
-        }
-        case "$mustache": {
-          last_result = mustache.render(source[op], context);
-          break;
-        }
-        case "$handlebars": {
-          const template = handlebars.compile(source[op]);
-          last_result = template(context);
-          break;
-        }
-        case "$js": {
-          const contextCopy = _.cloneDeep(context);
-          last_result = eval(source[op])(contextCopy);
-          break;
-        }
-        case "$minimal": {
-          const contextCopy = _.cloneDeep(context);
-          const listKeyValues = _.flatten(Object.entries(contextCopy));
-          last_result = interpreters[op].eval(["let", listKeyValues, source[op]]);
-          break;
-        }
-        case "$decrypt": {
-          const crypto = crypto_manager.getCrypto();
-          const crypted_value = _.get(context, source[op]);
-          last_result = crypto.decrypt(crypted_value);
-          break;
-        }
-        case "$map": {
-          const { array, value } = source[op];
-          const list = prepare(array, context, interpreters);
-          if (list instanceof Array) {
-            last_result = list.map((item) => prepare(value, item));
-          } else {
-            last_result = list;
-          }
-          break;
-        }
-        default: {
-          last_result = {};
-          for (let [key, value] of Object.entries(source)) {
-            last_result[key] = prepare(value, context);
-          }
-          break;
-        }
-      }
-    }
-  } else {
-    last_result = source;
+  if (!source || typeof source !== "object") {
+    return source
   }
-  return last_result;
+
+  if (source instanceof Array) {
+    return source.map((item) => prepare(item, context, interpreters));
+  }
+
+  const opKeys = Object.keys(source).filter(key => key[0] === "$");
+
+  if (opKeys.length > 1) {
+    throw new Error("More than one '$' found");
+  }
+
+  const op = opKeys[0]
+
+  const operators = {
+    $ref: (sourceContent, context) => _.get(context, sourceContent),
+    $js: (sourceContent, context) => safeEval(sourceContent)(_.cloneDeep(context)),
+    $mustache: (sourceContent, context) => mustache.render(sourceContent, context),
+    $handlebars: (sourceContent, context) => handlebars.compile(sourceContent)(context),
+    $minimal: (sourceContent, context, interpreters) => interpreters['$minimal'].eval(["let", _.flatten(Object.entries(context)), sourceContent]),
+    $decrypt: (sourceContent, context) => crypto_manager.getCrypto().decrypt(_.get(context, sourceContent)),
+    $map: (sourceContent, context, interpreters) => {
+      const { array, value } = sourceContent;
+      const list = prepare(array, context, interpreters);
+      return list instanceof Array ? list.map((item) => prepare(value, item, interpreters)) : list;
+    },
+  }
+
+  const processor = operators[op]
+
+  if (typeof processor === 'undefined') {
+    return Object.keys(source).reduce((obj, key) => ({ ...obj, [key]: prepare(source[key], context, interpreters) }), {})
+  }
+
+  try {
+    return processor(source[op], context, interpreters);
+  } catch (cause) {
+    throw new Error(`Error while evaluating ${op}: ${source[op]}\n${cause.message}`, { cause })
+  }
 }
 
 module.exports = {

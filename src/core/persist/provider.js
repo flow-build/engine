@@ -11,6 +11,10 @@ const {
   ActivityManagerKnexPersist,
   ActivityKnexPersist,
   TimerKnexPersist,
+  TriggerKnexPersist,
+  TargetKnexPersist,
+  TriggerTargetKnexPersist,
+  SwitchKnexPersist,
 } = require("../persist/knex");
 const { ProcessStateKnexPersist } = require("./knex/processState");
 const { PersistorSingleton } = require("../persist/persist");
@@ -45,6 +49,10 @@ class PersistorProvider {
           Activity: [ActivityKnexPersist, db],
           Timer: [TimerKnexPersist, db],
           ProcessState: [ProcessStateKnexPersist, db],
+          Trigger: [TriggerKnexPersist, db],
+          Target: [TargetKnexPersist, db],
+          TriggerTarget: [TriggerTargetKnexPersist, db],
+          Switch: [SwitchKnexPersist, db],
         };
         break;
       default:

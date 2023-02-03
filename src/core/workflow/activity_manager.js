@@ -372,6 +372,7 @@ class ActivityManager extends PersistedEntity {
             activities: activity_manager_data.activities,
           },
           timer.params.next_step_number,
+          undefined,
           trx
         );
       }

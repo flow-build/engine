@@ -33,7 +33,7 @@ class StartNode extends Node {
   }
 
   validate() {
-    let [is_valid, error] = StartNode.validate(this._spec);
+    let [is_valid, error] = this.constructor.validate(this._spec);
     if (is_valid) {
       try {
         let inputSchema = this._spec.parameters.input_schema;
