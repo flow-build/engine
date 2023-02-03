@@ -1,3 +1,10 @@
+## [2.19.0-beta.8](https://github.com/flow-build/engine/compare/v2.19.0-beta.7...v2.19.0-beta.8) (2023-02-03)
+
+
+### Features
+
+* adds warn logs for HTTP node ([c3c0c31](https://github.com/flow-build/engine/commit/c3c0c31e80f0e29e90d7996078c9ca770176c09e))
+
 ## [2.19.0-beta.7](https://github.com/flow-build/engine/compare/v2.19.0-beta.6...v2.19.0-beta.7) (2023-01-30)
 
 
