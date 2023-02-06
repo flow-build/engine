@@ -1,3 +1,19 @@
+## [3.0.0-alpha.3](https://github.com/flow-build/engine/compare/v3.0.0-alpha.2...v3.0.0-alpha.3) (2023-02-06)
+
+
+### Features
+
+* adds warn logs for HTTP node ([c3c0c31](https://github.com/flow-build/engine/commit/c3c0c31e80f0e29e90d7996078c9ca770176c09e))
+
+
+### Bug Fixes
+
+* adds transaction input on 'getLastStateByProcess' method ([a2a33d0](https://github.com/flow-build/engine/commit/a2a33d0eedcd9c041774ac69672424dadcf4a61c))
+* adjust 'step number' transaction injection ([1718b85](https://github.com/flow-build/engine/commit/1718b85253a9bed6746d06cea89c2ab57c01214e))
+* adjust transaction handling on n 'interrupt activity manager' method ([4d74b04](https://github.com/flow-build/engine/commit/4d74b04716ceaca96b4f975500edbb79dd61dd91))
+* adjust transaction handling on state creation ([af16b34](https://github.com/flow-build/engine/commit/af16b34634603cdb7da13fd7682d4e0808d0f9a7))
+* forces version update with fix ([7223320](https://github.com/flow-build/engine/commit/7223320a4c87fef598140eff1f3209460541d373))
+
 ## [3.0.0-alpha.2](https://github.com/flow-build/engine/compare/v3.0.0-alpha.1...v3.0.0-alpha.2) (2023-01-13)
 
 
