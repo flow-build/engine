@@ -183,10 +183,10 @@ class ActivityManager extends PersistedEntity {
     }
   }
 
-  static async interruptActivityManagerForProcess(process_id) {
+  static async interruptActivityManagerForProcess(process_id, trx) {
     const full_activity_manager_data = await this.getPersist().getActivityDataFromStatus(ActivityStatus.STARTED, {
       process_id: process_id,
-    });
+    }, trx);
     for (const activity_manager_data of full_activity_manager_data) {
       const activity_manager = ActivityManager.deserialize(activity_manager_data);
       activity_manager.activities = activity_manager_data.activities;
