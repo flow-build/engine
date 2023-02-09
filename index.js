@@ -4,7 +4,7 @@ const { Cockpit } = require("./src/cockpit/cockpit");
 const Nodes = require("./src/core/workflow/nodes/index.js");
 const { nodefyFunction, nodefyClass } = require("./src/core/utils/nodefy");
 const { ProcessStatus } = require("./src/core/workflow/process_state");
-const { getNode, addSystemTaskCategory,
+const { getNode, addSystemTaskCategory, addNodesBlackList,
   getNodeCategories, getNodeTypes } = require("./src/core/utils/node_factory");
 const { Validator } = require("./src/core/validators");
 const { prepare } = require("./src/core/utils/input");
@@ -24,6 +24,7 @@ module.exports = {
   ProcessStatus,
   getNode,
   addSystemTaskCategory,
+  addNodesBlackList,
   utils: {
     obju: obju,
     Validator: Validator,

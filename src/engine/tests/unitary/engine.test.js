@@ -1,3 +1,4 @@
+require("dotenv").config();
 const _ = require("lodash");
 const JSum = require("jsum");
 const { v1: uuid } = require("uuid");
@@ -12,6 +13,7 @@ const { Packages } = require("../../../core/workflow/packages");
 const { blueprints_, actors_ } = require("../../../core/workflow/tests/unitary/blueprint_samples");
 const { packages_ } = require("../../../core/workflow/tests/unitary/packages_samples");
 const extra_nodes = require("../utils/extra_nodes");
+const env = process.env;
 
 process.env.ENGINE_HEARTBEAT = false;
 const engine = new Engine(...settings.persist_options);
@@ -441,6 +443,19 @@ test("Extra node works", async () => {
   const workflow = await engine.saveWorkflow("sample", "sample", blueprints_.extra_nodes);
   let process = await createRunProcess(engine, workflow.id, actors_.simpleton);
   expect(process.status).toBe(ProcessStatus.FINISHED);
+});
+
+test("Status unavailable on sqlite works", async () => {
+  const black_list_to_add = ["test", "example"];
+  engine.addNodesCategoriesBlackList(black_list_to_add);
+
+  const workflow = await engine.saveWorkflow("sample", "sample", blueprints_.extra_nodes);
+  let process = await createRunProcess(engine, workflow.id, actors_.simpleton);
+  if (env.NODE_ENV === "sqlite") {
+    expect(process.status).toBe(ProcessStatus.UNAVAILABLE);  
+  } else {
+    expect(process.status).toBe(ProcessStatus.FINISHED);
+  }
 });
 
 describe("submitActivity", () => {

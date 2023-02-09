@@ -2,7 +2,7 @@
 require("dotenv").config();
 const _ = require("lodash");
 const { PersistedEntity } = require("./base");
-const { getNodeCategories } = require("../utils/node_factory");
+const { getNodeCategories, getNodesBlackList } = require("../utils/node_factory");
 const { Packages } = require("../workflow/packages");
 const { ProcessState, ENGINE_ID } = require("./process_state");
 const { ProcessStatus } = require("./process_state");
@@ -556,16 +556,16 @@ class Process extends PersistedEntity {
     let timer = null;
 
     if (SQLite) {
-      const categories = Object.keys(getNodeCategories());
+      const black_list = getNodesBlackList();
       const type = (_.get(this.next_node, ['_spec', 'type'])).toLowerCase() === "systemtask";
 
       if (type) {
-        const category = _.get(this.next_node, ['_spec', 'category'])
-        const available = categories.includes(category.toLowerCase());
+        const category = _.get(this.next_node, ['_spec', 'category']);
+        const available = black_list.includes(category.toLowerCase());
 
-        if(!available) {
+        if (!!available) {
           const state = await this.setStateUnavailable(this.state, trx);
-          emitter.emit('PROCESS.UNAVAILABLE', this)
+          emitter.emit('PROCESS.UNAVAILABLE', this);
           return [state, am, timer];
         }
       }
