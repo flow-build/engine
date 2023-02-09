@@ -1,3 +1,10 @@
+## [3.0.0-alpha.4](https://github.com/flow-build/engine/compare/v3.0.0-alpha.3...v3.0.0-alpha.4) (2023-02-09)
+
+
+### Features
+
+* add NodesBlackList for sqlite engine ([f7de9bb](https://github.com/flow-build/engine/commit/f7de9bb7d9259e66f6e89517e8db6afab63ca100))
+
 ## [3.0.0-alpha.3](https://github.com/flow-build/engine/compare/v3.0.0-alpha.2...v3.0.0-alpha.3) (2023-02-06)
 
 
