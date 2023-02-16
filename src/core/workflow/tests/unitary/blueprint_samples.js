@@ -8,6 +8,7 @@ const extra_nodes = require("../examples/customNodes");
 const environment = require("../examples/environment");
 const reference_environment = require("../examples/environmentReference");
 const existent_environment_variable = require("../examples/existingEnvironmentVariable");
+const http_retries = require("../examples/httpRetries");
 const identity_system_task = require("../examples/identitySystemTask");
 const identity_user_task = require("../examples/identityUserTask");
 const inexistent_environment_variable = require("../examples/inexistingEnvironmentVariable");
@@ -51,6 +52,7 @@ const blueprints_ = {
   environment,
   existent_environment_variable,
   extra_nodes,
+  http_retries,
   identity_system_task,
   identity_user_task,
   inexistent_environment_variable,

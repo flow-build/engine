@@ -108,10 +108,10 @@ class ActivityManager extends PersistedEntity {
     return result;
   }
 
-  static async fetch(activity_manager_id) {
-    const activity_manager = await this.getPersist().getActivityDataFromId(activity_manager_id);
+  static async fetch(activity_manager_id, trx = false) {
+    const activity_manager = await this.getPersist().getActivityDataFromId(activity_manager_id, trx);
     if (activity_manager) {
-      activity_manager.activities = await this.getPersist().getActivities(activity_manager.id);
+      activity_manager.activities = await this.getPersist().getActivities(activity_manager.id, trx);
     }
     return activity_manager;
   }
@@ -169,10 +169,10 @@ class ActivityManager extends PersistedEntity {
     }
   }
 
-  static async interruptActivityManagerForProcess(process_id) {
+  static async interruptActivityManagerForProcess(process_id, trx) {
     const full_activity_manager_data = await this.getPersist().getActivityDataFromStatus(ActivityStatus.STARTED, {
       process_id: process_id,
-    });
+    }, trx);
     for (const activity_manager_data of full_activity_manager_data) {
       const activity_manager = ActivityManager.deserialize(activity_manager_data);
       activity_manager.activities = activity_manager_data.activities;
@@ -352,7 +352,7 @@ class ActivityManager extends PersistedEntity {
       timer_id: timer.id,
     });
 
-    const activity_manager_data = await ActivityManager.fetch(timer.resource_id);
+    const activity_manager_data = await ActivityManager.fetch(timer.resource_id, trx);
     if (
       activity_manager_data &&
       activity_manager_data.parameters.timeout_id === timer.id &&

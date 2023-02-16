@@ -27,11 +27,27 @@ class HttpSystemTaskNode extends SystemTaskNode {
                 },
                 verb: { type: "string", enum: ["GET", "POST", "PATCH", "PUT", "DELETE", "HEAD"] },
                 header: { type: "object" },
+                retry: {
+                  type: "object",
+                  required: ["attempts", "interval", "conditions"],
+                  properties: {
+                    attempts: {type: "integer"},
+                    interval: {type: "integer"},
+                    conditions: {
+                      type: "array",
+                      items: {
+                        type: ["integer","string"]
+                      } 
+                    }
+                  }
+                }
               },
             },
             valid_response_codes: {
               type: "array",
-              items: { type: "integer" },
+              items: { 
+                type:  ["integer","string"] 
+              },
             },
           },
         },
@@ -40,11 +56,39 @@ class HttpSystemTaskNode extends SystemTaskNode {
   }
 
   static validate(spec) {
-    const ajv = new Ajv({ allErrors: true });
+    const ajv = new Ajv({ allErrors: true, allowUnionTypes: true });
     addFormats(ajv);
     const validate = ajv.compile(HttpSystemTaskNode.schema);
     const validation = validate(spec);
     return [validation, JSON.stringify(validate.errors)];
+  }
+
+  static includesHTTPCode(code_array, answer_code) {
+    const target_codes = code_array.map(code => code.toString());
+    const input_code = answer_code.toString();
+
+    const re = /[1-5][X0-9][X0-9]/;
+    const codeMatch = (code) => {
+      if(code.match(re)) {
+        const first_char = code[0];
+        const second_char = code[1] === 'X' ? '[0-9]': code[1];
+        const third_char = code[2] === 'X' ? '[0-9]': code[2];
+        const code_re = new RegExp(`${first_char}${second_char}${third_char}`);
+        return input_code.match(code_re);
+      }
+      return code === input_code;
+    }
+
+    return target_codes.find(code => codeMatch(code)) || null;
+  }
+
+  next(result) {
+    const retry_conditions = this._spec.parameters.request.retry?.conditions || [];
+    const retry_attempts = this._spec.parameters.request.retry?.attempts || 0;
+    if(HttpSystemTaskNode.includesHTTPCode(retry_conditions, result.status) && result.attempt < retry_attempts) {
+      return this._spec["id"];
+    }
+    return this._spec["next"];
   }
 
   validate() {
@@ -86,12 +130,13 @@ class HttpSystemTaskNode extends SystemTaskNode {
 
     const request_id = crypto.randomBytes(16).toString("hex");
     const process_id = execution_data.process_id;
-    delete execution_data.process_id;
+    const request_attempt = execution_data.HTTP_REQUEST_ATTEMPT || 0;
+    const payload = execution_data.payload;
 
     emitter.emit("HTTP.NODE.REQUEST", {
       verb,
       endpoint,
-      payload: execution_data,
+      payload,
       headers,
       configs: {
         http_timeout,
@@ -101,31 +146,49 @@ class HttpSystemTaskNode extends SystemTaskNode {
 
     let result;
     try {
-      result = await request[verb](endpoint, execution_data, headers, { http_timeout, max_content_length });
+      result = await request[verb](endpoint, payload, headers, { http_timeout, max_content_length });
     } catch (err) {
-      if (err.response) {
+      if (err.response || err.code === 'ECONNABORTED') {
         result = {
-          status: err.response.status,
-          data: err.response.data,
+          status: err.response?.status || err.code,
+          data: err.response?.data === undefined ? {} : err.response?.data,
+          attempt: request_attempt + 1,
+          timeout: this._spec.parameters.request.retry?.interval,
         };
       } else {
         throw new Error(`Got no response from request to ${verb} ${endpoint}, ${err.message}`);
       }
     }
+    const HTTP_WARN_CODES = process.env.HTTP_WARN_CODES;
+    if(HTTP_WARN_CODES) {
+      try {
+        const parsedWarnCodes = JSON.parse(HTTP_WARN_CODES);
+        if(HttpSystemTaskNode.includesHTTPCode(parsedWarnCodes, result.status)) {
+          emitter.emit("HTTP.NODE.WARN", result, { level: 'warn', request_id, process_id, endpoint });
+        }
+      } catch(e) {}
+    }
     if (this._spec.parameters.valid_response_codes) {
-      if (!this._spec.parameters.valid_response_codes.includes(result.status)) {
-        emitter.emit("HTTP.NODE.RESPONSE", result, { error: true, request_id: request_id, process_id: process_id });
+      if(!HttpSystemTaskNode.includesHTTPCode(this._spec.parameters.valid_response_codes, result.status)) {
+        emitter.emit("HTTP.NODE.RESPONSE", result, { level: 'error', request_id: request_id, process_id: process_id });
         throw new Error(`Invalid response status: ${result.status}`);
       }
     }
-    emitter.emit("HTTP.NODE.RESPONSE", result, { error: false, request_id: request_id, process_id: process_id })
+    emitter.emit("HTTP.NODE.RESPONSE", result, { request_id: request_id, process_id: process_id });
+    
+    const retry_conditions = this._spec.parameters.request.retry?.conditions || [];
+    const retry_attempts = this._spec.parameters.request.retry?.attempts || 0;
+    if(HttpSystemTaskNode.includesHTTPCode(retry_conditions, result.status) && result.attempt < retry_attempts) {
+      return [result, ProcessStatus.PENDING];  
+    }
+    
     return [result, ProcessStatus.RUNNING];
   }
 
   _preProcessing({ bag, input, actor_data, environment, parameters }) {
     this.request = prepare(this._spec.parameters.request, { bag, result: input, actor_data, environment, parameters });
     const pre_processed = super._preProcessing({ bag, input, actor_data, environment, parameters });
-    return { process_id: parameters?.process_id || "unknown", ...pre_processed };
+    return { process_id: parameters?.process_id || "unknown", HTTP_REQUEST_ATTEMPT: input.attempt || 0, payload: pre_processed };
   }
 }
 

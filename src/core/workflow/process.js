@@ -253,7 +253,7 @@ class Process extends PersistedEntity {
   async continue(result_data, actor_data, trx) {
     emitter.emit("PROCESS.CONTINUE", `CONTINUE ON PID [${this.id}]`, { process_id: this.id });
     if (!this.state) {
-      this.state = await this.getPersist().getLastStateByProcess(this._id);
+      this.state = await this.getPersist().getLastStateByProcess(this._id, trx);
     }
     let currentNode;
 
@@ -298,7 +298,7 @@ class Process extends PersistedEntity {
 
   async runPendingProcess(actor_data, trx = false) {
     emitter.emit("PROCESS.RUN_PENDING", `RUN PENDING PID [${this.id}]`, { process_id: this.id });
-    this.state = await this.getPersist().getLastStateByProcess(this._id);
+    this.state = await this.getPersist().getLastStateByProcess(this._id, trx);
     if (this.status !== ProcessStatus.PENDING) {
       throw new Error(`Process on invalid status ${this.status}`);
     }
@@ -391,8 +391,8 @@ class Process extends PersistedEntity {
     return this;
   }
 
-  async getNextStepNumber() {
-    const last_step_number = await this.getPersist().getLastStepNumber(this._id);
+  async getNextStepNumber(trx = false) {
+    const last_step_number = await this.getPersist().getLastStepNumber(this._id, trx);
     return Process.calculateNextStep(last_step_number);
   }
 
@@ -427,7 +427,7 @@ class Process extends PersistedEntity {
       process_state_id: ps_lock.id,
     });
 
-    const next_step_number = await this.getNextStepNumber();
+    const next_step_number = await this.getNextStepNumber(trx);
     let max_step_number;
 
     if (process.env.MAX_STEP_NUMBER || (this._blueprint._spec.parameters || {}).max_step_number) {
@@ -437,7 +437,7 @@ class Process extends PersistedEntity {
         max_step_number = parseInt(this._blueprint._spec.parameters.max_step_number);
       }
 
-      if (next_step_number === max_step_number) {
+      if (next_step_number >= max_step_number) {
         await this.expireProcess(trx);
         return [this.state, {}, {}];
       }
@@ -498,10 +498,16 @@ class Process extends PersistedEntity {
       result_state = await this._createStateFromNodeResult(
         node_result_error,
         actor_data,
-        this.next_node._spec.result_schema
+        this.next_node._spec.result_schema,
+        trx
       );
     } else {
-      result_state = await this._createStateFromNodeResult(node_result, actor_data, this.next_node._spec.result_schema);
+      result_state = await this._createStateFromNodeResult(
+        node_result,
+        actor_data,
+        this.next_node._spec.result_schema,
+        trx
+      );
     }
 
     emitter.emit("PROCESS.END_NODE_RUN", `      END NODE RUN STATUS [${node_result.status}]`, {
@@ -521,9 +527,9 @@ class Process extends PersistedEntity {
       await this._notifyProcessState(actor_data);
 
       if (
-        (result_state.status === ProcessStatus.PENDING || result_state.status === ProcessStatus.WAITING) 
-          && result_state.result.timeout) 
-          {
+        (result_state.status === ProcessStatus.PENDING || result_state.status === ProcessStatus.WAITING) &&
+        result_state.result.timeout
+      ) {
         emitter.emit("PROCESS.TIMER.CREATING", `      CREATING NEW TIMER ON PID [${p_lock.id}]`, {
           process_id: p_lock.id,
         });
@@ -717,7 +723,7 @@ class Process extends PersistedEntity {
 
       let ps = null;
       try {
-        if(input_trx) {
+        if (input_trx) {
           [ps, activity_manager, timer] = await this._intermediaryLoop(custom_lisp, actor_data, input_trx);
           await this._manageSignalCreation(input_trx);
         } else {
@@ -774,10 +780,10 @@ class Process extends PersistedEntity {
     switch (this.status) {
       case ProcessStatus.ERROR:
       case ProcessStatus.INTERRUPTED:
-        await ActivityManager.interruptActivityManagerForProcess(this._id);
+        await ActivityManager.interruptActivityManagerForProcess(this._id, input_trx);
         break;
       case ProcessStatus.FINISHED:
-        await ActivityManager.finishActivityManagerForProcess(this._id, input_trx);  
+        await ActivityManager.finishActivityManagerForProcess(this._id, input_trx);
         break;
       case ProcessStatus.FORBIDDEN:
         await ActivityManager.finishActivityManagerForProcess(this._id);
@@ -798,7 +804,7 @@ class Process extends PersistedEntity {
       timer_id: timer.id,
     });
 
-    this.state = await this.getPersist().getLastStateByProcess(this._id);
+    this.state = await this.getPersist().getLastStateByProcess(this._id, trx);
     switch (this.status) {
       case ProcessStatus.ERROR:
       case ProcessStatus.FINISHED:
@@ -859,9 +865,10 @@ class Process extends PersistedEntity {
   async _createStateFromNodeResult(
     { node_id, bag, external_input, result, error, status, next_node_id, time_elapsed },
     actor_data,
-    result_schema = ""
+    result_schema = "",
+    trx = false
   ) {
-    const step_number = await this.getNextStepNumber();
+    const step_number = await this.getNextStepNumber(trx);
 
     if (error) {
       this._errorState(error);
