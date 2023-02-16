@@ -9,12 +9,10 @@ const {
 const {
   PackagesKnexPersist,
   ActivityKnexPersist,
-  TimerKnexPersist,
   TriggerKnexPersist,
   TargetKnexPersist,
   TriggerTargetKnexPersist,
 } = require("../persist/knex");
-const { PackagesKnexPersist, ActivityKnexPersist } = require("../persist/knex");
 const { ActivityManagerKnexPersist } = require("./knex/activityManager");
 const { TimerKnexPersist } = require("./knex/timer");
 const { ProcessStateKnexPersist } = require("./knex/processState");
