@@ -254,7 +254,7 @@ module.exports = function startEventListener(em) {
   em.on("HTTP.NODE.*", (message, variable) => {
     if(process.env.HTTP_NODE_LOG === "true") {
       const obj = {
-        level: variable?.error ? "error" : "info",
+        level: variable?.level || 'info',
         message: `[PID ${variable.process_id}] - ${JSON.stringify(message)}`,
         variable: variable,
         section: `HTTP-${variable.request_id}`

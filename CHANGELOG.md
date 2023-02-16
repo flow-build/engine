@@ -1,3 +1,19 @@
+## [2.19.0](https://github.com/flow-build/engine/compare/v2.18.4...v2.19.0) (2023-02-03)
+
+
+### Features
+
+* adds warn logs for HTTP node ([c3c0c31](https://github.com/flow-build/engine/commit/c3c0c31e80f0e29e90d7996078c9ca770176c09e))
+
+### [2.18.4](https://github.com/flow-build/engine/compare/v2.18.3...v2.18.4) (2023-01-30)
+
+
+### Bug Fixes
+
+* adds transaction input on 'getLastStateByProcess' method ([a2a33d0](https://github.com/flow-build/engine/commit/a2a33d0eedcd9c041774ac69672424dadcf4a61c))
+* adjust 'step number' transaction injection ([1718b85](https://github.com/flow-build/engine/commit/1718b85253a9bed6746d06cea89c2ab57c01214e))
+* adjust transaction handling on state creation ([af16b34](https://github.com/flow-build/engine/commit/af16b34634603cdb7da13fd7682d4e0808d0f9a7))
+
 ### [2.18.3](https://github.com/flow-build/engine/compare/v2.18.2...v2.18.3) (2023-01-20)
 
 

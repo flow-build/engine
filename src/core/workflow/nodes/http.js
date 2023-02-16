@@ -159,13 +159,22 @@ class HttpSystemTaskNode extends SystemTaskNode {
         throw new Error(`Got no response from request to ${verb} ${endpoint}, ${err.message}`);
       }
     }
+    const HTTP_WARN_CODES = process.env.HTTP_WARN_CODES;
+    if(HTTP_WARN_CODES) {
+      try {
+        const parsedWarnCodes = JSON.parse(HTTP_WARN_CODES);
+        if(HttpSystemTaskNode.includesHTTPCode(parsedWarnCodes, result.status)) {
+          emitter.emit("HTTP.NODE.WARN", result, { level: 'warn', request_id, process_id, endpoint });
+        }
+      } catch(e) {}
+    }
     if (this._spec.parameters.valid_response_codes) {
       if(!HttpSystemTaskNode.includesHTTPCode(this._spec.parameters.valid_response_codes, result.status)) {
-        emitter.emit("HTTP.NODE.RESPONSE", result, { error: true, request_id: request_id, process_id: process_id });
+        emitter.emit("HTTP.NODE.RESPONSE", result, { level: 'error', request_id: request_id, process_id: process_id });
         throw new Error(`Invalid response status: ${result.status}`);
       }
     }
-    emitter.emit("HTTP.NODE.RESPONSE", result, { error: false, request_id: request_id, process_id: process_id });
+    emitter.emit("HTTP.NODE.RESPONSE", result, { request_id: request_id, process_id: process_id });
     
     const retry_conditions = this._spec.parameters.request.retry?.conditions || [];
     const retry_attempts = this._spec.parameters.request.retry?.attempts || 0;
