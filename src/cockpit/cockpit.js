@@ -5,6 +5,7 @@ const { Process } = require("../core/workflow/process");
 const { Packages } = require("../core/workflow/packages");
 const { Engine } = require("../engine/engine");
 const { ProcessState } = require("../core/workflow/process_state");
+const { Timer } = require("../core/workflow/timer");
 
 class Cockpit {
   static get instance() {
@@ -147,6 +148,14 @@ class Cockpit {
       }
     }
     return allowed_workflows;
+  }
+
+  async fetchTimersReady() {
+    return await Timer.fetchAllReady();
+  }
+
+  async fetchTimersActive() {
+    return await Timer.fetchAllActive();
   }
 }
 
