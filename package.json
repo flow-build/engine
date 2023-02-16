@@ -1,6 +1,6 @@
 {
   "name": "@flowbuild/engine",
-  "version": "3.0.0-alpha.3",
+  "version": "3.0.0-alpha.4",
   "description": "workflow engine from flow-build to work in multiple plataforms",
   "dependencies": {
     "ajv": "8.11.0",
