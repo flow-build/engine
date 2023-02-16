@@ -435,7 +435,7 @@ class Process extends PersistedEntity {
         max_step_number = parseInt(this._blueprint._spec.parameters.max_step_number);
       }
 
-      if (next_step_number === max_step_number) {
+      if (next_step_number >= max_step_number) {
         await this.expireProcess(trx);
         return [this.state, {}, {}];
       }
@@ -500,7 +500,12 @@ class Process extends PersistedEntity {
         trx
       );
     } else {
-      result_state = await this._createStateFromNodeResult(node_result, actor_data, this.next_node._spec.result_schema, trx);
+      result_state = await this._createStateFromNodeResult(
+        node_result,
+        actor_data,
+        this.next_node._spec.result_schema,
+        trx
+      );
     }
 
     emitter.emit("PROCESS.END_NODE_RUN", `      END NODE RUN STATUS [${node_result.status}]`, {
@@ -520,9 +525,9 @@ class Process extends PersistedEntity {
       await this._notifyProcessState(actor_data);
 
       if (
-        (result_state.status === ProcessStatus.PENDING || result_state.status === ProcessStatus.WAITING) 
-          && result_state.result.timeout) 
-          {
+        (result_state.status === ProcessStatus.PENDING || result_state.status === ProcessStatus.WAITING) &&
+        result_state.result.timeout
+      ) {
         emitter.emit("PROCESS.TIMER.CREATING", `      CREATING NEW TIMER ON PID [${p_lock.id}]`, {
           process_id: p_lock.id,
         });
@@ -664,7 +669,7 @@ class Process extends PersistedEntity {
 
       let ps = null;
       try {
-        if(input_trx) {
+        if (input_trx) {
           [ps, activity_manager, timer] = await this._intermediaryLoop(custom_lisp, actor_data, input_trx);
         } else {
           await db.transaction(async (trx) => {
@@ -722,7 +727,7 @@ class Process extends PersistedEntity {
         await ActivityManager.interruptActivityManagerForProcess(this._id, input_trx);
         break;
       case ProcessStatus.FINISHED:
-        await ActivityManager.finishActivityManagerForProcess(this._id, input_trx);  
+        await ActivityManager.finishActivityManagerForProcess(this._id, input_trx);
         break;
       case ProcessStatus.FORBIDDEN:
         await ActivityManager.finishActivityManagerForProcess(this._id);
