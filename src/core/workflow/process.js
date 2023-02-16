@@ -458,7 +458,7 @@ class Process extends PersistedEntity {
         max_step_number = parseInt(this._blueprint._spec.parameters.max_step_number);
       }
 
-      if (next_step_number === max_step_number) {
+      if (next_step_number >= max_step_number) {
         await this.expireProcess(trx);
         return [this.state, {}, {}];
       }
@@ -523,7 +523,12 @@ class Process extends PersistedEntity {
         trx
       );
     } else {
-      result_state = await this._createStateFromNodeResult(node_result, actor_data, this.next_node._spec.result_schema, trx);
+      result_state = await this._createStateFromNodeResult(
+        node_result,
+        actor_data,
+        this.next_node._spec.result_schema,
+        trx
+      );
     }
 
     emitter.emit("PROCESS.END_NODE_RUN", `      END NODE RUN STATUS [${node_result.status}]`, {
