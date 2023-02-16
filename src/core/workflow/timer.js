@@ -77,18 +77,18 @@ class Timer extends PersistedEntity {
           const { ActivityManager } = require("./activity_manager");
           return ActivityManager.deserialize(await ActivityManager.fetch(this.resource_id));
         }
-  
+
         case "Process": {
           const { Process } = require("./process");
           return Process.fetch(this.resource_id);
         }
-  
+
         case "Mock": {
           return Mock.fetch(this.resource_id);
         }
       }
     } catch (e) {
-      throw new Error(e)
+      throw new Error(e);
     }
   }
 
@@ -102,7 +102,7 @@ class Timer extends PersistedEntity {
     await this.delete(trx);
 
     const resource = await this.fetchResource();
-    if(resource) {
+    if (resource) {
       return resource.timeout(this, trx);
     }
   }
@@ -111,6 +111,12 @@ class Timer extends PersistedEntity {
     const now = new Date();
     now.setSeconds(now.getSeconds() + seconds);
     return now;
+  }
+
+  static async fetchAllActive() {
+    let query = this.getPersist().getAllActive();
+    const timers = await query;
+    return _.map(timers, (timer) => Timer.deserialize(timer));
   }
 
   static async fetchAllReady() {
