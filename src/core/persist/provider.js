@@ -6,12 +6,9 @@ const {
   ActivityManagerMemoryPersist,
   ActivityMemoryPersist,
 } = require("../persist/memory");
-const {
-  PackagesKnexPersist,
-  ActivityManagerKnexPersist,
-  ActivityKnexPersist,
-  TimerKnexPersist,
-} = require("../persist/knex");
+const { PackagesKnexPersist, ActivityKnexPersist } = require("../persist/knex");
+const { ActivityManagerKnexPersist } = require("./knex/activityManager");
+const { TimerKnexPersist } = require("./knex/timer");
 const { ProcessStateKnexPersist } = require("./knex/processState");
 const { PersistorSingleton } = require("../persist/persist");
 const { WorkflowKnexPersist } = require("./knex/workflow");
