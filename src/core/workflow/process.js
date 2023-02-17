@@ -304,7 +304,7 @@ class Process extends PersistedEntity {
           actor_data,
           null
         );
-        await this.save();
+        await this.save(trx);
         await this._notifyProcessState({});
       }
 
