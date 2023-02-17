@@ -813,7 +813,7 @@ class Process extends PersistedEntity {
         await ActivityManager.finishActivityManagerForProcess(this._id, input_trx);
         break;
       case ProcessStatus.FORBIDDEN:
-        await ActivityManager.finishActivityManagerForProcess(this._id);
+        await ActivityManager.finishActivityManagerForProcess(this._id, input_trx);
         break;
     }
 
