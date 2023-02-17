@@ -1,6 +1,14 @@
 exports.up = function (knex) {
   return knex.schema.createView("nodes", (view) => {
-    view.columns(["workflow_id", "workflow_name", "node_id", "node_type", "node_category"]);
+    view.columns([
+      "workflow_id",
+      "workflow_name",
+      "workflow_version",
+      "latest",
+      "node_id",
+      "node_type",
+      "node_category",
+    ]);
     view.as(
       knex.raw(
         `select

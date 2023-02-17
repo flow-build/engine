@@ -6,7 +6,10 @@ const {
   ActivityManagerMemoryPersist,
   ActivityMemoryPersist,
 } = require("../persist/memory");
-const { PackagesKnexPersist, ActivityKnexPersist   TriggerKnexPersist,
+const {
+  PackagesKnexPersist,
+  ActivityKnexPersist,
+  TriggerKnexPersist,
   TargetKnexPersist,
   TriggerTargetKnexPersist,
   SwitchKnexPersist,
