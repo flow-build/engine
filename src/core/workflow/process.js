@@ -795,7 +795,7 @@ class Process extends PersistedEntity {
       }
     }
 
-    if(execution_success){
+    if(execution_success && input_trx){
       input_trx.commit()
     }
 
