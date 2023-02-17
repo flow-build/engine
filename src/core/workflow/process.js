@@ -729,7 +729,7 @@ class Process extends PersistedEntity {
 
   // eslint-disable-next-line no-unused-vars
   async _executionLoop(custom_lisp, actor_data, input_trx = false, skipLock = false) {
-    
+
     if(!skipLock) {
       const isLocked = await this.checkForSwitch(input_trx);
       if(isLocked) {
@@ -793,6 +793,10 @@ class Process extends PersistedEntity {
         });
         await this._notifyActivityManager(activity_manager);
       }
+    }
+
+    if(execution_success){
+      input_trx.commit()
     }
 
     if (activity_manager) {
