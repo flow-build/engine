@@ -1,3 +1,10 @@
+### [2.20.1](https://github.com/flow-build/engine/compare/v2.20.0...v2.20.1) (2023-02-17)
+
+
+### Bug Fixes
+
+* fix node view migration ([329acc0](https://github.com/flow-build/engine/commit/329acc01fed246d9e65d8cbc1918118409f7a2a7))
+
 ## [2.20.0](https://github.com/flow-build/engine/compare/v2.19.1...v2.20.0) (2023-02-16)
 
 
