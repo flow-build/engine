@@ -1,3 +1,10 @@
+## [2.21.0-beta.2](https://github.com/flow-build/engine/compare/v2.21.0-beta.1...v2.21.0-beta.2) (2023-02-17)
+
+
+### Bug Fixes
+
+* :pencil2: add missing comma ([a6ed5bc](https://github.com/flow-build/engine/commit/a6ed5bccc6858e414c0f87e8a7cf303da949fd15))
+
 ## [2.21.0-beta.1](https://github.com/flow-build/engine/compare/v2.20.0...v2.21.0-beta.1) (2023-02-16)
 
 
