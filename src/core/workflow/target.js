@@ -121,7 +121,7 @@ class Target extends PersistedEntity {
     let process;
     switch(this.resource_type) {
       case 'workflow':
-        const db = Target.getPersist()._db;
+        const db = trx ? trx : Target.getPersist()._db;
         await db.transaction(async (inner_trx) => {
           try {
             process = await createProcessByWorkflowId(

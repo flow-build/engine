@@ -304,7 +304,7 @@ class Process extends PersistedEntity {
           actor_data,
           null
         );
-        await this.save();
+        await this.save(trx);
         await this._notifyProcessState({});
       }
 
@@ -729,7 +729,7 @@ class Process extends PersistedEntity {
 
   // eslint-disable-next-line no-unused-vars
   async _executionLoop(custom_lisp, actor_data, input_trx = false, skipLock = false) {
-    
+
     if(!skipLock) {
       const isLocked = await this.checkForSwitch(input_trx);
       if(isLocked) {
@@ -795,6 +795,10 @@ class Process extends PersistedEntity {
       }
     }
 
+    if(execution_success && input_trx){
+      input_trx.commit()
+    }
+
     if (activity_manager) {
       emitter.emit("PROCESS.ACTIVITY_MANAGER.CREATED", `ACTIVITY MANAGER CREATED ON PID [${this.id}]`, {
         process: this,
@@ -813,7 +817,7 @@ class Process extends PersistedEntity {
         await ActivityManager.finishActivityManagerForProcess(this._id, input_trx);
         break;
       case ProcessStatus.FORBIDDEN:
-        await ActivityManager.finishActivityManagerForProcess(this._id);
+        await ActivityManager.finishActivityManagerForProcess(this._id, input_trx);
         break;
     }
 
