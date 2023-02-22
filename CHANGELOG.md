@@ -1,3 +1,12 @@
+## [2.21.0-beta.3](https://github.com/flow-build/engine/compare/v2.21.0-beta.2...v2.21.0-beta.3) (2023-02-22)
+
+
+### Bug Fixes
+
+* :bug: Prevent call to non existent func ([128d698](https://github.com/flow-build/engine/commit/128d698dab3d8f2d3ef7197f66125bd8b5711c5a))
+* :bug: Prevent persistance inconsistent process state ([dbc6f51](https://github.com/flow-build/engine/commit/dbc6f51d9639144ce6c69b18566a7f8d1f7cef75))
+* **core:** :card_file_box: Propagate transaction when saving AM ([625b003](https://github.com/flow-build/engine/commit/625b003229b1b8103a050435ae81b599b1881773))
+
 ## [2.21.0-beta.2](https://github.com/flow-build/engine/compare/v2.21.0-beta.1...v2.21.0-beta.2) (2023-02-17)
 
 
