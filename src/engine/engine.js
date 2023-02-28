@@ -280,7 +280,7 @@ class Engine {
         Engine.heart = Engine.setNextHeartBeat(beatMode, actionObj.next);
         emitter.emit("ENGINE.NEXT", "NEXT HEARTBEAT SET");
       }
-    }, readEnvironmentVariableAsNumber(process.env.ENGINE_HEARTBEAT_PERIOD, 1000));
+    }, readEnvironmentVariableAsNumber('ENGINE_HEARTBEAT_PERIOD', 1000));
   }
 
   static kill() {

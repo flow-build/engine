@@ -253,7 +253,7 @@ module.exports = function startEventListener(em) {
   });
 
   em.on("HTTP.NODE.*", (message, variable) => {
-    if(readEnvironmentVariableAsBool(process.env.HTTP_NODE_LOG, false)) {
+    if(readEnvironmentVariableAsBool('HTTP_NODE_LOG', false)) {
       const obj = {
         level: variable?.level || 'info',
         message: `[PID ${variable.process_id}] - ${JSON.stringify(message)}`,
