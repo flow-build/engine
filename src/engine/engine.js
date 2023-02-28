@@ -202,7 +202,7 @@ class Engine {
           .limit(SWITCH_BATCH)
           .forUpdate()
           .skipLocked();
-        
+
         return await Promise.all(switches.map((l_switch) => {
           const switch_ = Switch.deserialize(l_switch);
           return switch_.validate(trx);
@@ -498,7 +498,7 @@ class Engine {
             };
           }
           const [is_completed, activities] = await activity_manager.pushActivity(activity_manager_data.process_id);
-          
+
           if(disable_target) {
             const target = await Target.fetchTargetByProcessStateId(activity_manager_data.process_state_id);
             if(target && target.active) {
@@ -506,7 +506,7 @@ class Engine {
               await target.save()
             }
           }
-          
+
           let process_promise;
           if (is_completed && activity_manager_data.type !== "notify") {
             const result = await process_manager.notifyCompletedActivityManager(
