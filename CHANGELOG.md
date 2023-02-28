@@ -1,3 +1,10 @@
+## [2.21.0](https://github.com/flow-build/engine/compare/v2.20.1...v2.21.0) (2023-02-28)
+
+
+### Features
+
+* Improve robustness env var eval ([95a26a1](https://github.com/flow-build/engine/commit/95a26a1e824312e6041dc4b545dff56b12d13130))
+
 ### [2.20.1](https://github.com/flow-build/engine/compare/v2.20.0...v2.20.1) (2023-02-17)
 
 
