@@ -21,6 +21,7 @@ const { ProcessStatus } = require("./../core/workflow/process_state");
 const { validateTimeInterval } = require("../core/utils/ajvValidator");
 const { validate: uuidValidate } = require("uuid");
 const { isEmpty } = require("lodash");
+const { readEnvironmentVariableAsBool, readEnvironmentVariableAsNumber } = require('../core/utils/environment');
 
 function getActivityManagerFromData(activity_manager_data) {
   const activity_manager = ActivityManager.deserialize(activity_manager_data);
@@ -58,7 +59,7 @@ class Engine {
   }
 
   constructor(persist_mode, persist_args, logger_level) {
-    const heartBeat = process.env.ENGINE_HEARTBEAT || true;
+    const heartBeat = readEnvironmentVariableAsBool('ENGINE_HEARTBEAT', true);
     createLogger(logger_level);
     if (Engine.instance) {
       startEventListener(emitter);
@@ -68,9 +69,9 @@ class Engine {
     this._db = persist_args;
     Engine.instance = this;
     this.emitter = emitter;
-    if (heartBeat === true || heartBeat === "true") {
+    if (heartBeat) {
       try {
-        const beatMode = process.env.BEAT_MODE || 'parallel';
+        const beatMode = process.env.ENGINE_BEAT_MODE || 'parallel';
         const initialBeat = beatMode === 'parallel' ? 'ALL' : 'ORPHAN_PROCESSES';
         Engine.heart = Engine.setNextHeartBeat(beatMode, initialBeat);
         emitter.emit("ENGINE.CONTRUCTOR", "HEARTBEAT INITIALIZED", {});
@@ -221,24 +222,24 @@ class Engine {
     emitter.emit("ENGINE.HEARTBEAT", `HEARTBEAT @ [${new Date().toISOString()}]`);
 
     switch(action) {
-      case 'ORPHAN_PROCESSES':
-        await Engine.resolveOrphanProcesses(ORPHAN_BATCH);
-        break;
-      case 'TIMERS':
-        await Engine.resolveTimers(TIMER_BATCH);
-        break;
-      case 'TRIGGERS':
-        await Engine.resolveTriggers(TRIGGER_BATCH);
-        break;
-      case 'SWITCHES':
-        await Engine.resolveSwitches(SWITCH_BATCH);
-        break;
-      default:
-        await Engine.resolveOrphanProcesses(ORPHAN_BATCH);
-        await Engine.resolveTimers(TIMER_BATCH);
-        await Engine.resolveTriggers(TRIGGER_BATCH);
-        await Engine.resolveSwitches(SWITCH_BATCH);
-        break;
+    case 'ORPHAN_PROCESSES':
+      await Engine.resolveOrphanProcesses(ORPHAN_BATCH);
+      break;
+    case 'TIMERS':
+      await Engine.resolveTimers(TIMER_BATCH);
+      break;
+    case 'TRIGGERS':
+      await Engine.resolveTriggers(TRIGGER_BATCH);
+      break;
+    case 'SWITCHES':
+      await Engine.resolveSwitches(SWITCH_BATCH);
+      break;
+    default:
+      await Engine.resolveOrphanProcesses(ORPHAN_BATCH);
+      await Engine.resolveTimers(TIMER_BATCH);
+      await Engine.resolveTriggers(TRIGGER_BATCH);
+      await Engine.resolveSwitches(SWITCH_BATCH);
+      break;
     }
   }
 
@@ -279,7 +280,7 @@ class Engine {
         Engine.heart = Engine.setNextHeartBeat(beatMode, actionObj.next);
         emitter.emit("ENGINE.NEXT", "NEXT HEARTBEAT SET");
       }
-    }, process.env.HEART_BEAT || 1000);
+    }, readEnvironmentVariableAsNumber(process.env.ENGINE_HEARTBEAT_PERIOD, 1000));
   }
 
   static kill() {

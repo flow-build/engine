@@ -1,4 +1,5 @@
 const logUtil = require("./logging");
+const { readEnvironmentVariableAsBool } = require('./environment');
 
 module.exports = function startEventListener(em) {
   em.on("KNEX.*", (message, variables) => {
@@ -252,7 +253,7 @@ module.exports = function startEventListener(em) {
   });
 
   em.on("HTTP.NODE.*", (message, variable) => {
-    if(process.env.HTTP_NODE_LOG === "true") {
+    if(readEnvironmentVariableAsBool(process.env.HTTP_NODE_LOG, false)) {
       const obj = {
         level: variable?.level || 'info',
         message: `[PID ${variable.process_id}] - ${JSON.stringify(message)}`,
