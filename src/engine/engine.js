@@ -71,7 +71,7 @@ class Engine {
     this.emitter = emitter;
     if (heartBeat) {
       try {
-        const beatMode = process.env.ENGINE_BEAT_MODE || 'parallel';
+        const beatMode = process.env.BEAT_MODE || 'parallel';
         const initialBeat = beatMode === 'parallel' ? 'ALL' : 'ORPHAN_PROCESSES';
         Engine.heart = Engine.setNextHeartBeat(beatMode, initialBeat);
         emitter.emit("ENGINE.CONTRUCTOR", "HEARTBEAT INITIALIZED", {});
@@ -280,7 +280,7 @@ class Engine {
         Engine.heart = Engine.setNextHeartBeat(beatMode, actionObj.next);
         emitter.emit("ENGINE.NEXT", "NEXT HEARTBEAT SET");
       }
-    }, readEnvironmentVariableAsNumber('ENGINE_HEARTBEAT_PERIOD', 1000));
+    }, readEnvironmentVariableAsNumber('HEART_BEAT', 1000));
   }
 
   static kill() {
