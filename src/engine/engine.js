@@ -18,6 +18,7 @@ const { ProcessStatus } = require("./../core/workflow/process_state");
 const { validateTimeInterval } = require("../core/utils/ajvValidator");
 const { validate: uuidValidate } = require("uuid");
 const { isEmpty } = require("lodash");
+const { readEnvironmentVariableAsBool, readEnvironmentVariableAsNumber } = require('../core/utils/environment');
 
 function getActivityManagerFromData(activity_manager_data) {
   const activity_manager = ActivityManager.deserialize(activity_manager_data);
@@ -55,7 +56,7 @@ class Engine {
   }
 
   constructor(persist_mode, persist_args, logger_level) {
-    const heartBeat = process.env.ENGINE_HEARTBEAT || true;
+    const heartBeat = readEnvironmentVariableAsBool('ENGINE_HEARTBEAT', true);
     createLogger(logger_level);
     if (Engine.instance) {
       startEventListener(emitter);
@@ -65,7 +66,7 @@ class Engine {
     this._db = persist_args;
     Engine.instance = this;
     this.emitter = emitter;
-    if (heartBeat === true || heartBeat === "true") {
+    if (heartBeat) {
       try {
         Engine.heart = Engine.setNextHeartBeat();
         emitter.emit("ENGINE.CONTRUCTOR", "HEARTBEAT INITIALIZED", {});
@@ -172,7 +173,7 @@ class Engine {
         Engine.heart = Engine.setNextHeartBeat();
         emitter.emit("ENGINE.NEXT", "NEXT HEARTBEAT SET");
       }
-    }, process.env.HEART_BEAT || 1000);
+    }, readEnvironmentVariableAsNumber('HEART_BEAT', 1000));
   }
 
   static kill() {
