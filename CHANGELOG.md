@@ -1,3 +1,10 @@
+### [2.21.1](https://github.com/flow-build/engine/compare/v2.21.0...v2.21.1) (2023-03-04)
+
+
+### Bug Fixes
+
+* :pushpin: Add vm2 as dependency ([34d4d0b](https://github.com/flow-build/engine/commit/34d4d0b863955e4ec79635fc10b4c405948639d9))
+
 ## [2.21.0](https://github.com/flow-build/engine/compare/v2.20.1...v2.21.0) (2023-02-28)
 
 
