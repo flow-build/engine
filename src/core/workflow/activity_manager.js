@@ -317,7 +317,7 @@ class ActivityManager extends PersistedEntity {
 
   async _initTimeout(trx = false) {
     const timeout = this.parameters.timeout;
-    if (timeout && this.status !== ActivityStatus.COMPLETED) {
+    if (timeout && this.status === ActivityStatus.STARTED) {
       const next_step_number = this.parameters.next_step_number;
 
       const db = trx ? trx : Timer.getPersist()._db;
