@@ -554,32 +554,6 @@ class Process extends PersistedEntity {
           process_id: p_lock.id,
           activity_manager_id: am.id,
         });
-      } else if (result_state.status === ProcessStatus.DELEGATED) {
-        emitter.emit("PROCESS.SUBPROCESS.CREATING", `      CREATING NEW SUBPROCESS ON PID [${p_lock.id}]`, {
-          process_id: p_lock.id,
-          sub_workflow_name: node_result.workflow_name,
-        });
-        const initial_bag = result_state.result;
-        const parent_data = {
-          id: this.id,
-          expected_step_number: result_state.step_number,
-        };
-        initial_bag.parent_process_data = parent_data;
-        const child_process = await process_manager.createProcessByWorkflowName(
-          node_result.workflow_name,
-          node_result.actor_data,
-          initial_bag
-        );
-        if (child_process.status === ProcessStatus.UNSTARTED) {
-          emitter.emit("PROCESS.SUBPROCESS.NEW", `NEW SUBPROCESS ON PID [${p_lock.id}] SPID [${child_process.id}]`, {
-            process_id: p_lock.id,
-            sub_process_id: child_process.id,
-          });
-
-          process_manager.runProcess(child_process.id, node_result.actor_data, {});
-        } else {
-          throw new Error(`ERROR CREATING SUBPROCESS`);
-        }
       } else if (result_state.status === ProcessStatus.FINISHED) {
         emitter.emit("PROCESS.FINISHED", `      FINISHED PID [${p_lock.id}]`, {
           process_id: p_lock.id,
