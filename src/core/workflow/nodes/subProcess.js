@@ -94,11 +94,19 @@ class SubProcessNode extends ParameterizedNode {
 
         let result, status;
         if (child_process?.id) {
+          emitter.emit(
+            "PROCESS.SUBPROCESS",
+            `      NEW SUBPROCESS ON PID [${parameters.process_id}] SPID [${child_process?.id}]`,
+            {
+              process_id: parameters.process_id,
+              sub_process_id: child_process.id,
+            }
+          );
           process_manager.runProcess(child_process.id, execution_data.actor_data);
           result = { sub_process_id: child_process.id };
           status = ProcessStatus.DELEGATED;
         } else {
-          emitter.emit("NODE.RESULT_ERROR", `WORKFLOW ${execution_data.workflow_name} NOT FOUND`, {});
+          emitter.emit("NODE.RESULT_ERROR", `WORKFLOW NAME ${execution_data.workflow_name} NOT FOUND`, {});
           result = { sub_process_id: "", error: "workflow not found" };
           status = ProcessStatus.ERROR;
         }
