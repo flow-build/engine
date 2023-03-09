@@ -41,6 +41,18 @@ test("constructor works", () => {
   expect(engineTest).toBeInstanceOf(Engine);
 });
 
+describe("getters", () => {
+  test("event_emitter", () => {
+    const getter = Engine.event_emitter;
+    expect(getter).toBeDefined();
+  });
+
+  test("persistor", () => {
+    const getter = Engine.persistor;
+    expect(getter).toBeDefined();
+  });
+});
+
 describe("create & run process", () => {
   test("for system tasks", async () => {
     const workflow = await engine.saveWorkflow("sample", "sample", blueprints_.identity_system_task);
