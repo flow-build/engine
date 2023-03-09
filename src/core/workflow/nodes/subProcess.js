@@ -63,7 +63,7 @@ class SubProcessNode extends ParameterizedNode {
     return {
       workflow_name: prepared_workflow_name,
       input: prepared_input,
-      actor_data: prepared_actor_data,
+      actor_data: { ...prepared_actor_data, ...{ parentProcessData: { id: parameters.process_id } } },
     };
   }
 
@@ -83,7 +83,8 @@ class SubProcessNode extends ParameterizedNode {
           parent_process_data: {
             id: parameters.process_id,
             expected_step_number: input.step_number + 1,
-          }
+          },
+          ...execution_data.input
         }
 
         const child_process = await process_manager.createProcessByWorkflowName(
