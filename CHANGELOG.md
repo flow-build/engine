@@ -1,3 +1,10 @@
+## [2.22.0](https://github.com/flow-build/engine/compare/v2.21.1...v2.22.0) (2023-03-09)
+
+
+### Features
+
+* **nodes:** add dueDate and duration to timerNode ([f0ab77a](https://github.com/flow-build/engine/commit/f0ab77ac1c4e31196e701dc2820b87ca31b26647))
+
 ### [2.21.1](https://github.com/flow-build/engine/compare/v2.21.0...v2.21.1) (2023-03-04)
 
 
