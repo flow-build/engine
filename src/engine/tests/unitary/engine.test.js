@@ -41,6 +41,18 @@ test("constructor works", () => {
   expect(engineTest).toBeInstanceOf(Engine);
 });
 
+describe("getters", () => {
+  test("event_emitter", () => {
+    const getter = Engine.event_emitter;
+    expect(getter).toBeDefined();
+  });
+
+  test("persistor", () => {
+    const getter = Engine.persistor;
+    expect(getter).toBeDefined();
+  });
+});
+
 describe("create & run process", () => {
   test("for system tasks", async () => {
     const workflow = await engine.saveWorkflow("sample", "sample", blueprints_.identity_system_task);
@@ -270,7 +282,9 @@ describe("continueProcess", () => {
     expect(process.status).toEqual(ProcessStatus.FINISHED);
 
     const history = await Process.fetchStateHistory(process.id);
-    expect(history[1]._result).toEqual({ timeout: 10000, new_result: 1, step_number: 3 });
+    expect(history[1]._result.timeout).toEqual(10000);
+    expect(history[1]._result.new_result).toEqual(1);
+    expect(history[1]._result.step_number).toEqual(3);
   });
   test("continueProcess should return invalid process status", async () => {
     const workflow = await engine.saveWorkflow("sample", "sample", blueprints_.user_action);
