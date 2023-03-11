@@ -30,7 +30,7 @@ async function continueProcess(process_id, result_data, expected_step_number, tr
 
 async function createProcessByWorkflowName(workflow_name, actor_data, initial_bag = {}) {
   const workflow = await workflowDependency.Workflow.fetchWorkflowByName(workflow_name);
-  if (workflow) {
+  if (workflow?.id) {
     return await workflow.createProcess(actor_data, initial_bag);
   }
   return undefined;
