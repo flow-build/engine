@@ -8,11 +8,12 @@ on:
 
 jobs:
   test:
+    if: github.event.pull_request.user.login!='bot-flowbuild'
     name: start on node ${{ matrix.node_version }} in ${{ matrix.os }}, lint and test
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        node-version: ["14"]
+        node-version: ["18"]
         os: [ubuntu-latest]
 
     steps:
@@ -22,8 +23,7 @@ jobs:
         with:
           node-version: ${{ matrix.node-version }}
       - name: install dependencies
-        run:
-          npm ci
+        run: npm ci
         # npm run lint
       - name: start database
         run: docker-compose up -d postgres

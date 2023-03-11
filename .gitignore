@@ -26,5 +26,6 @@ pids
 coverage
 
 node_modules
+.env
 .npmrc
 /.vscode
