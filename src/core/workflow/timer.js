@@ -107,6 +107,31 @@ class Timer extends PersistedEntity {
     }
   }
 
+  async deactivate(trx = false) {
+    this.getPersist().deactivate({ resource_type: this._resource_type, resource_id: this._resource_id, trx });
+  }
+
+  async retrieve() {
+    const dbData = await this.getPersist().getByResource({
+      resource_type: this._resource_type,
+      resource_id: this._resource_id,
+    });
+    if (dbData) {
+      this._id = dbData.id;
+      this._expires_at = dbData.expires_at;
+    } else {
+      this._id = undefined;
+    }
+  }
+
+  async updateExpiration() {
+    const dbData = await this.getPersist().updateExpiration({ id: this._id, expires_at: this._expires_at });
+    if (dbData.length > 0) {
+      this._expires_at = dbData[0].expires_at;
+      return dbData[0];
+    }
+  }
+
   static timeoutFromNow(seconds) {
     const now = new Date();
     now.setSeconds(now.getSeconds() + seconds);

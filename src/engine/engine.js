@@ -18,7 +18,7 @@ const { ProcessStatus } = require("./../core/workflow/process_state");
 const { validateTimeInterval } = require("../core/utils/ajvValidator");
 const { validate: uuidValidate } = require("uuid");
 const { isEmpty } = require("lodash");
-const { readEnvironmentVariableAsBool, readEnvironmentVariableAsNumber } = require('../core/utils/environment');
+const { readEnvironmentVariableAsBool, readEnvironmentVariableAsNumber } = require("../core/utils/environment");
 
 function getActivityManagerFromData(activity_manager_data) {
   const activity_manager = ActivityManager.deserialize(activity_manager_data);
@@ -56,7 +56,7 @@ class Engine {
   }
 
   constructor(persist_mode, persist_args, logger_level) {
-    const heartBeat = readEnvironmentVariableAsBool('ENGINE_HEARTBEAT', true);
+    const heartBeat = readEnvironmentVariableAsBool("ENGINE_HEARTBEAT", true);
     createLogger(logger_level);
     if (Engine.instance) {
       startEventListener(emitter);
@@ -173,7 +173,7 @@ class Engine {
         Engine.heart = Engine.setNextHeartBeat();
         emitter.emit("ENGINE.NEXT", "NEXT HEARTBEAT SET");
       }
-    }, readEnvironmentVariableAsNumber('HEART_BEAT', 1000));
+    }, readEnvironmentVariableAsNumber("HEART_BEAT", 1000));
   }
 
   static kill() {
@@ -233,7 +233,7 @@ class Engine {
 
     let activity_manager = await this.fetchActivityManager(id);
     if (activity_manager) {
-      return await ActivityManager.addTimeInterval(id, timeInterval, resource_type);
+      return await ActivityManager.addTimeInterval(id, timeInterval);
     } else {
       return {
         error: {

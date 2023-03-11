@@ -114,10 +114,6 @@ class ActivityManagerKnexPersist extends KnexPersist {
     }
     return await query;
   }
-
-  async getTimerfromResourceId(resource_id) {
-    return await this._db.select().from("timer").where("resource_id", resource_id);
-  }
 }
 
 module.exports = {

@@ -1,10 +1,11 @@
-const { v1: uuid } = require("uuid");
 const _ = require("lodash");
+const { v1: uuid } = require("uuid");
 const { PersistedEntity } = require("./base");
 const { Packages } = require("./packages");
 const { Lane } = require("./lanes");
 const { Activity, ActivityStatus } = require("./activity");
 const { Timer } = require("./timer");
+const { Events } = require("./events");
 
 const { getActivityManagerNotifier } = require("../notifier_manager");
 const process_manager = require("./process_manager");
@@ -12,6 +13,30 @@ const activity_manager_factory = require("../utils/activity_manager_factory");
 const crypto_manager = require("../crypto_manager");
 const ajvValidator = require("../utils/ajvValidator");
 const emitter = require("../utils/emitter");
+
+async function initTimeout({ id, timeout, status, next_step_number, trx }) {
+  if (timeout && status === ActivityStatus.STARTED) {
+    const timer = new Timer("ActivityManager", id, Timer.timeoutFromNow(timeout), { next_step_number });
+    const deact = await timer.deactivate(trx);
+    if (deact) {
+      emitter.emit("ACTIVITY_MANAGER_TIMER.CLEARED", `      CLEARED TIMERS FOR AMID [${id}]`, {
+        activity_manager_id: id,
+      });
+    }
+
+    emitter.emit("ACTIVITY_MANAGER_TIMER.CREATING_NEW", `      CREATING NEW TIMER ON AMID [${id}] `, {
+      activity_manager_id: id,
+    });
+
+    await timer.save(trx);
+    emitter.emit("ACTIVITY_MANAGER.NEW_TIMER", `      NEW TIMER ON AMID [${id}] TIMER [${timer.id}]`, {
+      activity_manager_id: id,
+      timer_id: timer.id,
+    });
+
+    return timer.id;
+  }
+}
 
 class ActivityManager extends PersistedEntity {
   static getEntityClass() {
@@ -126,53 +151,53 @@ class ActivityManager extends PersistedEntity {
         result = allowed_activities[0];
         result.activities = await this.getPersist().getActivities(result.id);
 
-        const timer = await this.getPersist().getTimerfromResourceId(activity_manager.id);
-        if (timer.length !== 0) {
-          result.expires_at = timer[0].expires_at;
+        let timer = new Timer("ActivityManager", activity_manager_id, null, {});
+        await timer.retrieve();
+
+        if (timer._id) {
+          result.expires_at = timer._expires_at;
         }
       }
     }
     return result;
   }
 
-  static async addTimeInterval(id, timeInterval, resource_type) {
-    let timer = await this.getPersist().getTimerfromResourceId(id);
+  static async addTimeInterval(activity_manager_id, timeInterval) {
+    let timer = new Timer("ActivityManager", activity_manager_id, null, {});
 
-    if (timer.length !== 0) {
-      const new_expired_date = new Date(
-        timer[0].expires_at.setTime(timer[0].expires_at.getTime() + timeInterval * 1000)
-      );
+    await timer.retrieve();
+    if (timer._id) {
+      const new_expired_date = new Date(timer.expires_at.setTime(timer.expires_at.getTime() + timeInterval * 1000));
+      timer._expires_at = new_expired_date;
 
-      const db = Timer.getPersist()._db;
-      await db("timer")
-        .where("resource_type", resource_type)
-        .andWhere("resource_id", id)
-        .update({ expires_at: new_expired_date });
+      await timer.updateExpiration();
     } else {
-      await ActivityManager.createTimer(id, timeInterval, resource_type);
+      timer._id = uuid();
+      timer._expires_at = new Date(new Date().getTime() + timeInterval * 1000);
+      await timer.save();
     }
   }
 
-  static async setExpiredDate(id, date, resource_type) {
-    let timer = await this.getPersist().getTimerfromResourceId(id);
+  static async setExpiredDate(activity_manager_id, date) {
+    let timer = new Timer("ActivityManager", activity_manager_id, date, {});
+    await timer.retrieve();
 
-    if (timer.length !== 0) {
-      timer.expires_at = new Date(date);
-
-      const db = Timer.getPersist()._db;
-      await db("timer")
-        .where("resource_type", resource_type)
-        .andWhere("resource_id", id)
-        .update({ expires_at: timer.expires_at });
+    if (timer._id) {
+      timer._expires_at = new Date(date);
+      await timer.updateExpiration();
     } else {
-      await ActivityManager.createTimer(id, date, resource_type);
+      await timer.save();
     }
   }
 
   static async interruptActivityManagerForProcess(process_id, trx) {
-    const full_activity_manager_data = await this.getPersist().getActivityDataFromStatus(ActivityStatus.STARTED, {
-      process_id: process_id,
-    }, trx);
+    const full_activity_manager_data = await this.getPersist().getActivityDataFromStatus(
+      ActivityStatus.STARTED,
+      {
+        process_id: process_id,
+      },
+      trx
+    );
     for (const activity_manager_data of full_activity_manager_data) {
       const activity_manager = ActivityManager.deserialize(activity_manager_data);
       activity_manager.activities = activity_manager_data.activities;
@@ -181,14 +206,33 @@ class ActivityManager extends PersistedEntity {
   }
 
   static async finishActivityManagerForProcess(process_id, trx = false) {
-    const full_activity_manager_data = await this.getPersist().getActivityDataFromStatus(ActivityStatus.STARTED, {
-      process_id: process_id,
-    }, trx);
+    const full_activity_manager_data = await this.getPersist().getActivityDataFromStatus(
+      ActivityStatus.STARTED,
+      {
+        process_id: process_id,
+      },
+      trx
+    );
     for (const activity_manager_data of full_activity_manager_data) {
       const activity_manager = ActivityManager.deserialize(activity_manager_data);
       activity_manager.activities = activity_manager_data.activities;
       await activity_manager._validateActivity(process_id);
     }
+  }
+
+  static async createTimer(id, time) {
+    let timeout = time instanceof Date ? new Date(time) : new Date(new Date().getTime() + time * 1000);
+
+    await initTimeout({ id, timeout, status: ActivityStatus.STARTED });
+  }
+
+  static async createBoundaryEvents({ id, event }) {
+    event.input["activityManagerId"] = id;
+    event.definition = "UserTask";
+
+    const myEvent = new Events(event);
+    const result = await myEvent.create();
+    return result;
   }
 
   get process_state_id() {
@@ -250,7 +294,22 @@ class ActivityManager extends PersistedEntity {
   }
 
   async save(trx = false, ...args) {
-    await this._initTimeout(trx);
+    const timeout_id = await initTimeout({
+      id: this._id,
+      timeout: this._parameters.timeout,
+      status: this._status,
+      next_step_number: this._parameters.next_step_number,
+      trx,
+    });
+
+    if (timeout_id) {
+      this.parameters.timeout_id = timeout_id;
+    }
+
+    if (this.events) {
+      await this.events.map(async (event) => ActivityManager.createBoundaryEvents({ id: this._id, event }));
+    }
+
     return await super.save(trx, ...args);
   }
 
@@ -315,37 +374,6 @@ class ActivityManager extends PersistedEntity {
     }
   }
 
-  async _initTimeout(trx = false) {
-    const timeout = this.parameters.timeout;
-    if (timeout && this.status !== ActivityStatus.COMPLETED) {
-      const next_step_number = this.parameters.next_step_number;
-
-      const db = trx ? trx : Timer.getPersist()._db;
-      await db("timer")
-        .where("resource_type", "ActivityManager")
-        .andWhere("resource_id", this.id)
-        .update({ active: false });
-
-      emitter.emit("ACTIVITY_MANAGER_TIMER.CLEARED", `      CLEARED TIMERS FOR AMID [${this.id}]`, {
-        activity_manager_id: this.id,
-      });
-
-      emitter.emit("ACTIVITY_MANAGER_TIMER.CREATING_NEW", `      CREATING NEW TIMER ON AMID [${this.id}] `, {
-        activity_manager_id: this.id,
-      });
-      const timer = new Timer("ActivityManager", this.id, Timer.timeoutFromNow(this.parameters.timeout), {
-        next_step_number,
-      });
-      await timer.save(trx);
-      emitter.emit("ACTIVITY_MANAGER.NEW_TIMER", `      NEW TIMER ON AMID [${this.id}] TIMER [${timer.id}]`, {
-        activity_manager_id: this.id,
-        timer_id: timer.id,
-      });
-
-      this.parameters.timeout_id = timer.id;
-    }
-  }
-
   async timeout(timer, trx) {
     emitter.emit("ACTIVITY_MANAGER.TIMEOUT_EXPIRED", `TIMEOUT ON AMID [${this.id}] TIMER [${timer.id}]`, {
       activity_manager_id: this.id,
@@ -375,36 +403,6 @@ class ActivityManager extends PersistedEntity {
           trx
         );
       }
-    }
-  }
-
-  static async createTimer(id, time, resource_type) {
-    emitter.emit("ACTIVITY_MANAGER_TIMER.CREATING_NEW", `      CREATING NEW TIMER ON AMID [${id}]`, {
-      activity_manager_id: id,
-    });
-
-    const db = Timer.getPersist()._db;
-
-    if (time instanceof Date) {
-      await db("timer").insert({
-        id: uuid(),
-        created_at: new Date(),
-        expires_at: new Date(time),
-        active: true,
-        resource_type: "ActivityManager",
-        resource_id: id,
-        params: {},
-      });
-    } else {
-      await db("timer").insert({
-        id: uuid(),
-        created_at: new Date(),
-        expires_at: new Date(new Date().getTime() + time * 1000),
-        active: true,
-        resource_type: resource_type,
-        resource_id: id,
-        params: {},
-      });
     }
   }
 }
