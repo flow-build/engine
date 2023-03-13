@@ -5,7 +5,7 @@ const { Packages } = require("./packages");
 const { Lane } = require("./lanes");
 const { Activity, ActivityStatus } = require("./activity");
 const { Timer } = require("./timer");
-const { Events } = require("./events");
+const { Events } = require("./events/base");
 
 const { getActivityManagerNotifier } = require("../notifier_manager");
 const process_manager = require("./process_manager");
@@ -29,6 +29,17 @@ async function initTimeout({ id, timeout, status, next_step_number, trx }) {
     });
 
     await timer.save(trx);
+    await Timer.addJob({
+      name: "usertask",
+      payload: {
+        activityManagerId: id,
+      },
+      options: {
+        jobId: id,
+        delay: timeout,
+        timerId: timer.id,
+      },
+    });
     emitter.emit("ACTIVITY_MANAGER.NEW_TIMER", `      NEW TIMER ON AMID [${id}] TIMER [${timer.id}]`, {
       activity_manager_id: id,
       timer_id: timer.id,
@@ -222,14 +233,23 @@ class ActivityManager extends PersistedEntity {
 
   static async createTimer(id, time) {
     let timeout = time instanceof Date ? new Date(time) : new Date(new Date().getTime() + time * 1000);
-
     await initTimeout({ id, timeout, status: ActivityStatus.STARTED });
   }
 
   static async createBoundaryEvents({ id, event }) {
-    event.input["activityManagerId"] = id;
-    event.definition = "UserTask";
+    if (event.input) {
+      event.input["activityManagerId"] = id;
+    } else {
+      event.input = {
+        activityManagerId: id,
+      };
+    }
 
+    event.definition = "UserTask";
+    event.resource = {
+      id: id,
+      type: "usertask",
+    };
     const myEvent = new Events(event);
     const result = await myEvent.create();
     return result;
@@ -306,10 +326,14 @@ class ActivityManager extends PersistedEntity {
       this.parameters.timeout_id = timeout_id;
     }
 
-    if (this.events) {
-      await this.events.map(async (event) => ActivityManager.createBoundaryEvents({ id: this._id, event }));
+    if (this._parameters?.events) {
+      const eventsPromise = await this._parameters.events.map(async (event) =>
+        ActivityManager.createBoundaryEvents({ id: this._id, event })
+      );
+      const eventsResult = await Promise.all(eventsPromise);
+      this.parameters.timeout_id = eventsResult.map((job) => `${job.queue.name}:${job.id}`);
+      this.parameters.timeout = eventsResult.map((job) => job.delay);
     }
-
     return await super.save(trx, ...args);
   }
 
