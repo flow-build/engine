@@ -155,6 +155,37 @@ describe("Validation", () => {
       expect(_errors[0].message).toBe("must be array");
     });
   });
+
+  describe("events", () => {
+    test("Must have family", async () => {
+      const spec = _.cloneDeep(examples.withDurationTimerEvent);
+      delete spec.events[0].family;
+      const node = new UserTaskNode(spec);
+      const [validation, errors] = node.validate();
+      expect(validation).toBeFalsy();
+      const _errors = JSON.parse(errors);
+      expect(_errors[0].message).toBe("must have required property 'family'");
+    });
+
+    test("Must have category", async () => {
+      const spec = _.cloneDeep(examples.withDurationTimerEvent);
+      delete spec.events[0].category;
+      const node = new UserTaskNode(spec);
+      const [validation, errors] = node.validate();
+      expect(validation).toBeFalsy();
+      const _errors = JSON.parse(errors);
+      expect(_errors[0].message).toBe("must have required property 'category'");
+    });
+
+    test("Category won't accept $ref", async () => {
+      const spec = _.cloneDeep(examples.withEventObject);
+      const node = new UserTaskNode(spec);
+      const [validation, errors] = node.validate();
+      expect(validation).toBeFalsy();
+      const _errors = JSON.parse(errors);
+      expect(_errors[0].message).toBe("must be string");
+    });
+  });
 });
 
 describe("UserTaskNode", () => {
@@ -397,5 +428,41 @@ describe("UserTaskNode", () => {
     expected_result.result.identity_user_data = "user of params";
 
     expect(result).toMatchObject(expected_result);
+  });
+
+  test("Creates activity manager with events property", async () => {
+    const node_spec = _.cloneDeep(examples.withDurationTimerEvent);
+
+    const node = new UserTaskNode(node_spec);
+
+    const bag = { identity_user_data: "example_bag_data" };
+    const input = { identity_user_data: "example_input_data" };
+    const actor_data = {};
+    const result = await node.run({ bag, input, actor_data });
+    expect(result.activity_manager).toBeDefined();
+    expect(result.activity_manager.events).toBeDefined();
+    expect(result.activity_manager.events[0].family).toBeDefined();
+  });
+
+  test("Creates activity manager with events using $ref", async () => {
+    const node_spec = _.cloneDeep(examples.withEventObject);
+
+    const node = new UserTaskNode(node_spec);
+
+    const bag = { identity_user_data: "example_bag_data", date: 12345 };
+    const input = { identity_user_data: "example_input_data" };
+    const actor_data = { family: "target" };
+    const parameters = { category: "timer" };
+    const result = await node.run({ bag, input, actor_data, parameters });
+    expect(result.activity_manager).toBeDefined();
+    expect(result.activity_manager.events).toBeDefined();
+    expect(result.activity_manager.events[0].dueDate).toBeDefined();
+    expect(result.activity_manager.events[0].dueDate).toEqual(12345);
+
+    expect(result.activity_manager.events[0].family).toBeDefined();
+    expect(result.activity_manager.events[0].family).toEqual("target");
+
+    expect(result.activity_manager.events[0].category).toBeDefined();
+    expect(result.activity_manager.events[0].category).toEqual("timer");
   });
 });

@@ -34,6 +34,63 @@ const complete = {
   },
 };
 
+const withEventObject = {
+  id: "USER-TASK-W-TIMER",
+  name: "user task with boundary timer event",
+  next: "NEXT",
+  type: "UserTask",
+  lane_id: "any",
+  parameters: {
+    input: {},
+    action: "SOME ACTION",
+  },
+  events: [
+    {
+      family: { $ref: "actor_data.family" },
+      category: { $ref: "parameters.category" },
+      dueDate: { $ref: "bag.date" },
+    },
+  ],
+};
+
+const withDueDateTimerEvent = {
+  id: "USER-TASK-W-TIMER",
+  name: "user task with boundary timer event",
+  next: "NEXT",
+  type: "UserTask",
+  lane_id: "any",
+  parameters: {
+    input: {},
+    action: "SOME ACTION",
+  },
+  events: [
+    {
+      family: "target",
+      category: "timer",
+      dueDate: new Date(),
+    },
+  ],
+};
+
+const withDurationTimerEvent = {
+  id: "USER-TASK-W-TIMER",
+  name: "user task with boundary timer event",
+  next: "NEXT",
+  type: "UserTask",
+  lane_id: "any",
+  parameters: {
+    input: {},
+    action: "SOME ACTION",
+  },
+  events: [
+    {
+      family: "target",
+      category: "timer",
+      duration: "PT5M10S",
+    },
+  ],
+};
+
 const wrongActivitySchema = {
   type: "object",
   properties: {
@@ -67,6 +124,9 @@ module.exports = {
   minimal,
   minimalSuccessWaiting,
   minimalSuccessRunning,
+  withEventObject,
+  withDueDateTimerEvent,
+  withDurationTimerEvent,
   complete,
   wrongActivitySchema,
 };
