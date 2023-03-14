@@ -5,6 +5,8 @@ const { prepare } = require("../../utils/input");
 const { ProcessStatus } = require("../process_state");
 const crypto_manager = require("../../crypto_manager");
 const { ParameterizedNode } = require("./parameterized");
+const process_manager = require("../process_manager");
+const emitter = require("../../utils/emitter");
 
 class SubProcessNode extends ParameterizedNode {
   static get schema() {
@@ -39,6 +41,32 @@ class SubProcessNode extends ParameterizedNode {
     return SubProcessNode.validate(this._spec);
   }
 
+  _preProcessing({ bag, input, actor_data, environment, parameters }) {
+    const context = {
+      bag,
+      result: input,
+      actor_data,
+      environment,
+      parameters,
+    };
+
+    const prepared_input = super._preProcessing({
+      bag,
+      input,
+      actor_data,
+      environment,
+      parameters,
+    });
+    const prepared_workflow_name = prepare(this._spec.parameters.workflow_name, context);
+    const prepared_actor_data = prepare(this._spec.parameters.actor_data, context);
+
+    return {
+      workflow_name: prepared_workflow_name,
+      input: prepared_input,
+      actor_data: { ...prepared_actor_data, ...{ parentProcessData: { id: parameters.process_id } } },
+    };
+  }
+
   async run({ bag, input, external_input = null, actor_data, environment = {}, parameters = {} }, lisp) {
     try {
       if (!external_input) {
@@ -51,13 +79,46 @@ class SubProcessNode extends ParameterizedNode {
           parameters,
         });
 
+        const initial_bag = {
+          parent_process_data: {
+            id: parameters.process_id,
+            expected_step_number: input.step_number + 1,
+          },
+          ...execution_data.input
+        }
+
+        const child_process = await process_manager.createProcessByWorkflowName(
+          execution_data.workflow_name,
+          execution_data.actor_data,
+          initial_bag
+        );
+
+        let result, status;
+        if (child_process?.id) {
+          emitter.emit(
+            "PROCESS.SUBPROCESS",
+            `      NEW SUBPROCESS ON PID [${parameters.process_id}] SPID [${child_process?.id}]`,
+            {
+              process_id: parameters.process_id,
+              sub_process_id: child_process.id,
+            }
+          );
+          process_manager.runProcess(child_process.id, execution_data.actor_data);
+          result = { sub_process_id: child_process.id };
+          status = ProcessStatus.DELEGATED;
+        } else {
+          emitter.emit("NODE.RESULT_ERROR", `WORKFLOW NAME ${execution_data.workflow_name} NOT FOUND`, {});
+          result = { sub_process_id: "", error: "workflow not found" };
+          status = ProcessStatus.ERROR;
+        }
+
         return {
           node_id: this.id,
           bag: bag,
           external_input: external_input, //external_input is always null here
-          result: execution_data,
+          result: result,
           error: null,
-          status: ProcessStatus.DELEGATED,
+          status: status,
           next_node_id: this.id,
           workflow_name: this._spec.parameters.workflow_name,
           actor_data: prepared_actor_data,

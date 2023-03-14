@@ -1,15 +1,17 @@
 {
   "name": "@flowbuild/engine",
-  "version": "2.21.1",
+  "version": "2.22.1",
   "description": "workflow engine from flow-build to work in multiple plataforms",
   "dependencies": {
     "ajv": "8.12.0",
     "ajv-formats": "2.1.1",
     "axios": "0.27.2",
+    "bullmq": "3.10.1",
     "delegates": "1.0.0",
     "dotenv": "16.0.3",
     "eventemitter2": "6.4.9",
     "handlebars": "4.7.7",
+    "iso8601-duration": "2.1.1",
     "jsum": "1.0.1",
     "knex": "2.4.2",
     "lodash": "4.17.21",

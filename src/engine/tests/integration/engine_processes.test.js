@@ -504,6 +504,54 @@ test("child process has restricted input schema", async () => {
   expect(childState.state.status).not.toBe(ProcessStatus.ERROR);
 });
 
+test("run successfully process that creates sub process", async () => {
+  const parent_workflow = await engine.saveWorkflow(
+    "parent_workflow",
+    "parent workflow",
+    blueprints_.sub_process.blueprint_spec
+  );
+  const child_workflow = await engine.saveWorkflow(
+    "blueprint_spec_son",
+    "child workflow",
+    blueprints_.minimal
+  );
+
+  let parent_process = await engine.createProcess(parent_workflow.id, actors_.simpleton);
+  expect(parent_process.state.status).toEqual("unstarted");
+
+  parent_process = await engine.runProcess(parent_process.id, actors_.simpleton);
+  expect(parent_process.state.status).toEqual("delegated");
+  
+  while(parent_process.state.status === "delegated" || parent_process.state.status === "running") {
+    parent_process = await engine.fetchProcess(parent_process.id)
+  }
+  const child_process_list = await engine.fetchProcessList({ workflow_id: child_workflow.id });
+  expect(child_process_list).toHaveLength(1);
+
+  const parent_process_list = await engine.fetchProcessList({ workflow_id: parent_workflow.id });
+  expect(parent_process_list).toHaveLength(1);
+
+  const result_parent = await engine.fetchProcess(parent_process.id);
+  expect(result_parent.state.status).not.toEqual(ProcessStatus.DELEGATED);
+
+  const result_child = await engine.fetchProcess(child_process_list[0].id);
+  expect(result_child.state.status).toEqual(ProcessStatus.FINISHED);
+});
+
+test("error running process that creates unexisted sub process", async () => {
+  const parent_workflow = await engine.saveWorkflow(
+    "parent_workflow",
+    "parent workflow",
+    blueprints_.sub_process.blueprint_spec
+  );
+
+  let parent_process = await engine.createProcess(parent_workflow.id, actors_.simpleton);
+  expect(parent_process.state.status).toEqual("unstarted");
+
+  parent_process = await engine.runProcess(parent_process.id, actors_.simpleton);
+  expect(parent_process.state.status).toEqual("error");
+});
+
 describe("User task timeout", () => {
 
   beforeEach(async () => {

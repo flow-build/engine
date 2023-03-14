@@ -18,11 +18,54 @@ const timeoutObject = {
   next: "END",
   lane_id: "1",
   parameters: {
-    input: {
-      value: { $ref: "bag.sample" },
-    },
-    timeout: { $ref: "value" },
+    timeout: { $ref: "bag.sample" },
   },
+};
+
+const dueDateObject = {
+  id: "DUEDATE-OBJECT",
+  type: "SystemTask",
+  category: "Timer",
+  name: "Sleep system task node",
+  next: "END",
+  lane_id: "1",
+  parameters: {
+    dueDate: { $ref: "bag.date" },
+  },
+};
+
+const durationObject = {
+  id: "DURATION-OBJECT",
+  type: "SystemTask",
+  category: "Timer",
+  name: "Sleep system task node",
+  next: "END",
+  lane_id: "1",
+  parameters: {
+    duration: { $ref: "bag.duration" },
+  },
+};
+
+const durationValue = {
+  id: "DURATION-OBJECT",
+  type: "SystemTask",
+  category: "Timer",
+  name: "Sleep system task node",
+  next: "END",
+  lane_id: "1",
+  parameters: {
+    duration: "PT10M10S",
+  },
+};
+
+const wrongObject = {
+  id: "WRONG-OBJECT",
+  type: "SystemTask",
+  category: "Timer",
+  name: "Sleep system task node",
+  next: "END",
+  lane_id: "1",
+  parameters: {},
 };
 
 const successResult = {
@@ -35,4 +78,12 @@ const successResult = {
   status: "running",
 };
 
-module.exports = { timeoutNumber, timeoutObject, successResult };
+module.exports = {
+  timeoutNumber,
+  timeoutObject,
+  dueDateObject,
+  durationObject,
+  durationValue,
+  successResult,
+  wrongObject,
+};

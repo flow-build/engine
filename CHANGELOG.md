@@ -1,3 +1,18 @@
+### [2.22.1](https://github.com/flow-build/engine/compare/v2.22.0...v2.22.1) (2023-03-11)
+
+
+### Bug Fixes
+
+* adjust subprocess node in case workflow doesnt exist ([5248bb3](https://github.com/flow-build/engine/commit/5248bb3afd1ff2c26ef055bab6b943fa2f8f1405))
+* insert input on initial_bag & parentData on actor_data ([e9666a5](https://github.com/flow-build/engine/commit/e9666a5e85e673b3e90470088de0855fe7661c34))
+
+## [2.22.0](https://github.com/flow-build/engine/compare/v2.21.1...v2.22.0) (2023-03-09)
+
+
+### Features
+
+* **nodes:** add dueDate and duration to timerNode ([f0ab77a](https://github.com/flow-build/engine/commit/f0ab77ac1c4e31196e701dc2820b87ca31b26647))
+
 ### [2.21.1](https://github.com/flow-build/engine/compare/v2.21.0...v2.21.1) (2023-03-04)
 
 
