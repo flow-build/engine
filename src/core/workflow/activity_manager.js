@@ -176,7 +176,7 @@ class ActivityManager extends PersistedEntity {
     for (const activity_manager_data of full_activity_manager_data) {
       const activity_manager = ActivityManager.deserialize(activity_manager_data);
       activity_manager.activities = activity_manager_data.activities;
-      await activity_manager.interruptActivity(process_id);
+      await activity_manager.interruptActivity(process_id, trx);
     }
   }
 
@@ -187,7 +187,7 @@ class ActivityManager extends PersistedEntity {
     for (const activity_manager_data of full_activity_manager_data) {
       const activity_manager = ActivityManager.deserialize(activity_manager_data);
       activity_manager.activities = activity_manager_data.activities;
-      await activity_manager._validateActivity(process_id);
+      await activity_manager._validateActivity(process_id, trx);
     }
   }
 
@@ -286,17 +286,17 @@ class ActivityManager extends PersistedEntity {
     return [is_completed, this._activities];
   }
 
-  async interruptActivity(process_id) {
+  async interruptActivity(process_id, trx = false) {
     this._status = ActivityStatus.INTERRUPTED;
-    await this.save();
+    await this.save(trx);
     await this._notifyActivityManager(process_id);
     return this;
   }
 
-  async _validateActivity(process_id) {
+  async _validateActivity(process_id, trx = false) {
     //ToDo
     this._status = ActivityStatus.COMPLETED;
-    await this.save();
+    await this.save(trx);
     emitter.emit("ACTIVITY_MANAGER.COMPLETED", `ACTIVITY MANAGER COMPLETED AMID: [${this.id}]`, {
       activity_manager: this,
     });
@@ -317,7 +317,7 @@ class ActivityManager extends PersistedEntity {
 
   async _initTimeout(trx = false) {
     const timeout = this.parameters.timeout;
-    if (timeout && this.status !== ActivityStatus.COMPLETED) {
+    if (timeout && this.status === ActivityStatus.STARTED) {
       const next_step_number = this.parameters.next_step_number;
 
       const db = trx ? trx : Timer.getPersist()._db;
