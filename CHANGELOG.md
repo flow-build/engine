@@ -1,3 +1,11 @@
+### [2.22.2](https://github.com/flow-build/engine/compare/v2.22.1...v2.22.2) (2023-03-14)
+
+
+### Bug Fixes
+
+* adjust condition to initialize new timer on AM saving ([87ac03b](https://github.com/flow-build/engine/commit/87ac03b4aee6b7b49261e42375a2e9c1912ffc29))
+* adjust transaction handling on 'finish' and 'interrupt' of AMs ([0dda685](https://github.com/flow-build/engine/commit/0dda68597514ac60d85a9825fcd6fd7aea55a310))
+
 ### [2.22.1](https://github.com/flow-build/engine/compare/v2.22.0...v2.22.1) (2023-03-11)
 
 
