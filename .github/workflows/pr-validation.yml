@@ -17,9 +17,9 @@ jobs:
         os: [ubuntu-latest]
 
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
       - name: Use Node.js ${{ matrix.node-version }}
-        uses: actions/setup-node@v1
+        uses: actions/setup-node@v3
         with:
           node-version: ${{ matrix.node-version }}
       - name: install dependencies
@@ -27,6 +27,9 @@ jobs:
         # npm run lint
       - name: start database
         run: docker-compose up -d postgres
+
+      - name: start redis
+        run: docker-compose up -d redis
 
       - name: start app
         run: docker-compose up app

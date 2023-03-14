@@ -10,6 +10,13 @@ services:
     ports:
       - 5432:5432
 
+  redis:
+    image: redis:7-bullseye
+    container_name: flwobuild_redis
+    restart: always
+    ports:
+      - 6379:6379
+
   app:
     image: node:16.15.0
     user: root
