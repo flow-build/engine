@@ -3,13 +3,8 @@ const addFormats = require("ajv-formats");
 const { prepare } = require("../../utils/input");
 const { ProcessStatus } = require("../process_state");
 const { SystemTaskNode } = require("./systemTask");
-const { Queue } = require("bullmq");
 const { toSeconds, parse } = require("iso8601-duration");
-
-const connection = {
-  host: process.env.TIMER_HOST,
-  port: process.env.TIMER_PORT,
-};
+const { Timer } = require("../timer");
 
 class TimerSystemTaskNode extends SystemTaskNode {
   static get schema() {
@@ -109,7 +104,7 @@ class TimerSystemTaskNode extends SystemTaskNode {
 
     try {
       const job = {
-        name: "intermediateEvent",
+        name: "intermediateevent",
         payload: {
           processId: execution_data["process_id"],
           stepNumber: execution_data["step_number"],
@@ -119,10 +114,11 @@ class TimerSystemTaskNode extends SystemTaskNode {
           delay: execution_data["timeout"] * 1000,
         },
       };
-      if (process.env.TIMER_QUEUE) {
-        const myQueue = new Queue(process.env.TIMER_QUEUE, { connection });
-        await myQueue.add(job.name, job.payload, job.options);
-      }
+      await Timer.addJob({
+        name: job.name,
+        payload: job.payload,
+        options: job.options,
+      });
     } catch (e) {
       return [{ error: e }, ProcessStatus.ERROR];
     }

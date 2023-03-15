@@ -46,11 +46,6 @@ describe("getters", () => {
     const getter = Engine.event_emitter;
     expect(getter).toBeDefined();
   });
-
-  test("persistor", () => {
-    const getter = Engine.persistor;
-    expect(getter).toBeDefined();
-  });
 });
 
 describe("create & run process", () => {

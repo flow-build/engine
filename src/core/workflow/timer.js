@@ -1,6 +1,12 @@
 /* eslint-disable indent */
 const { PersistedEntity } = require("./base");
 const _ = require("lodash");
+const { Queue } = require("bullmq");
+
+const connection = {
+  host: process.env.TIMER_HOST,
+  port: process.env.TIMER_PORT,
+};
 
 class Timer extends PersistedEntity {
   static getEntityClass() {
@@ -35,6 +41,32 @@ class Timer extends PersistedEntity {
       timer._fired_at = serialized.fired_at;
 
       return timer;
+    }
+    return undefined;
+  }
+
+  static timeoutFromNow(seconds) {
+    const now = new Date();
+    now.setSeconds(now.getSeconds() + seconds);
+    return now;
+  }
+
+  static async fetchAllActive() {
+    let query = Timer.getPersist().getAllActive();
+    const timers = await query;
+    return _.map(timers, (timer) => Timer.deserialize(timer));
+  }
+
+  static async fetchAllReady() {
+    let query = Timer.getPersist().getAllReady();
+    const timers = await query;
+    return _.map(timers, (timer) => Timer.deserialize(timer));
+  }
+
+  static async addJob({ name, payload, options }) {
+    if (process.env.TIMER_QUEUE) {
+      const myQueue = new Queue(process.env.TIMER_QUEUE, { connection });
+      return await myQueue.add(name, payload, options);
     }
     return undefined;
   }
@@ -107,22 +139,29 @@ class Timer extends PersistedEntity {
     }
   }
 
-  static timeoutFromNow(seconds) {
-    const now = new Date();
-    now.setSeconds(now.getSeconds() + seconds);
-    return now;
+  async deactivate(trx = false) {
+    this.getPersist().deactivate({ resource_type: this._resource_type, resource_id: this._resource_id, trx });
   }
 
-  static async fetchAllActive() {
-    let query = this.getPersist().getAllActive();
-    const timers = await query;
-    return _.map(timers, (timer) => Timer.deserialize(timer));
+  async retrieve() {
+    const dbData = await this.getPersist().getByResource({
+      resource_type: this._resource_type,
+      resource_id: this._resource_id,
+    });
+    if (dbData) {
+      this._id = dbData.id;
+      this._expires_at = dbData.expires_at;
+    } else {
+      this._id = undefined;
+    }
   }
 
-  static async fetchAllReady() {
-    let query = this.getPersist().getAllReady();
-    const timers = await query;
-    return _.map(timers, (timer) => Timer.deserialize(timer));
+  async updateExpiration() {
+    const dbData = await this.getPersist().updateExpiration({ id: this._id, expires_at: this._expires_at });
+    if (dbData.length > 0) {
+      this._expires_at = dbData[0].expires_at;
+      return dbData[0];
+    }
   }
 }
 

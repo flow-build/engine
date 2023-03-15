@@ -4,8 +4,43 @@ const { getActivityManager } = require("../../utils/activity_manager_factory");
 const crypto_manager = require("../../crypto_manager");
 const { timeoutParse } = require("../../utils/node");
 const { ParameterizedNode } = require("./parameterized");
+const { prepare } = require("../../utils/input");
 const Ajv = require("ajv");
 const addFormats = require("ajv-formats");
+
+const eventSchema = {
+  type: "object",
+  required: ["family", "category"],
+  properties: {
+    definition: { oneOf: [{ type: "string" }, { type: "object" }] },
+    family: { type: "string", enum: ["trigger", "target"] },
+    category: {
+      type: "string",
+      enum: [
+        "message",
+        "timer",
+        "error",
+        "escalation",
+        "cancel",
+        "compensation",
+        "conditional",
+        "link",
+        "signal",
+        "terminate",
+        "multiple",
+        "parallel",
+      ],
+    },
+    input: { type: "object" },
+    key: { oneOf: [{ type: "string" }, { type: "object" }] },
+    code: { oneOf: [{ type: "string" }, { type: "object" }] },
+    rule: { oneOf: [{ type: "string" }, { type: "object" }] },
+    dueDate: { oneOf: [{ type: "string", format: "date-time" }, { type: "object" }] },
+    cycle: { oneOf: [{ type: "string" }, { type: "object" }] },
+    duration: { oneOf: [{ type: "string" }, { type: "object" }] },
+    nodes: { type: "array" },
+  },
+};
 
 class UserTaskNode extends ParameterizedNode {
   static get schema() {
@@ -31,6 +66,7 @@ class UserTaskNode extends ParameterizedNode {
             activity_manager: { type: "string", enum: ["commit", "notify"] },
           },
         },
+        events: { type: "array", items: eventSchema },
       },
     });
   }
@@ -58,8 +94,22 @@ class UserTaskNode extends ParameterizedNode {
     try {
       if (!external_input) {
         const execution_data = this._preProcessing({ bag, input, actor_data, environment, parameters });
+        //if events are provided, prepare each event
+        let preparedEvents;
+        if (this._spec.events) {
+          preparedEvents = this._spec.events.map((item) =>
+            prepare(item, {
+              bag,
+              result: input,
+              actor_data,
+              environment,
+              parameters,
+            })
+          );
+        }
 
         const activity_manager = getActivityManager(this._spec.parameters.activity_manager);
+        activity_manager.events = preparedEvents;
         activity_manager.props = {
           result: execution_data,
           action: this._spec.parameters.action,

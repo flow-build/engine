@@ -5,7 +5,6 @@ const { FinishNode } = require("../finish");
 describe("static Schema", () => {
   test("Should merge Node and Parameterized schema", async () => {
     const schema = FinishNode.schema;
-    console.log(schema.required);
     expect(schema.properties.id).toBeDefined();
     expect(schema.properties.next).toBeDefined();
     expect(schema.properties.next.type).toBe("null");

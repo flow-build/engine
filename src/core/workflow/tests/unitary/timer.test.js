@@ -1,12 +1,7 @@
 const _ = require("lodash");
-const lisp = require("../../../lisp");
-const obju = require("../../../utils/object");
 const settings = require("../../../../../settings/tests/settings");
-const { AssertionError } = require("assert");
 const { Timer } = require("../../../workflow/timer");
-const { ProcessStatus } = require("../../../workflow/process_state");
 const { PersistorProvider } = require("../../../persist/provider");
-const { blueprints_, actors_ } = require("./blueprint_samples");
 const { v1: uuid } = require("uuid");
 
 beforeEach(async () => {
@@ -33,7 +28,7 @@ test("save works", async () => {
 });
 
 test("save params works", async () => {
-  const timer = new Timer("Process", uuid(), Timer.timeoutFromNow(10), {foo: "bar"});
+  const timer = new Timer("Process", uuid(), Timer.timeoutFromNow(10), { foo: "bar" });
   const saved_timer = await timer.save();
   expect(saved_timer.params.foo).toBe("bar");
 });
@@ -47,17 +42,13 @@ test("fetch works", async () => {
 
 test("fetchAllRead works)", async () => {
   const timeouts = [-100, -100, +100];
-  const timers = _.map(timeouts, (t) =>
-    new Timer("Process", uuid(), Timer.timeoutFromNow(t), {})
-  )
+  const timers = _.map(timeouts, (t) => new Timer("Process", uuid(), Timer.timeoutFromNow(t), {}));
 
-  for (const t of timers)
-    await t.save()
+  for (const t of timers) await t.save();
 
   const ready = await Timer.fetchAllReady();
 
   expect(ready.length).toBe(2);
-
 });
 
 test("delete works", async () => {
@@ -92,29 +83,72 @@ test("run works on mock", async () => {
 test("fetch resource don't work on other resource types", async () => {
   const mock_id = uuid();
   let timer = new Timer("Mocker", mock_id, Timer.timeoutFromNow(10), {});
-  
+
   await timer.save();
   timer._resource_id = uuid();
 
-  await timer.fetchResource().then((timer) => {
-    expect(timer).toBeFalsy();
-  }).catch((error) => {
-    expect(error).toBeTruthy();
-  });
+  await timer
+    .fetchResource()
+    .then((timer) => {
+      expect(timer).toBeFalsy();
+    })
+    .catch((error) => {
+      expect(error).toBeTruthy();
+    });
 });
 
 test("run timer don't work on other resource types", async () => {
   const mock_id = uuid();
   let timer = new Timer("ActivityManager", mock_id, Timer.timeoutFromNow(10), {});
-  
+
   await timer.save();
   timer._resource_id = uuid();
-  
-  await timer.run().then((timer) => {
-    expect(timer).toBeFalsy();
-  }).catch((error) => {
-    expect(error).toBeTruthy();
-  });
+
+  await timer
+    .run()
+    .then((timer) => {
+      expect(timer).toBeFalsy();
+    })
+    .catch((error) => {
+      expect(error).toBeTruthy();
+    });
+});
+
+test("deactivate works", async () => {
+  const id = uuid();
+  let timer = new Timer("ActivityManager", id, Timer.timeoutFromNow(1000), {});
+  await timer.save();
+
+  const newTimer = new Timer("ActivityManager", id, new Date(), {});
+  await newTimer.retrieve();
+  expect(newTimer.active).toBe(true);
+  await newTimer.deactivate();
+
+  const lastTimer = new Timer("ActivityManager", id, new Date(), {});
+  await lastTimer.retrieve();
+  expect(newTimer.active).toBe(true);
+});
+
+test("retrieve works", async () => {
+  const id = uuid();
+  let timer = new Timer("ActivityManager", id, Timer.timeoutFromNow(10), {});
+  await timer.save();
+
+  const newTimer = new Timer("ActivityManager", id, Timer.timeoutFromNow(100), {});
+  await newTimer.retrieve();
+  expect(newTimer._expires_at).toBeDefined();
+});
+
+test("updateExpiration works", async () => {
+  const id = uuid();
+  let timer = new Timer("ActivityManager", id, Timer.timeoutFromNow(10), {});
+  await timer.save();
+
+  const newExpiration = Timer.timeoutFromNow(1000);
+  timer._expires_at = newExpiration;
+
+  const newTimer = await timer.updateExpiration();
+  expect(newTimer.expires_at).toEqual(newExpiration);
 });
 
 const _clean = async () => {
