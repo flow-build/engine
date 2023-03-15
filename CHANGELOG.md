@@ -1,3 +1,16 @@
+## [2.23.0](https://github.com/flow-build/engine/compare/v2.22.2...v2.23.0) (2023-03-15)
+
+
+### Features
+
+* add events object to userTask ([b9d26f3](https://github.com/flow-build/engine/commit/b9d26f3d9155db60e20cb7159da6d6dbb8f56295))
+* create an events class ([dc7f89f](https://github.com/flow-build/engine/commit/dc7f89fc9ce1ab6bdd5161970d6c5843e99e3c34))
+
+
+### Bug Fixes
+
+* fix tests ([b8ab391](https://github.com/flow-build/engine/commit/b8ab391c99005432bc72964e606554be6b38ff9f))
+
 ### [2.22.2](https://github.com/flow-build/engine/compare/v2.22.1...v2.22.2) (2023-03-14)
 
 
