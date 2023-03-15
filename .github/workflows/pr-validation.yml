@@ -24,17 +24,11 @@ jobs:
           node-version: ${{ matrix.node-version }}
       - name: install dependencies
         run: npm ci
-        # npm run lint
       - name: start database
         run: docker-compose up -d postgres
-
-      - name: start redis
-        run: docker-compose up -d redis
-
       - name: start app
         run: docker-compose up app
-
       - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@v1
+        uses: codecov/codecov-action@v3
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
