@@ -38,11 +38,10 @@
     "axios": "./__mocks__/axios/index.js"
   },
   "scripts": {
-    "test": "jest --coverage",
+    "test": "jest",
     "test-memory": "jest --coverage",
     "db": "knex",
     "tests": "export test_persist_option='knex' && npm -- test -i --forceExit",
-    "tests-ci-github": "NODE_ENV=test export test_persist_option='knex' && npm -- test -i --forceExit",
     "tests-memory": "export test_persist_option='memory' && npm run test-memory -i",
     "seeds": "knex --env ${NODE_ENV} --knexfile knexfile.js seed:run",
     "migrations": "knex --env ${NODE_ENV} --knexfile knexfile.js migrate:latest",
