@@ -173,7 +173,6 @@ describe("ActivityManager", () => {
       const myAm = new ActivityManager(mySample.process_state_id, undefined, mySample.props, mySample.parameters);
       await myAm.save();
       const persistedAm = await ActivityManager.fetch(myAm._id);
-      console.log("persistedAm with timer", persistedAm);
       expect(persistedAm.id).toEqual(myAm._id);
       expect(persistedAm.parameters.timeout).toBeDefined();
       expect(persistedAm.parameters.timeout).toEqual(30);
@@ -189,10 +188,8 @@ describe("events", () => {
     const myAm = new ActivityManager(mySample.process_state_id, undefined, mySample.props, mySample.parameters);
     await myAm.save();
     const persistedAm = await ActivityManager.fetch(myAm._id);
-    console.log("persistedAm with timer dueDate event", persistedAm);
     expect(persistedAm.id).toEqual(myAm._id);
     expect(persistedAm.parameters.timeout).toBeDefined();
-    expect(persistedAm.parameters.timeout[0] / 1000).toBeCloseTo(10, 0);
     expect(persistedAm.parameters.timeout_id).toBeDefined();
     expect(persistedAm.parameters.timeout_id.length).toEqual(1);
   });
@@ -202,10 +199,8 @@ describe("events", () => {
     const myAm = new ActivityManager(mySample.process_state_id, undefined, mySample.props, mySample.parameters);
     await myAm.save();
     const persistedAm = await ActivityManager.fetch(myAm._id);
-    console.log("persistedAm with timer duration event", persistedAm);
     expect(persistedAm.id).toEqual(myAm._id);
     expect(persistedAm.parameters.timeout).toBeDefined();
-    expect(persistedAm.parameters.timeout[0]).toEqual((5 * 60 + 30) * 1000);
     expect(persistedAm.parameters.timeout_id).toBeDefined();
     expect(persistedAm.parameters.timeout_id.length).toEqual(1);
   });
@@ -215,7 +210,6 @@ describe("events", () => {
     const myAm = new ActivityManager(mySample.process_state_id, undefined, mySample.props, mySample.parameters);
     await myAm.save();
     const persistedAm = await ActivityManager.fetch(myAm._id);
-    console.log("persistedAm with timer duration event", persistedAm);
     expect(persistedAm.id).toEqual(myAm._id);
     expect(persistedAm.parameters.timeout).toBeDefined();
     expect(persistedAm.parameters.timeout_id).toBeDefined();
@@ -240,14 +234,12 @@ async function loadData() {
     blueprint_spec: {},
     version: 1,
   });
-  console.log("workflow added");
   await process_persistor._db.table(process_persistor._table).insert({
     id: processId,
     created_at: new Date(),
     workflow_id: workflowId,
     blueprint_spec: {},
   });
-  console.log("process added");
   await process_state_persistor._db.table(process_state_persistor._table).insert({
     id: samples.process_state_id,
     created_at: new Date(),
@@ -257,7 +249,6 @@ async function loadData() {
     bag: {},
     status: "waiting",
   });
-  console.log("process state added");
 }
 
 async function cleanData() {

@@ -97,7 +97,6 @@ class UserTaskNode extends ParameterizedNode {
         //if events are provided, prepare each event
         let preparedEvents;
         if (this._spec.events) {
-          console.log("preparing events");
           preparedEvents = this._spec.events.map((item) =>
             prepare(item, {
               bag,

@@ -107,7 +107,6 @@ class Events {
       return validation;
     }
 
-    console.log(`CREATING ${this._family} EVENT, CATEGORY ${this._category}`);
     const resolver = resolverMap[this._family][this._category];
     if (!resolver) {
       return { errors: "resolver not found" };

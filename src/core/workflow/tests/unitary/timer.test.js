@@ -148,7 +148,6 @@ test("updateExpiration works", async () => {
   timer._expires_at = newExpiration;
 
   const newTimer = await timer.updateExpiration();
-  console.log(newTimer);
   expect(newTimer.expires_at).toEqual(newExpiration);
 });
 
