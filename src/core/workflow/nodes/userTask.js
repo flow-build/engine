@@ -109,13 +109,12 @@ class UserTaskNode extends ParameterizedNode {
         }
 
         const activity_manager = getActivityManager(this._spec.parameters.activity_manager);
-        activity_manager.events = preparedEvents;
         activity_manager.props = {
           result: execution_data,
           action: this._spec.parameters.action,
         };
         activity_manager.parameters = {};
-
+        activity_manager.parameters.events = preparedEvents;
         activity_manager.parameters.timeout = timeoutParse(this._spec.parameters, execution_data);
 
         if (this._spec.parameters.channels) {
