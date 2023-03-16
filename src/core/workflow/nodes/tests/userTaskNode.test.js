@@ -440,8 +440,8 @@ describe("UserTaskNode", () => {
     const actor_data = {};
     const result = await node.run({ bag, input, actor_data });
     expect(result.activity_manager).toBeDefined();
-    expect(result.activity_manager.events).toBeDefined();
-    expect(result.activity_manager.events[0].family).toBeDefined();
+    expect(result.activity_manager.parameters.events).toBeDefined();
+    expect(result.activity_manager.parameters.events[0].family).toBeDefined();
   });
 
   test("Creates activity manager with events using $ref", async () => {
@@ -455,14 +455,14 @@ describe("UserTaskNode", () => {
     const parameters = { category: "timer" };
     const result = await node.run({ bag, input, actor_data, parameters });
     expect(result.activity_manager).toBeDefined();
-    expect(result.activity_manager.events).toBeDefined();
-    expect(result.activity_manager.events[0].dueDate).toBeDefined();
-    expect(result.activity_manager.events[0].dueDate).toEqual(12345);
+    expect(result.activity_manager.parameters.events).toBeDefined();
+    expect(result.activity_manager.parameters.events[0].dueDate).toBeDefined();
+    expect(result.activity_manager.parameters.events[0].dueDate).toEqual(12345);
 
-    expect(result.activity_manager.events[0].family).toBeDefined();
-    expect(result.activity_manager.events[0].family).toEqual("target");
+    expect(result.activity_manager.parameters.events[0].family).toBeDefined();
+    expect(result.activity_manager.parameters.events[0].family).toEqual("target");
 
-    expect(result.activity_manager.events[0].category).toBeDefined();
-    expect(result.activity_manager.events[0].category).toEqual("timer");
+    expect(result.activity_manager.parameters.events[0].category).toBeDefined();
+    expect(result.activity_manager.parameters.events[0].category).toEqual("timer");
   });
 });

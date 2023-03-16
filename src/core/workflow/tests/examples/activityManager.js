@@ -40,7 +40,7 @@ const withSingleDueDateTimerEvent = {
       {
         family: "target",
         category: "timer",
-        dueDate: new Date(new Date().getTime() + 10000).toISOString(),
+        dueDate: new Date(new Date().getTime() + 10000),
       },
     ],
   },
@@ -89,7 +89,7 @@ const withMultipleTimers = {
       {
         family: "target",
         category: "timer",
-        dueDate: new Date(new Date().getTime() + 10000).toISOString(),
+        dueDate: new Date(new Date().getTime() + 10000),
       },
     ],
   },

@@ -314,7 +314,7 @@ class ActivityManager extends PersistedEntity {
   }
 
   async save(trx = false, ...args) {
-    if (this._activities.length === 0) {
+    if (!this._activities || this._activities.length === 0) {
       const timeout_id = await initTimeout({
         id: this._id,
         timeout: this._parameters.timeout,
