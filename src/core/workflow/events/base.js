@@ -85,7 +85,7 @@ class Events {
       key: this._key,
       code: this._code,
       rule: this._rule,
-      dueDate: this._dueDate,
+      dueDate: this._dueDate.toISOString(),
       cycle: this._cycle,
       duration: this._duration,
       nodes: this._nodes,
