@@ -8,7 +8,7 @@ const targetMinimal = {
   key: "any key",
   code: "any code",
   rule: "any rule",
-  dueDate: new Date(new Date().getTime() + 1000).toISOString(),
+  dueDate: new Date(new Date().getTime() + 1000),
   cycle: "any cron string",
   duration: "any ISO8601 pattern",
   nodes: [],
@@ -39,7 +39,7 @@ const timer = {
     family: "target",
     category: "timer",
     input: {},
-    dueDate: new Date(new Date().getTime() + 10000).toISOString(),
+    dueDate: new Date(new Date().getTime() + 10000),
     resource: {
       id: "94164158-9653-425b-9b9a-6904711e6c0f",
       type: "intermediateevent",

@@ -103,7 +103,7 @@ describe("create", () => {
   describe("timer", () => {
     test("post a dueDate timer job", async () => {
       let sample = _.cloneDeep(samples.timer.dueDate);
-      sample.dueDate = new Date(new Date().getTime() + 1000).toISOString();
+      sample.dueDate = new Date(new Date().getTime() + 1000);
       const myEvent = new Events(sample);
       const result = await myEvent.create();
       expect(result.errors).toBeUndefined();

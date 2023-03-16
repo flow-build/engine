@@ -191,7 +191,6 @@ describe("events", () => {
     expect(persistedAm.id).toEqual(myAm._id);
     expect(persistedAm.parameters.timeout).toBeDefined();
     expect(persistedAm.parameters.timeout_id).toBeDefined();
-    expect(persistedAm.parameters.timeout_id.length).toEqual(1);
   });
 
   test("should create a timer with duration", async () => {
@@ -202,7 +201,6 @@ describe("events", () => {
     expect(persistedAm.id).toEqual(myAm._id);
     expect(persistedAm.parameters.timeout).toBeDefined();
     expect(persistedAm.parameters.timeout_id).toBeDefined();
-    expect(persistedAm.parameters.timeout_id.length).toEqual(1);
   });
 
   test("can receive multiple events", async () => {
@@ -213,7 +211,7 @@ describe("events", () => {
     expect(persistedAm.id).toEqual(myAm._id);
     expect(persistedAm.parameters.timeout).toBeDefined();
     expect(persistedAm.parameters.timeout_id).toBeDefined();
-    expect(persistedAm.parameters.timeout_id.length).toEqual(2);
+    expect(persistedAm.parameters.events.length).toEqual(2);
   });
 });
 

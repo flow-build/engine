@@ -314,25 +314,27 @@ class ActivityManager extends PersistedEntity {
   }
 
   async save(trx = false, ...args) {
-    const timeout_id = await initTimeout({
-      id: this._id,
-      timeout: this._parameters.timeout,
-      status: this._status,
-      next_step_number: this._parameters.next_step_number,
-      trx,
-    });
+    if (!this._activities || this._activities.length === 0) {
+      const timeout_id = await initTimeout({
+        id: this._id,
+        timeout: this._parameters.timeout,
+        status: this._status,
+        next_step_number: this._parameters.next_step_number,
+        trx,
+      });
 
-    if (timeout_id) {
-      this.parameters.timeout_id = timeout_id;
-    }
+      if (timeout_id) {
+        this.parameters.timeout_id = timeout_id;
+      }
 
-    if (this._parameters?.events) {
-      const eventsPromise = await this._parameters.events.map(async (event) =>
-        ActivityManager.createBoundaryEvents({ id: this._id, event })
-      );
-      const eventsResult = await Promise.all(eventsPromise);
-      this.parameters.timeout_id = eventsResult.map((job) => `${job?.queue?.name}:${job?.id}`);
-      this.parameters.timeout = eventsResult.map((job) => job?.delay);
+      if (this._parameters?.events) {
+        const eventsPromise = await this._parameters.events.map(async (event) =>
+          ActivityManager.createBoundaryEvents({ id: this._id, event })
+        );
+        const eventsResult = await Promise.all(eventsPromise);
+        this.parameters.timeout_id = eventsResult[0].data.timerId;
+        this.parameters.timeout = eventsResult[0].delay;
+      }
     }
     return await super.save(trx, ...args);
   }
@@ -412,6 +414,8 @@ class ActivityManager extends PersistedEntity {
     ) {
       const activity_manager = ActivityManager.deserialize(activity_manager_data);
       activity_manager.status = ActivityStatus.COMPLETED;
+      const activity = await new Activity(this.id, {}, { timer_id: timer.id }, ActivityStatus.STARTED).save();
+      activity_manager._activities.unshift(activity);
       await activity_manager.save(trx);
       emitter.emit("ACTIVITY_MANAGER.COMPLETED", `COMPLETED AMID [${this.id}]`, { activity_manager: activity_manager });
 
@@ -423,7 +427,7 @@ class ActivityManager extends PersistedEntity {
             is_continue: true,
             activities: activity_manager_data.activities,
           },
-          timer.params.next_step_number,
+          timer.params.next_step_number || activity_manager._parameters.next_step_number,
           trx
         );
       }
