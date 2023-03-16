@@ -59,7 +59,7 @@ async function timerResolver(event) {
     workflow: "Workflow",
   };
 
-  let myTimer = new Timer(timerResourceMap[event.resource.type], event.resource.id, delay.dueDate, {});
+  let myTimer = new Timer(timerResourceMap[event.resource.type], event.resource.id, new Date(delay.dueDate), {});
   await myTimer.save();
 
   const options = {
