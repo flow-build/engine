@@ -1,3 +1,13 @@
+### [2.23.1](https://github.com/flow-build/engine/compare/v2.23.0...v2.23.1) (2023-03-16)
+
+
+### Bug Fixes
+
+* add events to activity_manager parameters ([a4d7dc8](https://github.com/flow-build/engine/commit/a4d7dc81cbbbfba61fb32f32ac950d96396eb76e))
+* convert event dueDate do ISOString ([30ec955](https://github.com/flow-build/engine/commit/30ec955abe60fccaaf561dd9fb0ecc7b1064526c))
+* convert expires_at to Date ([c77b7d7](https://github.com/flow-build/engine/commit/c77b7d7635c34b4ab1b0835ee7a8535f1782d3a7))
+* only initTimeout if no activity is committed ([93a5b81](https://github.com/flow-build/engine/commit/93a5b8196d16dfb30b0dc7b07316a5f400391aab))
+
 ## [2.23.0](https://github.com/flow-build/engine/compare/v2.22.2...v2.23.0) (2023-03-15)
 
 
