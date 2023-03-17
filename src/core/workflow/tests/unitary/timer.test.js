@@ -151,6 +151,45 @@ test("updateExpiration works", async () => {
   expect(newTimer.expires_at).toEqual(newExpiration);
 });
 
+describe("durationToSeconds", () => {
+  test("works for SECONDS", async () => {
+    const interval = "PT10S";
+    const timeout = Timer.durationToSeconds(interval);
+    expect(timeout).toEqual(10);
+  });
+  test("works for MINUTES", async () => {
+    const interval = "PT10M";
+    const timeout = Timer.durationToSeconds(interval);
+    expect(timeout).toEqual(600);
+  });
+});
+
+describe("dueDateToSeconds", () => {
+  test("works", async () => {
+    const dueDate = new Date(new Date().getTime() + 10 * 1000);
+    const timeout = Timer.dueDateToSeconds(dueDate);
+    expect(timeout).toEqual(10);
+  });
+});
+
+describe("addJob", () => {
+  test("returns undefined if TIMER_QUEUE is undefined", async () => {
+    const before = process.env.TIMER_QUEUE;
+    process.env.TIMER_QUEUE = undefined;
+    const result = await Timer.addJob({});
+    expect(result).toBeUndefined();
+    process.env.TIMER_QUEUE = before;
+  });
+
+  test("returns if TIMER_QUEUE is defined", async () => {
+    const before = process.env.TIMER_QUEUE;
+    process.env.TIMER_QUEUE = "timer";
+    const result = await Timer.addJob({});
+    expect(result).toBeDefined();
+    process.env.TIMER_QUEUE = before;
+  });
+});
+
 const _clean = async () => {
   const persistor = PersistorProvider.getPersistor(...settings.persist_options);
   const timer_persist = persistor.getPersistInstance("Timer");
