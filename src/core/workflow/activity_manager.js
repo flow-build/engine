@@ -36,7 +36,7 @@ async function initTimeout({ id, timeout, status, next_step_number, trx }) {
       },
       options: {
         jobId: id,
-        delay: timeout,
+        delay: timeout * 1000,
         timerId: timer.id,
       },
     });
