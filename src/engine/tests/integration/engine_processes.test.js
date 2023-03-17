@@ -404,39 +404,39 @@ test("run process with http retries", async () => {
     expect(workflow_process.state.status).toEqual("unstarted");
 
     workflow_process = await engine.runProcess(workflow_process.id, actors_.simpleton);
-  
-    await sleep(5000)
 
-    expect(process_state_history).toHaveLength(6)
+    await sleep(5000);
+
+    expect(process_state_history).toHaveLength(6);
 
     let http_script = process_state_history[2];
     expect(http_script.node_id).toEqual("2");
     expect(http_script.result).toEqual({
-      attempt:1,
-      data:"",
-      status:503,
-      step_number:3,
-      timeout:1
+      attempt: 1,
+      data: "",
+      status: 503,
+      step_number: 3,
+      timeout: 1,
     });
 
     http_script = process_state_history[3];
     expect(http_script.node_id).toEqual("2");
     expect(http_script.result).toEqual({
-      attempt:2,
-      data:"",
-      status:503,
-      step_number:4,
-      timeout:1
+      attempt: 2,
+      data: "",
+      status: 503,
+      step_number: 4,
+      timeout: 1,
     });
 
     http_script = process_state_history[4];
     expect(http_script.node_id).toEqual("2");
     expect(http_script.result).toEqual({
-      attempt:3,
-      data:"",
-      status:503,
-      step_number:5,
-      timeout:1
+      attempt: 3,
+      data: "",
+      status: 503,
+      step_number: 5,
+      timeout: 1,
     });
   } finally {
     engine.setProcessStateNotifier();
@@ -510,20 +510,16 @@ test("run successfully process that creates sub process", async () => {
     "parent workflow",
     blueprints_.sub_process.blueprint_spec
   );
-  const child_workflow = await engine.saveWorkflow(
-    "blueprint_spec_son",
-    "child workflow",
-    blueprints_.minimal
-  );
+  const child_workflow = await engine.saveWorkflow("blueprint_spec_son", "child workflow", blueprints_.minimal);
 
   let parent_process = await engine.createProcess(parent_workflow.id, actors_.simpleton);
   expect(parent_process.state.status).toEqual("unstarted");
 
   parent_process = await engine.runProcess(parent_process.id, actors_.simpleton);
   expect(parent_process.state.status).toEqual("delegated");
-  
-  while(parent_process.state.status === "delegated" || parent_process.state.status === "running") {
-    parent_process = await engine.fetchProcess(parent_process.id)
+
+  while (parent_process.state.status === "delegated" || parent_process.state.status === "running") {
+    parent_process = await engine.fetchProcess(parent_process.id);
   }
   const child_process_list = await engine.fetchProcessList({ workflow_id: child_workflow.id });
   expect(child_process_list).toHaveLength(1);
@@ -553,7 +549,6 @@ test("error running process that creates unexisted sub process", async () => {
 });
 
 describe("User task timeout", () => {
-
   beforeEach(async () => {
     await engine.saveWorkflow("user_timeout", "user_timeout", blueprints_.user_timeout);
   });
@@ -891,7 +886,7 @@ test("Beat won't break despite orphan timer", async () => {
   let timer2 = new Timer("ActivityManager", activity_manager.id, Timer.timeoutFromNow(10), {});
   await timer2.save();
 
-  let timer3 = new Timer("Mocker", uuid(), Timer.timeoutFromNow(10), {});
+  let timer3 = new Timer("Mock", uuid(), Timer.timeoutFromNow(10), {});
   await timer3.save();
 
   for (let i = 0; i < 5; i++) {
