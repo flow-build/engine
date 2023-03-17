@@ -20,6 +20,7 @@ class TimerKnexPersist extends KnexPersist {
       .from(this._table)
       .where("resource_type", resource_type)
       .andWhere("resource_id", resource_id)
+      .andWhere("active", true)
       .first();
   }
 

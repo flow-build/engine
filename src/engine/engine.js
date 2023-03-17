@@ -17,7 +17,6 @@ const { createLogger } = require("../core/utils/logging");
 const { ProcessStatus } = require("./../core/workflow/process_state");
 const { validateTimeInterval } = require("../core/utils/ajvValidator");
 const { validate: uuidValidate } = require("uuid");
-const { isEmpty } = require("lodash");
 const { readEnvironmentVariableAsBool, readEnvironmentVariableAsNumber } = require("../core/utils/environment");
 
 function getActivityManagerFromData(activity_manager_data) {
@@ -575,12 +574,12 @@ class Engine {
       return error;
     }
 
-    const timer_db = this._db("timer");
-    const timer = await timer_db.where({ resource_id: process.id }).first();
+    const timer = new Timer("Process", process.id);
+    await timer.retrieve();
 
-    if (!isEmpty(timer)) {
+    if (timer._id) {
       emitter.emit("ENGINE.CONTINUE_PROCESS.TIMER", { active: false, resource_type: process_id });
-      await timer_db.update({ active: false }).where({ resource_id: process.id });
+      await timer.deactivate();
     }
 
     emitter.emit("ENGINE.CONTINUE_PROCESS.WORKS", { process_id });
