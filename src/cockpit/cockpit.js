@@ -157,6 +157,21 @@ class Cockpit {
   async fetchTimersActive() {
     return await Timer.fetchAllActive();
   }
+
+  async expireProcess(process_id, actor_data, result = {}) {
+    const process = await Process.fetch(process_id);
+    const timer = new Timer("Process", process.id);
+    await timer.retrieve();
+
+    if (timer._id) {
+      emitter.emit("ENGINE.EXPIRE_PROCESS.TIMER", { active: false, resource_type: process_id });
+      await timer.deactivate();
+    }
+
+    emitter.emit("ENGINE.CONTINUE_PROCESS.WORKS", { process_id });
+    process.expireProcess(false, { actor_data, result });
+    return undefined;
+  }
 }
 
 module.exports = {

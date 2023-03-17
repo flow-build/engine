@@ -295,7 +295,7 @@ class Process extends PersistedEntity {
     return await this._executionLoop(custom_lisp, actor_data, trx);
   }
 
-  async expireProcess(trx = false) {
+  async expireProcess(trx = false, params = {}) {
     emitter.emit("PROCESS.EDGE.EXPIRING", `EXPIRE PID [${this.id}]`, { process_id: this.id });
     const next_step_number = await this.getNextStepNumber();
     this.state = new ProcessState(
@@ -303,12 +303,12 @@ class Process extends PersistedEntity {
       next_step_number,
       this._state.node_id,
       {},
-      null,
-      null,
+      params.external_input,
+      params.result,
       null,
       ProcessStatus.EXPIRED,
       null,
-      null,
+      params.actor_data,
       null
     );
 
@@ -419,7 +419,7 @@ class Process extends PersistedEntity {
       }
 
       if (next_step_number >= max_step_number) {
-        await this.expireProcess(trx);
+        await this.expireProcess(trx, { external_input: { max_step_number } });
         return [this.state, {}, {}];
       }
     }
@@ -709,7 +709,7 @@ class Process extends PersistedEntity {
         break;
       case ProcessStatus.WAITING:
       case ProcessStatus.DELEGATED:
-        await this.expireProcess();
+        await this.expireProcess(trx, { external_input: { timer_id: timer.id } });
         break;
     }
   }
