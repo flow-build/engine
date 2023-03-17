@@ -1,4 +1,5 @@
 const _ = require("lodash");
+const { v1: uuid } = require("uuid");
 const { TimerSystemTaskNode } = require("../timer");
 const {
   timeoutNumber,
@@ -9,7 +10,21 @@ const {
   wrongObject,
 } = require("../examples/timer");
 const { ProcessStatus } = require("../../process_state");
-const { uniqueId } = require("lodash");
+const settings = require("../../../../../settings/tests/settings");
+const { PersistorProvider } = require("../../../persist/provider");
+const { Timer } = require("../../timer");
+
+beforeEach(async () => {
+  await _clean();
+});
+
+afterAll(async () => {
+  await _clean();
+  if (settings.persist_options[0] === "knex") {
+    const persist = Timer.getPersist();
+    await persist._db.destroy();
+  }
+});
 
 describe("static Schema", () => {
   test("Should merge Node and SystemTaskNode schema", async () => {
@@ -71,8 +86,11 @@ describe("Execution", () => {
     const node = new TimerSystemTaskNode(spec);
 
     const bag = { sample: "data" };
-    const input = { input: "value" };
-    const nodeResult = await node.run({ bag, input });
+    const input = { input: "value", step_number: 10 };
+    const parameters = {
+      process_id: uuid(),
+    };
+    const nodeResult = await node.run({ bag, input, parameters });
     expect(nodeResult.status).toBe(ProcessStatus.PENDING);
     expect(nodeResult.result.timeout).toBe(spec.parameters.timeout);
   });
@@ -83,8 +101,11 @@ describe("Execution", () => {
     const node = new TimerSystemTaskNode(spec);
 
     const bag = { sample: 10 };
-    const input = { input: "value" };
-    const nodeResult = await node.run({ bag, input });
+    const input = { input: "value", step_number: 10 };
+    const parameters = {
+      process_id: uuid(),
+    };
+    const nodeResult = await node.run({ bag, input, parameters });
 
     expect(nodeResult.status).toBe(ProcessStatus.PENDING);
     expect(nodeResult.result.timeout).toBe(bag.sample);
@@ -96,8 +117,9 @@ describe("Execution", () => {
     const node = new TimerSystemTaskNode(spec);
 
     const bag = {};
-    const input = { input: "value" };
-    const nodeResult = await node.run({ bag, input });
+    const input = { input: "value", step_number: 10 };
+    const parameters = { process_id: uuid() };
+    const nodeResult = await node.run({ bag, input, parameters });
 
     expect(nodeResult.status).toBe(ProcessStatus.PENDING);
     expect(nodeResult.result.timeout).toEqual(10 * 60 + 10);
@@ -109,8 +131,9 @@ describe("Execution", () => {
     const node = new TimerSystemTaskNode(spec);
 
     const bag = { duration: "PT10M10S" };
-    const input = { input: "value" };
-    const nodeResult = await node.run({ bag, input });
+    const input = { input: "value", step_number: 10 };
+    const parameters = { process_id: uuid() };
+    const nodeResult = await node.run({ bag, input, parameters });
 
     expect(nodeResult.status).toBe(ProcessStatus.PENDING);
     expect(nodeResult.result.timeout).toEqual(10 * 60 + 10);
@@ -123,8 +146,9 @@ describe("Execution", () => {
 
     const curDate = new Date();
     const bag = { date: new Date(curDate.getTime() + 10 * 60 * 1000) };
-    const input = { input: "value" };
-    const nodeResult = await node.run({ bag, input });
+    const input = { input: "value", step_number: 10 };
+    const parameters = { process_id: uuid() };
+    const nodeResult = await node.run({ bag, input, parameters });
 
     expect(nodeResult.status).toBe(ProcessStatus.PENDING);
     expect(nodeResult.result.timeout).toBeCloseTo(600);
@@ -137,7 +161,7 @@ describe("Execution", () => {
 
     const bag = { duration: "PT10M10S" };
     const input = { input: "value", step_number: 2 };
-    const process_id = uniqueId();
+    const process_id = uuid();
     const parameters = { process_id };
     const nodeResult = await node.run({ bag, input, parameters });
 
@@ -153,7 +177,7 @@ describe("Execution", () => {
 
     const bag = { duration: "TESTE" };
     const input = { input: "value", step_number: 2 };
-    const process_id = uniqueId();
+    const process_id = uuid();
     const parameters = { process_id };
     const nodeResult = await node.run({ bag, input, parameters });
 
@@ -161,4 +185,24 @@ describe("Execution", () => {
     expect(nodeResult.result.process_id).toBeDefined();
     expect(nodeResult.result.step_number).toBeDefined();
   });
+
+  test("Timer node creates a timer", async () => {
+    const spec = _.cloneDeep(timeoutNumber);
+
+    const node = new TimerSystemTaskNode(spec);
+
+    const bag = { sample: "data" };
+    const input = { input: "value", step_number: 10 };
+    const process_id = uuid();
+    await node.run({ bag, input, parameters: { process_id } });
+    const timer = new Timer("Process", process_id);
+    await timer.retrieve();
+    expect(timer._id).toBeDefined();
+  });
 });
+
+const _clean = async () => {
+  const persistor = PersistorProvider.getPersistor(...settings.persist_options);
+  const timer_persist = persistor.getPersistInstance("Timer");
+  await timer_persist.deleteAll();
+};
