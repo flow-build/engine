@@ -1,7 +1,29 @@
 const _ = require("lodash");
+const { v1: uuid } = require("uuid");
 const { ProcessStatus } = require("../../process_state");
 const { minimal, minimalResult, timeout, timeoutResult } = require("../examples/start");
 const { StartNode } = require("../start");
+const settings = require("../../../../../settings/tests/settings");
+const { PersistorProvider } = require("../../../persist/provider");
+const { Timer } = require("../../timer");
+
+async function _clean() {
+  const persistor = PersistorProvider.getPersistor(...settings.persist_options);
+  const timer_persist = persistor.getPersistInstance("Timer");
+  await timer_persist.deleteAll();
+}
+
+beforeEach(async () => {
+  await _clean();
+});
+
+afterAll(async () => {
+  await _clean();
+  if (settings.persist_options[0] === "knex") {
+    const persist = Timer.getPersist();
+    await persist._db.destroy();
+  }
+});
 
 describe("static Schema", () => {
   test("Should merge Node and Parameterized schema", async () => {
@@ -118,7 +140,21 @@ describe("execution", () => {
     const bag = { data: "bag" };
     const input = { data: "input" };
     const external_input = { data: "external" };
-    const nodeResult = await node.run({ bag, input, external_input });
+    const parameters = { process_id: uuid() };
+    const nodeResult = await node.run({ bag, input, external_input, parameters });
     expect(nodeResult).toMatchObject(timeoutResult);
+  });
+
+  test("With timeout creates a timer", async () => {
+    const spec = _.cloneDeep(timeout);
+    const node = new StartNode(spec);
+    const bag = { data: "bag" };
+    const input = { data: "input" };
+    const external_input = { data: "external" };
+    const process_id = uuid();
+    await node.run({ bag, input, external_input, parameters: { process_id } });
+    const timer = new Timer("Process", process_id);
+    await timer.retrieve();
+    expect(timer._id).toBeDefined();
   });
 });
