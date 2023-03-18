@@ -249,7 +249,7 @@ class ActivityManager extends PersistedEntity {
     return result;
   }
 
-  static async expire(activity_manager_id, data, params = {}, trx) {
+  static async expire(activity_manager_id, data, params = {}, trx = false) {
     const activity_manager = ActivityManager.deserialize(data);
     activity_manager.status = ActivityStatus.COMPLETED;
 
