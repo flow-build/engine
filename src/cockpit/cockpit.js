@@ -5,6 +5,7 @@ const { Process } = require("../core/workflow/process");
 const { Packages } = require("../core/workflow/packages");
 const { Engine } = require("../engine/engine");
 const { ProcessState } = require("../core/workflow/process_state");
+const { ActivityManager } = require("../core/workflow/activity_manager");
 const { Timer } = require("../core/workflow/timer");
 
 class Cockpit {
@@ -169,8 +170,31 @@ class Cockpit {
     }
 
     emitter.emit("ENGINE.CONTINUE_PROCESS.WORKS", { process_id });
-    process.expireProcess(false, { actor_data, result });
+    await process.expireProcess(false, { actor_data, result });
     return undefined;
+  }
+
+  async expireActivityManager(amid, actor_data) {
+    let am = await ActivityManager.fetch(amid);
+    if (!am) {
+      return {
+        error: {
+          errorType: "activityManager",
+          message: "activity manager not found",
+        },
+      };
+    }
+    await ActivityManager.expire(amid, am, { actor_data });
+    //check whether the activity manager is started
+    if (am.activity_status !== "started") {
+      return {
+        error: {
+          errorType: "activityManager",
+          message: "activity manager unavailable",
+        },
+      };
+    }
+    return am;
   }
 }
 

@@ -1,52 +1,135 @@
 const _ = require("lodash");
 const { v1: uuid } = require("uuid");
-const settings = require("../../../../settings/tests/settings");
 const { ProcessStatus } = require("../../../core/workflow/process_state");
 const { Cockpit } = require("../../cockpit");
 const { Engine } = require("../../../engine/engine");
-const { PersistorProvider } = require("../../../core/persist/provider");
 const { blueprints_, actors_ } = require("../../../core/workflow/tests/unitary/blueprint_samples");
 const extra_nodes = require("../../../engine/tests/utils/extra_nodes");
+const utils = require("./cockpitUtils");
 
-const cockpit = new Cockpit(...settings.persist_options);
-const engine = new Engine(...settings.persist_options);
+const cockpit = new Cockpit(...utils.persistOptions);
+const engine = new Engine(...utils.persistOptions);
 
 beforeEach(async () => {
-  await _clean();
+  await utils._clean();
 });
 
 afterAll(async () => {
   Engine.kill();
-  await _clean();
+  await utils._clean();
+});
+
+describe("fetchWorkflowsWithProcessStatusCount", () => {
+  test("base test", async () => {
+    const myWorkflow = await cockpit.saveWorkflow("sample", "sample", blueprints_.minimal);
+    await cockpit.createProcess(myWorkflow.id, actors_.simpleton);
+    const myProcess = await cockpit.createProcess(myWorkflow.id, actors_.simpleton);
+    await cockpit.runProcess(myProcess.id, actors_.simpleton, {});
+
+    let response = await cockpit.fetchWorkflowsWithProcessStatusCount();
+    expect(response[myWorkflow.id].workflow_name).toEqual("sample");
+    expect(response[myWorkflow.id].workflow_description).toEqual("sample");
+    expect(response[myWorkflow.id].workflow_version).toEqual(1);
+    expect(response[myWorkflow.id].unstarted).toEqual(1);
+    expect(response[myWorkflow.id].finished).toEqual(1);
+  });
+
+  test("workflow_id filter works", async () => {
+    const workflow1 = await cockpit.saveWorkflow("sample1", "sample1", blueprints_.minimal);
+    await cockpit.createProcess(workflow1.id, actors_.simpleton);
+    const workflow2 = await cockpit.saveWorkflow("sample2", "sample2", blueprints_.minimal);
+    await cockpit.createProcess(workflow2.id, actors_.simpleton);
+
+    let response = await cockpit.fetchWorkflowsWithProcessStatusCount({ workflow_id: workflow2.id });
+    expect(response[workflow1.id]).toBeUndefined();
+    expect(response[workflow2.id]).toBeDefined();
+  });
+
+  test("start_date filter works", async () => {
+    const myWorkflow = await cockpit.saveWorkflow("sample", "sample", blueprints_.minimal);
+    await cockpit.createProcess(myWorkflow.id, actors_.simpleton);
+
+    // Force time difference
+    await utils.sleep();
+    const start_date = new Date();
+    await utils.sleep();
+
+    const myProcess = await cockpit.createProcess(myWorkflow.id, actors_.simpleton);
+    await cockpit.runProcess(myProcess.id, actors_.simpleton, {});
+
+    let response = await cockpit.fetchWorkflowsWithProcessStatusCount({ start_date });
+    expect(response[myWorkflow.id]).toBeDefined();
+    expect(response[myWorkflow.id].unstarted).toBeUndefined();
+    expect(response[myWorkflow.id].finished).toEqual(1);
+
+    response = await cockpit.fetchWorkflowsWithProcessStatusCount({ start_date: start_date.toJSON() });
+    expect(response[myWorkflow.id]).toBeDefined();
+    expect(response[myWorkflow.id].unstarted).toBeUndefined();
+    expect(response[myWorkflow.id].finished).toEqual(1);
+  });
+
+  test("end_date filter works", async () => {
+    const myWorkflow = await cockpit.saveWorkflow("sample", "sample", blueprints_.minimal);
+    await cockpit.createProcess(myWorkflow.id, actors_.simpleton);
+
+    // Force time difference
+    await utils.sleep();
+    const end_date = new Date();
+    await utils.sleep();
+
+    const myProcess = await cockpit.createProcess(myWorkflow.id, actors_.simpleton);
+    await cockpit.runProcess(myProcess.id, actors_.simpleton, {});
+
+    let response = await cockpit.fetchWorkflowsWithProcessStatusCount({ end_date: end_date });
+    expect(response[myWorkflow.id]).toBeDefined();
+    expect(response[myWorkflow.id].unstarted).toEqual(1);
+    expect(response[myWorkflow.id].finished).toBeUndefined();
+
+    response = await cockpit.fetchWorkflowsWithProcessStatusCount({ end_date: end_date.toJSON() });
+    expect(response[myWorkflow.id]).toBeDefined();
+    expect(response[myWorkflow.id].unstarted).toEqual(1);
+    expect(response[myWorkflow.id].finished).toBeUndefined;
+  });
+
+  test("workflow without process", async () => {
+    const myWorkflow = await cockpit.saveWorkflow("sample", "sample description", blueprints_.minimal);
+
+    let response = await cockpit.fetchWorkflowsWithProcessStatusCount();
+    expect(response[myWorkflow.id]).toEqual({
+      workflow_name: "sample",
+      workflow_description: "sample description",
+      workflow_version: 1,
+    });
+  });
 });
 
 describe("getProcessStateHistory works", () => {
   test("getProcessStateHistory when there are states for the process", async () => {
-    const workflow = await engine.saveWorkflow("sample", "sample", blueprints_.identity_system_task);
-    let process = await engine.createProcess(workflow.id, actors_.simpleton);
-    process = await engine.runProcess(process.id, actors_.simpleton);
-    const process_state_history = await engine.fetchProcessStateHistory(process.id);
-    const process_state_data_history = await cockpit.getProcessStateHistory(process.id);
-    expect(process_state_data_history).toHaveLength(process_state_history.length);
-    for (const process_state of process_state_history) {
-      const process_state_data = _.find(process_state_data_history, { id: process_state.id });
-      _validate_process_state_data(process_state_data, process_state);
+    const myWorkflow = await engine.saveWorkflow("sample", "sample", blueprints_.identity_system_task);
+    let myProcess = await engine.createProcess(myWorkflow.id, actors_.simpleton);
+    myProcess = await engine.runProcess(myProcess.id, actors_.simpleton);
+    const myHistory = await engine.fetchProcessStateHistory(myProcess.id);
+    const myHistoryData = await cockpit.getProcessStateHistory(myProcess.id);
+    expect(myHistoryData).toHaveLength(myHistory.length);
+    for (const state of myHistory) {
+      const data = _.find(myHistoryData, { id: state.id });
+      utils._validate_process_state_data(data, state);
     }
   });
 
   test("getProcessStateHistory works for no states", async () => {
-    const workflow = await engine.saveWorkflow("sample", "sample", blueprints_.identity_system_task);
-    let process = await engine.createProcess(workflow.id, actors_.admin);
-    await engine.runProcess(process.id, actors_.admin);
-    const process_state_data_history = await cockpit.getProcessStateHistory(uuid());
-    expect(process_state_data_history).toHaveLength(0);
+    const myWorkflow = await engine.saveWorkflow("sample", "sample", blueprints_.identity_system_task);
+    let myProcess = await engine.createProcess(myWorkflow.id, actors_.admin);
+    await engine.runProcess(myProcess.id, actors_.admin);
+    const myHistoryData = await cockpit.getProcessStateHistory(uuid());
+    expect(myHistoryData).toHaveLength(0);
   });
 
   test("getProcessStateHistory works when there are many processes with states", async () => {
-    const workflow = await engine.saveWorkflow("sample", "sample", blueprints_.identity_system_task);
-    let simpleton_process = await engine.createProcess(workflow.id, actors_.simpleton);
+    const myWorkflow = await engine.saveWorkflow("sample", "sample", blueprints_.identity_system_task);
+    let simpleton_process = await engine.createProcess(myWorkflow.id, actors_.simpleton);
     simpleton_process = await engine.runProcess(simpleton_process.id, actors_.simpleton);
-    let admin_process = await engine.createProcess(workflow.id, actors_.admin);
+    let admin_process = await engine.createProcess(myWorkflow.id, actors_.admin);
     admin_process = await engine.runProcess(admin_process.id, actors_.admin);
     const simpleton_process_state_history = await engine.fetchProcessStateHistory(simpleton_process.id);
     const admin_process_state_history = await engine.fetchProcessStateHistory(admin_process.id);
@@ -56,21 +139,23 @@ describe("getProcessStateHistory works", () => {
     expect(admin_process_state_data_history).toHaveLength(admin_process_state_history.length);
     for (const process_state of simpleton_process_state_history) {
       const process_state_data = _.find(simpleton_process_state_data_history, { id: process_state.id });
-      _validate_process_state_data(process_state_data, process_state);
+      utils._validate_process_state_data(process_state_data, process_state);
     }
     for (const process_state of admin_process_state_history) {
       const process_state_data = _.find(admin_process_state_data_history, { id: process_state.id });
-      _validate_process_state_data(process_state_data, process_state);
+      utils._validate_process_state_data(process_state_data, process_state);
     }
   });
 });
 
+describe("getWorkflows", () => {});
+
 describe("getWorkflowsForActor works", () => {
   test("getWorkflowsForActor when there are workflows available to actor", async () => {
-    const workflow = await engine.saveWorkflow("sample", "sample", blueprints_.identity_system_task);
+    const myWorkflow = await engine.saveWorkflow("sample", "sample", blueprints_.identity_system_task);
     const actor_workflows_data = await cockpit.getWorkflowsForActor(actors_.simpleton);
     expect(actor_workflows_data).toHaveLength(1);
-    _validate_workflow_data(actor_workflows_data[0], workflow);
+    utils._validate_workflow_data(actor_workflows_data[0], myWorkflow);
   });
 
   test("getWorkflowsForActor when there are no workflows available", async () => {
@@ -87,140 +172,26 @@ describe("getWorkflowsForActor works", () => {
     );
     const simpleton_workflows_data = await cockpit.getWorkflowsForActor(actors_.simpleton);
     expect(simpleton_workflows_data).toHaveLength(1);
-    _validate_workflow_data(simpleton_workflows_data[0], open_workflow);
+    utils._validate_workflow_data(simpleton_workflows_data[0], open_workflow);
     const admin_workflows_data = await cockpit.getWorkflowsForActor(actors_.admin);
     expect(admin_workflows_data).toHaveLength(2);
     const admin_open_workflow_data = _.find(admin_workflows_data, { name: "open" });
     const admin_restricted_workflow_data = _.find(admin_workflows_data, { name: "restricted" });
-    _validate_workflow_data(admin_open_workflow_data, open_workflow);
-    _validate_workflow_data(admin_restricted_workflow_data, restricted_workflow);
+    utils._validate_workflow_data(admin_open_workflow_data, open_workflow);
+    utils._validate_workflow_data(admin_restricted_workflow_data, restricted_workflow);
   });
 
   test("getWorkflowsForActor list workflows with multiple starts and only one start node is allowed", async () => {
     const open_workflow = await engine.saveWorkflow("multiple", "multiple", blueprints_.multiple_starts);
     const simpleton_workflows_data = await cockpit.getWorkflowsForActor(actors_.simpleton);
     expect(simpleton_workflows_data).toHaveLength(1);
-    _validate_workflow_data(simpleton_workflows_data[0], open_workflow);
+    utils._validate_workflow_data(simpleton_workflows_data[0], open_workflow);
   });
 
   test("getWorkflowsForActor filters workflows with multiple starts and many start nodes are allowed", async () => {
     await engine.saveWorkflow("multiple", "multiple", blueprints_.multiple_starts);
     const simpleton_workflows_data = await cockpit.getWorkflowsForActor(actors_.admin);
     expect(simpleton_workflows_data).toHaveLength(0);
-  });
-});
-
-describe("Adding extra nodes works", () => {
-  test("Validation of extra nodes works", async () => {
-    cockpit.addCustomSystemCategory(extra_nodes);
-    const custom_bluprint = _.cloneDeep(blueprints_.extra_nodes);
-    const exampleNode = custom_bluprint.nodes.find((node) => node.category === "example");
-    delete exampleNode.parameters.example;
-    await expect(cockpit.saveWorkflow("sample", "sample", custom_bluprint)).rejects.toThrowError(
-      "must have required property 'example'"
-    );
-  });
-
-  test("Execution of extra nodes works", async () => {
-    cockpit.addCustomSystemCategory(extra_nodes);
-    const workflow = await cockpit.saveWorkflow("sample", "sample", blueprints_.extra_nodes);
-    let process = await cockpit.createProcess(workflow.id, actors_.simpleton);
-    process = await cockpit.runProcess(process.id, actors_.simpleton);
-    expect(process.status).toBe(ProcessStatus.FINISHED);
-  });
-});
-
-describe("fetchWorkflowsWithProcessStatusCount", () => {
-  function sleep() {
-    return new Promise((resolve) => setTimeout(resolve, 1));
-  }
-
-  test("base test", async () => {
-    const workflow = await cockpit.saveWorkflow("sample", "sample", blueprints_.minimal);
-    await cockpit.createProcess(workflow.id, actors_.simpleton);
-    const process = await cockpit.createProcess(workflow.id, actors_.simpleton);
-    await cockpit.runProcess(process.id, actors_.simpleton, {});
-
-    let response = await cockpit.fetchWorkflowsWithProcessStatusCount();
-    expect(response[workflow.id].workflow_name).toEqual("sample");
-    expect(response[workflow.id].workflow_description).toEqual("sample");
-    expect(response[workflow.id].workflow_version).toEqual(1);
-    expect(response[workflow.id].unstarted).toEqual(1);
-    expect(response[workflow.id].finished).toEqual(1);
-  });
-
-  test("workflow_id filter works", async () => {
-    const workflow1 = await cockpit.saveWorkflow("sample1", "sample1", blueprints_.minimal);
-    await cockpit.createProcess(workflow1.id, actors_.simpleton);
-    const workflow2 = await cockpit.saveWorkflow("sample2", "sample2", blueprints_.minimal);
-    await cockpit.createProcess(workflow2.id, actors_.simpleton);
-
-    let response = await cockpit.fetchWorkflowsWithProcessStatusCount({ workflow_id: workflow2.id });
-    expect(response[workflow1.id]).toBeUndefined();
-    expect(response[workflow2.id]).toBeDefined();
-  });
-
-  test("start_date filter works", async () => {
-    const workflow = await cockpit.saveWorkflow("sample", "sample", blueprints_.minimal);
-    await cockpit.createProcess(workflow.id, actors_.simpleton);
-
-    // Force time difference
-    await sleep();
-    const start_date = new Date();
-    await sleep();
-
-    const process = await cockpit.createProcess(workflow.id, actors_.simpleton);
-    await cockpit.runProcess(process.id, actors_.simpleton, {});
-
-    let response = await cockpit.fetchWorkflowsWithProcessStatusCount({ start_date });
-    expect(response[workflow.id]).toBeDefined();
-    expect(response[workflow.id].unstarted).toBeUndefined();
-    expect(response[workflow.id].finished).toEqual(1);
-
-    response = await cockpit.fetchWorkflowsWithProcessStatusCount({ start_date: start_date.toJSON() });
-    expect(response[workflow.id]).toBeDefined();
-    expect(response[workflow.id].unstarted).toBeUndefined();
-    expect(response[workflow.id].finished).toEqual(1);
-  });
-
-  test("end_date filter works", async () => {
-    const workflow = await cockpit.saveWorkflow("sample", "sample", blueprints_.minimal);
-    await cockpit.createProcess(workflow.id, actors_.simpleton);
-
-    // Force time difference
-    await sleep();
-    const end_date = new Date();
-    await sleep();
-
-    const process = await cockpit.createProcess(workflow.id, actors_.simpleton);
-    await cockpit.runProcess(process.id, actors_.simpleton, {});
-
-    let response = await cockpit.fetchWorkflowsWithProcessStatusCount({ end_date: end_date });
-    expect(response[workflow.id]).toBeDefined();
-    expect(response[workflow.id].unstarted).toEqual(1);
-    expect(response[workflow.id].finished).toBeUndefined();
-
-    response = await cockpit.fetchWorkflowsWithProcessStatusCount({ end_date: end_date.toJSON() });
-    expect(response[workflow.id]).toBeDefined();
-    expect(response[workflow.id].unstarted).toEqual(1);
-    expect(response[workflow.id].finished).toBeUndefined;
-  });
-
-  test("workflow without process", async () => {
-    const workflow = await cockpit.saveWorkflow("sample", "sample description", blueprints_.minimal);
-
-    let response = await cockpit.fetchWorkflowsWithProcessStatusCount();
-    expect(response[workflow.id]).toEqual({
-      workflow_name: "sample",
-      workflow_description: "sample description",
-      workflow_version: 1,
-    });
-  });
-});
-
-describe("setProcessState", () => {
-  test("a valid processId must be provided", async () => {
-    await expect(cockpit.setProcessState(uuid(), {})).rejects.toThrowError("Process not found");
   });
 });
 
@@ -286,93 +257,161 @@ describe("runPendingProcess", () => {
   });
 });
 
-describe("fetch states", () => {
-  let process;
-  let history;
-
-  beforeEach(async () => {
-    const workflow = await cockpit.saveWorkflow("sample", "sample", blueprints_.minimal);
-    process = await cockpit.createProcess(workflow.id, actors_.simpleton);
-    await engine.runProcess(process.id, actors_.simpleton);
-    history = await engine.fetchProcessStateHistory(process.id);
-  });
-
-  test("getProcessState", async () => {
-    const result = await cockpit.getProcessState(history[0]._id);
-    expect(result).toBeDefined();
-    expect(result).toEqual(history[0]);
-  });
-
-  test("getProcessState should throw if no state is provided", async () => {
-    await expect(cockpit.getProcessState()).rejects.toThrowError("Process Id not provided");
-  });
-
-  test("findProcessStatesByStepNumber", async () => {
-    const result = await cockpit.findProcessStatesByStepNumber(process.id, 1);
-    expect(result).toBeDefined();
-    expect(result.id).toEqual(_.last(history)._id);
-  });
-
-  test("findProcessStatesByStepNumber should throw if no process id is provided", async () => {
-    await expect(cockpit.findProcessStatesByStepNumber()).rejects.toThrowError("Process Id not provided");
-  });
-
-  test("findProcessStatesByStepNumber should throw if no process id is provided", async () => {
-    await expect(cockpit.findProcessStatesByStepNumber(process.id, undefined)).rejects.toThrowError(
-      "stepNumber not provided"
-    );
-  });
-
-  test("findProcessStatesByNodeId", async () => {
-    const result = await cockpit.findProcessStatesByNodeId(process.id, "minimal_1");
-    expect(result).toBeDefined();
-    expect(result).toHaveLength(2);
-  });
-
-  test("findProcessStatesByNodeId should throw if no process id is provided", async () => {
-    await expect(cockpit.findProcessStatesByNodeId(undefined, "minimal_1")).rejects.toThrowError(
-      "Process Id not provided"
-    );
-  });
-
-  test("findProcessStatesByNodeId should throw if no process id is provided", async () => {
-    await expect(cockpit.findProcessStatesByNodeId(process.id, undefined)).rejects.toThrowError("NodeId not provided");
+describe("setProcessState", () => {
+  test("a valid processId must be provided", async () => {
+    await expect(cockpit.setProcessState(uuid(), {})).rejects.toThrowError("Process not found");
   });
 });
 
-function sleep(ms) {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
+describe("Process State", () => {
+  let myProcess;
+  let myHistory;
 
-const _clean = async () => {
-  const persistor = PersistorProvider.getPersistor(...settings.persist_options);
-  const activity_persist = persistor.getPersistInstance("Activity");
-  const activity_manager_persist = persistor.getPersistInstance("ActivityManager");
-  const process_persist = persistor.getPersistInstance("Process");
-  const workflow_persist = persistor.getPersistInstance("Workflow");
-  const timer_persist = persistor.getPersistInstance("Timer");
+  beforeEach(async () => {
+    const myWorkflow = await cockpit.saveWorkflow("sample", "sample", blueprints_.minimal);
+    myProcess = await cockpit.createProcess(myWorkflow.id, actors_.simpleton);
+    await engine.runProcess(myProcess.id, actors_.simpleton);
+    myHistory = await engine.fetchProcessStateHistory(myProcess.id);
+  });
 
-  await activity_persist.deleteAll();
-  await sleep(10);
-  await activity_manager_persist.deleteAll();
-  await sleep(10);
-  await process_persist.deleteAll();
-  await sleep(10);
-  await workflow_persist.deleteAll();
-  await sleep(10);
-  await timer_persist.deleteAll();
-};
+  describe("getProcessState", () => {
+    test("getProcessState returns the state", async () => {
+      const result = await cockpit.getProcessState(myHistory[0]._id);
+      expect(result).toBeDefined();
+      expect(result).toEqual(myHistory[0]);
+    });
 
-const _validate_process_state_data = (process_state_data, process_state) => {
-  expect(process_state_data.id).toBe(process_state.id);
-  expect(process_state_data.step_number).toBe(process_state.step_number);
-  expect(process_state_data.created_at).toMatchObject(process_state.created_at);
-  expect(process_state_data.node_id).toBe(process_state.node_id);
-  expect(process_state_data.status).toBe(process_state.status);
-};
+    test("getProcessState throw if no state is provided", async () => {
+      await expect(cockpit.getProcessState()).rejects.toThrowError("Process Id not provided");
+    });
+  });
 
-const _validate_workflow_data = (workflow_data, workflow) => {
-  expect(workflow_data.id).toBe(workflow.id);
-  expect(workflow_data.name).toBe(workflow.name);
-  expect(workflow_data.description).toBe(workflow.description);
-};
+  describe("findProcessStatesByStepNumber", () => {
+    test("findProcessStatesByStepNumber returns the state", async () => {
+      const result = await cockpit.findProcessStatesByStepNumber(myProcess.id, 1);
+      expect(result).toBeDefined();
+      expect(result.id).toEqual(_.last(myHistory)._id);
+    });
+
+    test("findProcessStatesByStepNumber should throw if no process id is provided", async () => {
+      await expect(cockpit.findProcessStatesByStepNumber()).rejects.toThrowError("Process Id not provided");
+    });
+
+    test("findProcessStatesByStepNumber should throw if no process id is provided", async () => {
+      await expect(cockpit.findProcessStatesByStepNumber(myProcess.id, undefined)).rejects.toThrowError(
+        "stepNumber not provided"
+      );
+    });
+  });
+
+  describe("findProcessStatesByNodeId", () => {
+    test("findProcessStatesByNodeId returns the state", async () => {
+      const result = await cockpit.findProcessStatesByNodeId(myProcess.id, "minimal_1");
+      expect(result).toBeDefined();
+      expect(result).toHaveLength(2);
+    });
+
+    test("findProcessStatesByNodeId should throw if no process id is provided", async () => {
+      await expect(cockpit.findProcessStatesByNodeId(undefined, "minimal_1")).rejects.toThrowError(
+        "Process Id not provided"
+      );
+    });
+
+    test("findProcessStatesByNodeId should throw if no process id is provided", async () => {
+      await expect(cockpit.findProcessStatesByNodeId(myProcess.id, undefined)).rejects.toThrowError(
+        "NodeId not provided"
+      );
+    });
+  });
+});
+
+describe("Timers", () => {
+  let myTimers;
+  beforeEach(async () => {
+    myTimers = await utils.loadTimers();
+  });
+
+  test("fetchTimersReady", async () => {
+    const result = await cockpit.fetchTimersReady();
+    expect(result.length).toEqual(1);
+    expect(result[0].id).toEqual(myTimers.ready.id);
+  });
+
+  test("fetchTimersActive", async () => {
+    const result = await cockpit.fetchTimersActive();
+    expect(result.length).toEqual(2);
+  });
+});
+
+describe("Extra Nodes", () => {
+  test("Validation of extra nodes works", async () => {
+    cockpit.addCustomSystemCategory(extra_nodes);
+    const customBp = _.cloneDeep(blueprints_.extra_nodes);
+    const exampleNode = customBp.nodes.find((node) => node.category === "example");
+    delete exampleNode.parameters.example;
+    await expect(cockpit.saveWorkflow("sample", "sample", customBp)).rejects.toThrowError(
+      "must have required property 'example'"
+    );
+  });
+
+  test("Execution of extra nodes works", async () => {
+    cockpit.addCustomSystemCategory(extra_nodes);
+    const myWorkflow = await cockpit.saveWorkflow("sample", "sample", blueprints_.extra_nodes);
+    let myProcess = await cockpit.createProcess(myWorkflow.id, actors_.simpleton);
+    myProcess = await cockpit.runProcess(myProcess.id, actors_.simpleton);
+    expect(myProcess.status).toBe(ProcessStatus.FINISHED);
+  });
+});
+
+describe("expireProcess", () => {
+  let myProcess;
+  beforeEach(async () => {
+    const myWorkflow = await cockpit.saveWorkflow("sample", "sample", blueprints_.identity_user_task);
+    myProcess = await cockpit.createProcess(myWorkflow.id, actors_.simpleton);
+    await engine.runProcess(myProcess.id, actors_.simpleton);
+    await utils.sleep(1000);
+  });
+
+  test("expireProcess should work even without timer", async () => {
+    await cockpit.expireProcess(myProcess.id, actors_.admin, { foo: "bar" });
+    const myHistory = await engine.fetchProcessStateHistory(myProcess.id);
+    expect(myHistory[0].status).toEqual("expired");
+    expect(myHistory[0].result.foo).toBeDefined();
+    expect(myHistory[0].actor_data.actor_id).toEqual(actors_.admin.actor_id);
+  });
+
+  test("expireProcess should deactivate existing timer", async () => {
+    const timerId = uuid();
+    const now = new Date();
+    await utils.saveTimer({
+      id: timerId,
+      created_at: new Date(),
+      expires_at: new Date(now.setDate(now.getDate() + 5)),
+      active: true,
+      resource_type: "Process",
+      resource_id: myProcess.id,
+    });
+    await cockpit.expireProcess(myProcess.id, actors_.admin, { foo: "bar" });
+    const myTimer = await utils.getTimer(timerId);
+    expect(myTimer.active).toBe(false);
+  });
+});
+
+describe("expireActivityManager", () => {
+  let myProcess;
+  let myActivityManager;
+  beforeEach(async () => {
+    const myWorkflow = await cockpit.saveWorkflow("sample", "sample", blueprints_.identity_user_task);
+    myProcess = await cockpit.createProcess(myWorkflow.id, actors_.simpleton);
+    await engine.runProcess(myProcess.id, actors_.simpleton);
+    await utils.sleep(1000);
+    myActivityManager = await engine.fetchAvailableActivitiesForActor(actors_.simpleton);
+  });
+
+  test("expireActivityManager should work", async () => {
+    await cockpit.expireActivityManager(myActivityManager[0].id, actors_.admin);
+    const myHistory = await engine.fetchProcessStateHistory(myProcess.id);
+    expect(myHistory[1].status).toEqual("running");
+    expect(myHistory[1].result.is_continue).toBeTruthy();
+  });
+});
