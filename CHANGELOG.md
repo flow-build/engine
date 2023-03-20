@@ -1,3 +1,10 @@
+### [2.24.1](https://github.com/flow-build/engine/compare/v2.24.0...v2.24.1) (2023-03-20)
+
+
+### Bug Fixes
+
+* convert dueDate to Date before converting to ISO ([10021aa](https://github.com/flow-build/engine/commit/10021aa6dce2bc618e25b30379946dab210f251c))
+
 ## [2.24.0](https://github.com/flow-build/engine/compare/v2.23.1...v2.24.0) (2023-03-20)
 
 
