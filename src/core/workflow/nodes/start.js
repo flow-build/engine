@@ -19,6 +19,8 @@ class StartNode extends Node {
           required: ["input_schema"],
           properties: {
             input_schema: { type: "object" },
+            timeout: { type: "integer" },
+            duration: { type: "string" },
           },
         },
       },
