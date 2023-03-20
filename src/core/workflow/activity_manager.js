@@ -361,8 +361,8 @@ class ActivityManager extends PersistedEntity {
           ActivityManager.createBoundaryEvents({ id: this._id, event })
         );
         const eventsResult = await Promise.all(eventsPromise);
-        this.parameters.timeout_id = eventsResult[0].data.timerId;
-        this.parameters.timeout = eventsResult[0].delay;
+        this.parameters.timeout_id = eventsResult[0]?.data?.timerId;
+        this.parameters.timeout = eventsResult[0]?.delay;
       }
     }
     return await super.save(trx, ...args);
