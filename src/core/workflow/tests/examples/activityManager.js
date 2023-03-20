@@ -1,6 +1,35 @@
 const { v1: uuid } = require("uuid");
 
 const process_state_id = uuid();
+const id = uuid();
+
+const serialized = {
+  id,
+  created_at: new Date(),
+  type: "commit",
+  process_state_id,
+  status: "any",
+  props: {
+    foo: "bar",
+  },
+  parameters: {
+    hello: "world",
+  },
+};
+
+const activity_manager = {
+  _id: id,
+  _created_at: new Date(),
+  _type: "commit",
+  process_state_id: process_state_id,
+  _status: "any",
+  _props: {
+    foo: "bar",
+  },
+  _parameters: {
+    hello: "world",
+  },
+};
 
 const minimal = {
   process_state_id: process_state_id,
@@ -96,6 +125,8 @@ const withMultipleTimers = {
 };
 
 module.exports = {
+  serialized,
+  activity_manager,
   process_state_id,
   minimal,
   withTimeout,

@@ -6,7 +6,6 @@ const { ProcessState, ENGINE_ID } = require("./process_state");
 const { ProcessStatus } = require("./process_state");
 const { Blueprint } = require("../workflow/blueprint");
 const { Lane } = require("../workflow/lanes");
-const { Timer } = require("./timer");
 const { getProcessStateNotifier, getActivityManagerNotifier } = require("../notifier_manager");
 const { getAllowedStartNodes } = require("../utils/blueprint");
 const { ActivityManager } = require("./activity_manager");
@@ -220,22 +219,6 @@ class Process extends PersistedEntity {
       this.state = await this._createStateFromNodeResult(node_result, actor_data);
       await this.save();
       await this._notifyProcessState(actor_data);
-
-      if (
-        this.state.status === ProcessStatus.RUNNING &&
-        this.state.step_number === 2 &&
-        this.state.result &&
-        this.state.result.timeout
-      ) {
-        emitter.emit("PROCESS.TIMER.CREATING", `  CREATING PROCESS TIMER ON PID [${this.id}]`, { process_id: this.id });
-        let timer = new Timer("Process", this.id, Timer.timeoutFromNow(this.state.result.timeout), { actor_data });
-        await timer.save();
-        emitter.emit("PROCESS.TIMER.NEW", `  PROCESS TIMER ON PID [${this.id}] TIMER [${timer.id}]`, {
-          process_id: this.id,
-          timer_id: timer.id,
-        });
-      }
-
       await this._executionLoop(custom_lisp, actor_data);
 
       if (this._current_status === ProcessStatus.DELEGATED) {
@@ -312,7 +295,7 @@ class Process extends PersistedEntity {
     return await this._executionLoop(custom_lisp, actor_data, trx);
   }
 
-  async expireProcess(trx = false) {
+  async expireProcess(trx = false, params = {}) {
     emitter.emit("PROCESS.EDGE.EXPIRING", `EXPIRE PID [${this.id}]`, { process_id: this.id });
     const next_step_number = await this.getNextStepNumber();
     this.state = new ProcessState(
@@ -320,12 +303,12 @@ class Process extends PersistedEntity {
       next_step_number,
       this._state.node_id,
       {},
-      null,
-      null,
+      params.external_input,
+      params.result,
       null,
       ProcessStatus.EXPIRED,
       null,
-      null,
+      params.actor_data,
       null
     );
 
@@ -436,7 +419,7 @@ class Process extends PersistedEntity {
       }
 
       if (next_step_number >= max_step_number) {
-        await this.expireProcess(trx);
+        await this.expireProcess(trx, { external_input: { max_step_number } });
         return [this.state, {}, {}];
       }
     }
@@ -524,21 +507,7 @@ class Process extends PersistedEntity {
 
       await this._notifyProcessState(actor_data);
 
-      if (
-        (result_state.status === ProcessStatus.PENDING || result_state.status === ProcessStatus.WAITING) &&
-        result_state.result.timeout
-      ) {
-        emitter.emit("PROCESS.TIMER.CREATING", `      CREATING NEW TIMER ON PID [${p_lock.id}]`, {
-          process_id: p_lock.id,
-        });
-
-        timer = new Timer("Process", this.id, Timer.timeoutFromNow(result_state.result.timeout), { actor_data });
-        await timer.save(trx);
-        emitter.emit("PROCESS.TIMER.NEW", `      NEW TIMER ON PID [${p_lock.id}] TIMER [${timer.id}]`, {
-          process_id: this.id,
-          timer_id: timer.id,
-        });
-      } else if (node_result.activity_manager) {
+      if (node_result.activity_manager) {
         emitter.emit("PROCESS.AM.CREATING", `      CREATING NEW ACTIVITY MANAGER ON PID [${p_lock.id}]`, {
           process_id: p_lock.id,
         });
@@ -740,7 +709,7 @@ class Process extends PersistedEntity {
         break;
       case ProcessStatus.WAITING:
       case ProcessStatus.DELEGATED:
-        await this.expireProcess();
+        await this.expireProcess(trx, { external_input: { timer_id: timer.id } });
         break;
     }
   }

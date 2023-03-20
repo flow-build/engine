@@ -36,7 +36,7 @@ async function initTimeout({ id, timeout, status, next_step_number, trx }) {
       },
       options: {
         jobId: id,
-        delay: timeout,
+        delay: timeout * 1000,
         timerId: timer.id,
       },
     });
@@ -77,7 +77,6 @@ class ActivityManager extends PersistedEntity {
       );
       activity_manager._id = serialized.id;
       activity_manager._created_at = serialized.created_at;
-
       return activity_manager;
     }
     return undefined;
@@ -231,11 +230,6 @@ class ActivityManager extends PersistedEntity {
     }
   }
 
-  static async createTimer(id, time) {
-    let timeout = time instanceof Date ? new Date(time) : new Date(new Date().getTime() + time * 1000);
-    await initTimeout({ id, timeout, status: ActivityStatus.STARTED });
-  }
-
   static async createBoundaryEvents({ id, event }) {
     if (event.input) {
       event.input["activityManagerId"] = id;
@@ -253,6 +247,38 @@ class ActivityManager extends PersistedEntity {
     const myEvent = new Events(event);
     const result = await myEvent.create();
     return result;
+  }
+
+  static async expire(activity_manager_id, data, params = {}, trx = false) {
+    const activity_manager = ActivityManager.deserialize(data);
+    activity_manager.status = ActivityStatus.COMPLETED;
+
+    const activity = await new Activity(
+      activity_manager_id,
+      params.actor_data || {},
+      { timer_id: data.parameters.timeout_id },
+      ActivityStatus.STARTED
+    ).save();
+
+    activity_manager._activities.unshift(activity);
+    await activity_manager.save(trx);
+
+    emitter.emit("ACTIVITY_MANAGER.COMPLETED", `COMPLETED AMID [${activity_manager_id}]`, {
+      activity_manager: activity_manager,
+    });
+
+    await activity_manager._notifyActivityManager(data.process_id);
+    if (activity_manager.type === "commit") {
+      await process_manager.continueProcess(
+        data.process_id,
+        {
+          is_continue: true,
+          activities: data.activities,
+        },
+        params.next_step_number || activity_manager._parameters.next_step_number,
+        trx
+      );
+    }
   }
 
   get process_state_id() {
@@ -412,25 +438,12 @@ class ActivityManager extends PersistedEntity {
       activity_manager_data.parameters.timeout_id === timer.id &&
       activity_manager_data.activity_status === ActivityStatus.STARTED
     ) {
-      const activity_manager = ActivityManager.deserialize(activity_manager_data);
-      activity_manager.status = ActivityStatus.COMPLETED;
-      const activity = await new Activity(this.id, {}, { timer_id: timer.id }, ActivityStatus.STARTED).save();
-      activity_manager._activities.unshift(activity);
-      await activity_manager.save(trx);
-      emitter.emit("ACTIVITY_MANAGER.COMPLETED", `COMPLETED AMID [${this.id}]`, { activity_manager: activity_manager });
-
-      await activity_manager._notifyActivityManager(activity_manager_data.process_id);
-      if (activity_manager.type === "commit") {
-        await process_manager.continueProcess(
-          activity_manager_data.process_id,
-          {
-            is_continue: true,
-            activities: activity_manager_data.activities,
-          },
-          timer.params.next_step_number || activity_manager._parameters.next_step_number,
-          trx
-        );
-      }
+      await ActivityManager.expire(
+        this.id,
+        activity_manager_data,
+        { next_step_number: timer.params.next_step_number },
+        trx
+      );
     }
   }
 }

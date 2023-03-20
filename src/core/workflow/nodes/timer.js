@@ -3,7 +3,6 @@ const addFormats = require("ajv-formats");
 const { prepare } = require("../../utils/input");
 const { ProcessStatus } = require("../process_state");
 const { SystemTaskNode } = require("./systemTask");
-const { toSeconds, parse } = require("iso8601-duration");
 const { Timer } = require("../timer");
 
 class TimerSystemTaskNode extends SystemTaskNode {
@@ -59,65 +58,69 @@ class TimerSystemTaskNode extends SystemTaskNode {
   }
 
   _preProcessing({ bag, input, actor_data, environment, parameters = {} }) {
-    const timeout = prepare(this._spec.parameters.timeout, {
-      bag,
-      result: input,
-      actor_data,
-      environment,
-      parameters,
-    });
-    const duration = prepare(this._spec.parameters.duration, {
-      bag,
-      result: input,
-      actor_data,
-      environment,
-      parameters,
-    });
-
-    const dueDate = prepare(this._spec.parameters.dueDate, {
-      bag,
-      result: input,
-      actor_data,
-      environment,
-      parameters,
-    });
-
+    let timeout;
+    if (this._spec.parameters.timeout) {
+      timeout = prepare(this._spec.parameters.timeout, {
+        bag,
+        result: input,
+        actor_data,
+        environment,
+        parameters,
+      });
+    } else if (this._spec.parameters.duration) {
+      const preparedDuration = prepare(this._spec.parameters.duration, {
+        bag,
+        result: input,
+        actor_data,
+        environment,
+        parameters,
+      });
+      timeout = Timer.durationToSeconds(preparedDuration);
+    } else if (this._spec.parameters.dueDate) {
+      const preparedDueDate = prepare(this._spec.parameters.dueDate, {
+        bag,
+        result: input,
+        actor_data,
+        environment,
+        parameters,
+      });
+      timeout = Timer.dueDateToSeconds(preparedDueDate);
+    }
     return {
       timeout,
       process_id: parameters?.process_id,
       //input.step_number is the one from previous state, so +1 is required.
       step_number: input?.step_number + 1,
-      dueDate,
-      duration,
+      actor_data,
     };
   }
 
   // eslint-disable-next-line no-unused-vars
-  async _run(execution_data = {}, lisp) {
-    if (execution_data["dueDate"]) {
-      execution_data["timeout"] = (new Date(execution_data["dueDate"]).getTime() - new Date().getTime()) / 1000;
-    } else if (execution_data["duration"]) {
-      execution_data["timeout"] = toSeconds(parse(execution_data["duration"]));
-    } else if (!execution_data["timeout"]) {
+  async _run(execution_data = {}) {
+    if (!execution_data.timeout) {
       return [execution_data, ProcessStatus.ERROR];
     }
 
     try {
-      const job = {
+      let timer = new Timer("Process", execution_data.process_id, Timer.timeoutFromNow(execution_data.timeout), {
+        actor_data: execution_data.actor_data,
+      });
+      await timer.save();
+      await Timer.addJob({
         name: "intermediateevent",
         payload: {
           processId: execution_data["process_id"],
           stepNumber: execution_data["step_number"],
         },
         options: {
+          jobId: `${execution_data["process_id"]}-${this._spec.id}`,
           //delay should be in milliseconds, the spec expects the timeout in seconds
           delay: execution_data["timeout"] * 1000,
         },
-      };
-      await Timer.addJob({
-        name: job.name,
-        payload: job.payload,
-        options: job.options,
+      });
+      emitter.emit("PROCESS.TIMER.NEW", `NEW TIMER ON PID [${execution_data.process_id}] TIMER [${timer.id}]`, {
+        process_id: this.id,
+        timer_id: timer.id,
       });
     } catch (e) {
       return [{ error: e }, ProcessStatus.ERROR];

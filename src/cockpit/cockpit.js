@@ -5,6 +5,7 @@ const { Process } = require("../core/workflow/process");
 const { Packages } = require("../core/workflow/packages");
 const { Engine } = require("../engine/engine");
 const { ProcessState } = require("../core/workflow/process_state");
+const { ActivityManager } = require("../core/workflow/activity_manager");
 const { Timer } = require("../core/workflow/timer");
 
 class Cockpit {
@@ -156,6 +157,44 @@ class Cockpit {
 
   async fetchTimersActive() {
     return await Timer.fetchAllActive();
+  }
+
+  async expireProcess(process_id, actor_data, result = {}) {
+    const process = await Process.fetch(process_id);
+    const timer = new Timer("Process", process.id);
+    await timer.retrieve();
+
+    if (timer._id) {
+      emitter.emit("ENGINE.EXPIRE_PROCESS.TIMER", { active: false, resource_type: process_id });
+      await timer.deactivate();
+    }
+
+    emitter.emit("ENGINE.CONTINUE_PROCESS.WORKS", { process_id });
+    await process.expireProcess(false, { actor_data, result });
+    return undefined;
+  }
+
+  async expireActivityManager(amid, actor_data) {
+    let am = await ActivityManager.fetch(amid);
+    if (!am) {
+      return {
+        error: {
+          errorType: "activityManager",
+          message: "activity manager not found",
+        },
+      };
+    }
+    await ActivityManager.expire(amid, am, { actor_data });
+    //check whether the activity manager is started
+    if (am.activity_status !== "started") {
+      return {
+        error: {
+          errorType: "activityManager",
+          message: "activity manager unavailable",
+        },
+      };
+    }
+    return am;
   }
 }
 

@@ -7,6 +7,7 @@ const { ProcessStatus } = require("../process_state");
 const { request } = require("../../utils/requests");
 const { SystemTaskNode } = require("./systemTask");
 const emitter = require("../../utils/emitter");
+const { Timer } = require("../timer");
 
 class HttpSystemTaskNode extends SystemTaskNode {
   static get schema() {
@@ -31,22 +32,22 @@ class HttpSystemTaskNode extends SystemTaskNode {
                   type: "object",
                   required: ["attempts", "interval", "conditions"],
                   properties: {
-                    attempts: {type: "integer"},
-                    interval: {type: "integer"},
+                    attempts: { type: "integer" },
+                    interval: { type: "integer" },
                     conditions: {
                       type: "array",
                       items: {
-                        type: ["integer","string"]
-                      } 
-                    }
-                  }
-                }
+                        type: ["integer", "string"],
+                      },
+                    },
+                  },
+                },
               },
             },
             valid_response_codes: {
               type: "array",
-              items: { 
-                type:  ["integer","string"] 
+              items: {
+                type: ["integer", "string"],
               },
             },
           },
@@ -64,28 +65,28 @@ class HttpSystemTaskNode extends SystemTaskNode {
   }
 
   static includesHTTPCode(code_array, answer_code) {
-    const target_codes = code_array.map(code => code.toString());
+    const target_codes = code_array.map((code) => code.toString());
     const input_code = answer_code.toString();
 
     const re = /[1-5][X0-9][X0-9]/;
     const codeMatch = (code) => {
-      if(code.match(re)) {
+      if (code.match(re)) {
         const first_char = code[0];
-        const second_char = code[1] === 'X' ? '[0-9]': code[1];
-        const third_char = code[2] === 'X' ? '[0-9]': code[2];
+        const second_char = code[1] === "X" ? "[0-9]" : code[1];
+        const third_char = code[2] === "X" ? "[0-9]" : code[2];
         const code_re = new RegExp(`${first_char}${second_char}${third_char}`);
         return input_code.match(code_re);
       }
       return code === input_code;
-    }
+    };
 
-    return target_codes.find(code => codeMatch(code)) || null;
+    return target_codes.find((code) => codeMatch(code)) || null;
   }
 
   next(result) {
     const retry_conditions = this._spec.parameters.request.retry?.conditions || [];
     const retry_attempts = this._spec.parameters.request.retry?.attempts || 0;
-    if(HttpSystemTaskNode.includesHTTPCode(retry_conditions, result.status) && result.attempt < retry_attempts) {
+    if (HttpSystemTaskNode.includesHTTPCode(retry_conditions, result.status) && result.attempt < retry_attempts) {
       return this._spec["id"];
     }
     return this._spec["next"];
@@ -133,22 +134,26 @@ class HttpSystemTaskNode extends SystemTaskNode {
     const request_attempt = execution_data.HTTP_REQUEST_ATTEMPT || 0;
     const payload = execution_data.payload;
 
-    emitter.emit("HTTP.NODE.REQUEST", {
-      verb,
-      endpoint,
-      payload,
-      headers,
-      configs: {
-        http_timeout,
-        max_content_length
-      }
-    }, { request_id: request_id, process_id: process_id })
+    emitter.emit(
+      "HTTP.NODE.REQUEST",
+      {
+        verb,
+        endpoint,
+        payload,
+        headers,
+        configs: {
+          http_timeout,
+          max_content_length,
+        },
+      },
+      { request_id: request_id, process_id: process_id }
+    );
 
     let result;
     try {
       result = await request[verb](endpoint, payload, headers, { http_timeout, max_content_length });
     } catch (err) {
-      if (err.response || err.code === 'ECONNABORTED') {
+      if (err.response || err.code === "ECONNABORTED") {
         result = {
           status: err.response?.status || err.code,
           data: err.response?.data === undefined ? {} : err.response?.data,
@@ -160,35 +165,62 @@ class HttpSystemTaskNode extends SystemTaskNode {
       }
     }
     const HTTP_WARN_CODES = process.env.HTTP_WARN_CODES;
-    if(HTTP_WARN_CODES) {
+    if (HTTP_WARN_CODES) {
       try {
         const parsedWarnCodes = JSON.parse(HTTP_WARN_CODES);
-        if(HttpSystemTaskNode.includesHTTPCode(parsedWarnCodes, result.status)) {
-          emitter.emit("HTTP.NODE.WARN", result, { level: 'warn', request_id, process_id, endpoint });
+        if (HttpSystemTaskNode.includesHTTPCode(parsedWarnCodes, result.status)) {
+          emitter.emit("HTTP.NODE.WARN", result, { level: "warn", request_id, process_id, endpoint });
         }
-      } catch(e) {}
+      } catch (e) {
+        emitter.emit("HTTP.NODE.ERROR", `Warn code error: ${e}`, { request_id, process_id, endpoint });
+      }
     }
     if (this._spec.parameters.valid_response_codes) {
-      if(!HttpSystemTaskNode.includesHTTPCode(this._spec.parameters.valid_response_codes, result.status)) {
-        emitter.emit("HTTP.NODE.RESPONSE", result, { level: 'error', request_id: request_id, process_id: process_id });
+      if (!HttpSystemTaskNode.includesHTTPCode(this._spec.parameters.valid_response_codes, result.status)) {
+        emitter.emit("HTTP.NODE.RESPONSE", result, { level: "error", request_id: request_id, process_id: process_id });
         throw new Error(`Invalid response status: ${result.status}`);
       }
     }
     emitter.emit("HTTP.NODE.RESPONSE", result, { request_id: request_id, process_id: process_id });
-    
+
     const retry_conditions = this._spec.parameters.request.retry?.conditions || [];
     const retry_attempts = this._spec.parameters.request.retry?.attempts || 0;
-    if(HttpSystemTaskNode.includesHTTPCode(retry_conditions, result.status) && result.attempt < retry_attempts) {
-      return [result, ProcessStatus.PENDING];  
+    if (HttpSystemTaskNode.includesHTTPCode(retry_conditions, result.status) && result.attempt < retry_attempts) {
+      emitter.emit("HTTP.TIMER.CREATING", `CREATING NEW TIMER ON PID [${process_id}]`, { process_id: process_id });
+      const interval = this._spec.parameters.request?.retry?.interval || 1;
+      const timer = new Timer("Process", process_id, Timer.timeoutFromNow(interval), { attempt: result.attempt });
+      await timer.save();
+      await Timer.addJob({
+        name: "httpnoderetries",
+        payload: {
+          processId: process_id,
+          requestId: request_id,
+          attempts: retry_attempts,
+        },
+        options: {
+          jobId: `${execution_data["process_id"]}-${this._spec.id}`,
+          //delay should be in milliseconds, the spec expects the timeout in seconds
+          delay: interval * 1000,
+        },
+      });
+      emitter.emit("PROCESS.TIMER.NEW", `NEW TIMER ON PID [${process_id}] TIMER [${timer.id}]`, {
+        process_id: process_id,
+        timer_id: timer.id,
+      });
+      return [result, ProcessStatus.PENDING];
     }
-    
+
     return [result, ProcessStatus.RUNNING];
   }
 
   _preProcessing({ bag, input, actor_data, environment, parameters }) {
     this.request = prepare(this._spec.parameters.request, { bag, result: input, actor_data, environment, parameters });
     const pre_processed = super._preProcessing({ bag, input, actor_data, environment, parameters });
-    return { process_id: parameters?.process_id || "unknown", HTTP_REQUEST_ATTEMPT: input.attempt || 0, payload: pre_processed };
+    return {
+      process_id: parameters?.process_id || "unknown",
+      HTTP_REQUEST_ATTEMPT: input.attempt || 0,
+      payload: pre_processed,
+    };
   }
 }
 

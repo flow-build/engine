@@ -1,7 +1,7 @@
-/* eslint-disable indent */
-const { PersistedEntity } = require("./base");
 const _ = require("lodash");
 const { Queue } = require("bullmq");
+const { toSeconds, parse } = require("iso8601-duration");
+const { PersistedEntity } = require("./base");
 
 const connection = {
   host: process.env.TIMER_HOST,
@@ -51,6 +51,15 @@ class Timer extends PersistedEntity {
     return now;
   }
 
+  static durationToSeconds(duration) {
+    //TODO: verify is duration is an ISO8601 string
+    return toSeconds(parse(duration));
+  }
+
+  static dueDateToSeconds(dueDate) {
+    return (new Date(dueDate).getTime() - new Date().getTime()) / 1000;
+  }
+
   static async fetchAllActive() {
     let query = Timer.getPersist().getAllActive();
     const timers = await query;
@@ -63,12 +72,13 @@ class Timer extends PersistedEntity {
     return _.map(timers, (timer) => Timer.deserialize(timer));
   }
 
-  static async addJob({ name, payload, options }) {
-    if (process.env.TIMER_QUEUE) {
-      const myQueue = new Queue(process.env.TIMER_QUEUE, { connection });
-      return await myQueue.add(name, payload, options);
+  static async addJob({ name = "any", payload, options }) {
+    if (!process.env.TIMER_QUEUE || process.env.TIMER_QUEUE === "undefined") {
+      return undefined;
     }
-    return undefined;
+
+    const myQueue = new Queue(process.env.TIMER_QUEUE, { connection });
+    return await myQueue.add(name, payload, options);
   }
 
   constructor(resource_type, resource_id, expires_at, params = {}) {
@@ -103,21 +113,27 @@ class Timer extends PersistedEntity {
   }
 
   async fetchResource() {
+    const types = {
+      ActivityManager: async () => {
+        const { ActivityManager } = require("./activity_manager");
+        return ActivityManager.deserialize(await ActivityManager.fetch(this.resource_id));
+      },
+      Process: async () => {
+        const { Process } = require("./process");
+        return Process.fetch(this.resource_id);
+      },
+      Mock: async () => {
+        return await Mock.fetch(this.resource_id);
+      },
+    };
+
     try {
-      switch (this._resource_type) {
-        case "ActivityManager": {
-          const { ActivityManager } = require("./activity_manager");
-          return ActivityManager.deserialize(await ActivityManager.fetch(this.resource_id));
+      if (this._resource_type) {
+        const resourceType = await types[this._resource_type]();
+        if (!resourceType) {
+          throw new Error("resource type not found");
         }
-
-        case "Process": {
-          const { Process } = require("./process");
-          return Process.fetch(this.resource_id);
-        }
-
-        case "Mock": {
-          return Mock.fetch(this.resource_id);
-        }
+        return resourceType;
       }
     } catch (e) {
       throw new Error(e);
