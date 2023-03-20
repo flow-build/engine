@@ -231,7 +231,7 @@ class ActivityManager extends PersistedEntity {
   }
 
   static async createBoundaryEvents({ id, event }) {
-    emitter.emit("ACTIVITY_MANAGER.CREATE_BOUNDARY_EVENT", `CREATE BOUNDARY EVENTO ON AMID [${id}]`, {
+    emitter.emit("ACTIVITY_MANAGER.CREATE_BOUNDARY_EVENT", `CREATE BOUNDARY EVENT ON AMID [${id}]`, {
       activity_manager: id,
     });
     if (event.input) {
