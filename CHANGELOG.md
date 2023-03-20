@@ -1,3 +1,11 @@
+### [2.24.2](https://github.com/flow-build/engine/compare/v2.24.1...v2.24.2) (2023-03-20)
+
+
+### Bug Fixes
+
+* fix return when there is no timer queue ([23a171a](https://github.com/flow-build/engine/commit/23a171a4dac4e6272e33c2243ea7e99af06c5b69))
+* return the timerId even without timer queue ([9bc52c5](https://github.com/flow-build/engine/commit/9bc52c51034202431e2187dab328eed333ee4e0d))
+
 ### [2.24.1](https://github.com/flow-build/engine/compare/v2.24.0...v2.24.1) (2023-03-20)
 
 
