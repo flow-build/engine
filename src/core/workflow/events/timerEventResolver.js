@@ -69,11 +69,21 @@ async function timerResolver(event) {
   };
 
   const job = serializeJobData(event, options);
-  return await Timer.addJob({
+  const jobResult = await Timer.addJob({
     name: job.name,
     payload: { ...job.payload, ...{ timerId: myTimer._id } },
     options: job.options,
   });
+  if (!jobResult) {
+    return {
+      data: {
+        timerId: myTimer.id,
+      },
+      delay: delay.timeout / 1000,
+    };
+  }
+
+  return jobResult;
 }
 
 module.exports = {
