@@ -1,3 +1,17 @@
+## [2.24.0](https://github.com/flow-build/engine/compare/v2.23.1...v2.24.0) (2023-03-20)
+
+
+### Features
+
+* add expireProcess method on cockpit ([035b0ea](https://github.com/flow-build/engine/commit/035b0eabd2202ff5b3bcec74bd31187b528c68a6))
+* add timeout and duration to startNode schema ([0345148](https://github.com/flow-build/engine/commit/034514863930cafc058814e4cac08b15493c2a10))
+* **FLOW-61:** add expireActivityManager to cockpit ([8d4c409](https://github.com/flow-build/engine/commit/8d4c40954c4bfef64a840e78b0e07cd8e1a78331))
+
+
+### Bug Fixes
+
+* **nodes:** convert delay to ms ([f676409](https://github.com/flow-build/engine/commit/f6764097fbd97e001491b91e054f147dd9f6d311))
+
 ### [2.23.1](https://github.com/flow-build/engine/compare/v2.23.0...v2.23.1) (2023-03-16)
 
 
