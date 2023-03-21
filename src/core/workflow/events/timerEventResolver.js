@@ -11,6 +11,7 @@ function serializeJobData(event, options = {}) {
     name: event.definition,
     payload: {
       resourceId: event.resource.id,
+      resourceType: event.resource.type,
       stepNumber: event.resource.stepNumber,
       nodeId: event.resource.nodeId,
       workflowName: event.resource.workflowName,
