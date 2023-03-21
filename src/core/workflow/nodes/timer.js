@@ -109,7 +109,8 @@ class TimerSystemTaskNode extends SystemTaskNode {
       await Timer.addJob({
         name: "intermediateevent",
         payload: {
-          processId: execution_data["process_id"],
+          resourceId: execution_data["process_id"],
+          resourceType: "process",
           stepNumber: execution_data["step_number"],
         },
         options: {

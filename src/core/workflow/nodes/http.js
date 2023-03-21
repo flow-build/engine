@@ -193,7 +193,8 @@ class HttpSystemTaskNode extends SystemTaskNode {
       await Timer.addJob({
         name: "httpnoderetries",
         payload: {
-          processId: process_id,
+          resourceId: process_id,
+          resourceType: "process",
           requestId: request_id,
           attempts: retry_attempts,
         },

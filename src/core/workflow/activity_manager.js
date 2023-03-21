@@ -32,7 +32,9 @@ async function initTimeout({ id, timeout, status, next_step_number, trx }) {
     await Timer.addJob({
       name: "usertask",
       payload: {
-        activityManagerId: id,
+        resourceId: id,
+        resourceType: "activityManager",
+        timerId: timer.id,
       },
       options: {
         jobId: id,

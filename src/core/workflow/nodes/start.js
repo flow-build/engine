@@ -108,7 +108,8 @@ class StartNode extends Node {
       await Timer.addJob({
         name: "process",
         payload: {
-          processId: execution_data["process_id"],
+          resourceId: execution_data["process_id"],
+          resourceType: "process",
         },
         options: {
           jobId: execution_data.process_id,
