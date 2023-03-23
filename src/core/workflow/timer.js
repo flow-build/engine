@@ -72,6 +72,19 @@ class Timer extends PersistedEntity {
     return _.map(timers, (timer) => Timer.deserialize(timer));
   }
 
+  static openTransaction() {
+    return Timer.getPersist()._db.transaction();
+  }
+
+  static async batchLock(batch, trx) {
+    return await Timer.getPersist().lock(trx, batch);
+  }
+
+  static async fire(timer, trx) {
+    const _timer = Timer.deserialize(timer);
+    return await _timer.run(trx);
+  }
+
   static async addJob({ name = "any", payload, options }) {
     if (!process.env.TIMER_QUEUE || process.env.TIMER_QUEUE === "undefined") {
       return undefined;
