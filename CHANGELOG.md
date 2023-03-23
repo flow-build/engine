@@ -1,3 +1,10 @@
+### [2.24.4](https://github.com/flow-build/engine/compare/v2.24.3...v2.24.4) (2023-03-23)
+
+
+### Bug Fixes
+
+* disable timer fetch if batch is set to ZERO ([c2be851](https://github.com/flow-build/engine/commit/c2be8517ef934f16670a1cbdca56f65bee9a8f73))
+
 ### [2.24.3](https://github.com/flow-build/engine/compare/v2.24.2...v2.24.3) (2023-03-21)
 
 
