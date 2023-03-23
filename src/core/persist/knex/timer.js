@@ -44,6 +44,15 @@ class TimerKnexPersist extends KnexPersist {
         .update({ active: false });
     }
   }
+
+  async lock(trx, batch) {
+    return await trx(this._table)
+      .where("expires_at", "<", new Date())
+      .andWhere("active", true)
+      .limit(batch)
+      .forUpdate()
+      .skipLocked();
+  }
 }
 
 module.exports = {

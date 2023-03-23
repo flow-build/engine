@@ -66,6 +66,12 @@ class Engine {
     Engine.instance = this;
     this.emitter = emitter;
     if (heartBeat) {
+      if (process.env.TIMER_BATCH && process.env.TIMER_BATCH > 0 && process.env.TIMER_QUEUE) {
+        emitter.emit("ENGINE.CONTRUCTOR", "BOTH BATCH AND QUEUE ACTIVE", {
+          batch: process.env.TIMER_BATCH,
+          queue: process.env.TIMER_QUEUE,
+        });
+      }
       try {
         Engine.heart = Engine.setNextHeartBeat();
         emitter.emit("ENGINE.CONTRUCTOR", "HEARTBEAT INITIALIZED", {});
@@ -81,29 +87,29 @@ class Engine {
     const TIMER_BATCH = process.env.TIMER_BATCH || 40;
     const ORPHAN_BATCH = process.env.ORPHAN_BATCH || 10;
     emitter.emit("ENGINE.HEARTBEAT", `HEARTBEAT @ [${new Date().toISOString()}]`);
-    await Timer.getPersist()._db.transaction(async (trx) => {
+    if (TIMER_BATCH > 0) {
+      emitter.emit("ENGINE.FETCHING_TIMERS", `  FETCHING TIMERS ON HEARTBEAT BATCH [${TIMER_BATCH}]`);
+      const timerTrx = await Timer.openTransaction();
       try {
-        emitter.emit("ENGINE.FETCHING_TIMERS", `  FETCHING TIMERS ON HEARTBEAT BATCH [${TIMER_BATCH}]`);
-        const locked_timers = await trx("timer")
-          .where("expires_at", "<", new Date())
-          .andWhere("active", true)
-          .limit(TIMER_BATCH)
-          .forUpdate()
-          .skipLocked();
+        const locked_timers = await Timer.batchLock(TIMER_BATCH, timerTrx);
         emitter.emit("ENGINE.TIMERS", `  FETCHED [${locked_timers.length}] TIMERS ON HEARTBEAT`, {
           timers: locked_timers.length,
         });
         await Promise.all(
           locked_timers.map((t_lock) => {
-            emitter.emit("ENGINE.FIRING_TIMER", `  FIRING TIMER [${t_lock.id}] ON HEARTBEAT`, { timer_id: t_lock.id });
-            const timer = Timer.deserialize(t_lock);
-            return timer.run(trx);
+            emitter.emit("ENGINE.FIRING_TIMER", `  FIRING TIMER [${t_lock.id}] ON HEARTBEAT`, {
+              timer_id: t_lock.id,
+            });
+            return Timer.fire(t_lock, timerTrx);
           })
         );
+        await timerTrx.commit();
       } catch (e) {
+        await timerTrx.rollback();
         throw new Error(e);
       }
-    });
+    }
+
     const orphan_process = await Process.getPersist()._db.transaction(async (trx) => {
       try {
         emitter.emit("ENGINE.ORPHANS_FETCHING", `FETCHING ORPHAN PROCESSES ON HEARTBEAT BATCH [${ORPHAN_BATCH}]`);
