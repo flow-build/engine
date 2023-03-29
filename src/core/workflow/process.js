@@ -244,37 +244,40 @@ class Process extends PersistedEntity {
       return this._forbiddenState(err);
     }
 
-    if (currentNode && this.status !== ProcessStatus.FINISHED) {
-      if (this.status !== ProcessStatus.RUNNING) {
-        const next_node_id = currentNode.next();
-        const step_number = await this.getNextStepNumber();
-        this.state = new ProcessState(
-          this.id,
-          step_number,
-          currentNode.id,
-          this.bag,
-          null,
-          {
-            ...this.state.result,
-            ...result_data,
-          },
-          null,
-          ProcessStatus.RUNNING,
-          next_node_id,
-          actor_data,
-          null
-        );
-        await this.save();
-        await this._notifyProcessState({});
-      }
-
-      const custom_lisp = await Packages._fetchPackages(
-        this._blueprint_spec.requirements,
-        this._blueprint_spec.prepare
-      );
-
-      await this._executionLoop(custom_lisp, actor_data, trx);
+    if (!currentNode || this.status === ProcessStatus.FINISHED) {
+      return;
     }
+
+    if (this.status !== ProcessStatus.RUNNING) {
+      const next_node_id = currentNode.next();
+      const step_number = await this.getNextStepNumber();
+      this.state.result.step_number = step_number;
+      this.state = new ProcessState(
+        this.id,
+        step_number,
+        currentNode.id,
+        this.bag,
+        null,
+        {
+          ...this.state.result,
+          ...result_data,
+        },
+        null,
+        ProcessStatus.RUNNING,
+        next_node_id,
+        actor_data,
+        null
+      );
+      await this.save();
+      await this._notifyProcessState({});
+    }
+
+    const custom_lisp = await Packages._fetchPackages(
+      this._blueprint_spec.requirements,
+      this._blueprint_spec.prepare
+    );
+
+    await this._executionLoop(custom_lisp, actor_data, trx);
   }
 
   async runPendingProcess(actor_data, trx = false) {

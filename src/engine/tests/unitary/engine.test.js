@@ -279,7 +279,7 @@ describe("continueProcess", () => {
     const history = await Process.fetchStateHistory(process.id);
     expect(history[1]._result.timeout).toEqual(10000);
     expect(history[1]._result.new_result).toEqual(1);
-    expect(history[1]._result.step_number).toEqual(3);
+    expect(history[1]._result.step_number).toEqual(history[1].step_number);
   });
   test("continueProcess should return invalid process status", async () => {
     const workflow = await engine.saveWorkflow("sample", "sample", blueprints_.user_action);
