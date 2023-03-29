@@ -1,3 +1,10 @@
+### [2.24.5](https://github.com/flow-build/engine/compare/v2.24.4...v2.24.5) (2023-03-29)
+
+
+### Bug Fixes
+
+* adjust step_number on continue process method ([38e0e47](https://github.com/flow-build/engine/commit/38e0e47ab2c278e8e942d230b997155ac884cf60))
+
 ### [2.24.4](https://github.com/flow-build/engine/compare/v2.24.3...v2.24.4) (2023-03-23)
 
 
