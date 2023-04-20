@@ -7,7 +7,7 @@ const { PersistorProvider } = require("../core/persist/provider");
 const { Timer } = require("../core/workflow/timer");
 const { ActivityManager } = require("../core/workflow/activity_manager");
 const { ActivityStatus } = require("../core/workflow/activity");
-const { setProcessStateNotifier, setActivityManagerNotifier } = require("../core/notifier_manager");
+const { setProcessStateNotifier, setActivityManagerNotifier, setEventNodeNotifier } = require("../core/notifier_manager");
 const { addSystemTaskCategory } = require("../core/utils/node_factory");
 const process_manager = require("../core/workflow/process_manager");
 const crypto_manager = require("../core/crypto_manager");
@@ -195,6 +195,10 @@ class Engine {
 
   setActivityManagerNotifier(activity_manager_notifier) {
     setActivityManagerNotifier(activity_manager_notifier);
+  }
+
+  setEventNodeNotifier(event_node_notifier) {
+    setEventNodeNotifier(event_node_notifier);
   }
 
   addCustomSystemCategory(extra_system_tasks) {

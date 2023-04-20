@@ -9,6 +9,7 @@ const types = {
   usertask: nodes.UserTaskNode,
   systemtask: nodes.SystemTaskNode,
   subprocess: nodes.SubProcessNode,
+  event: nodes.EventNode,
 };
 
 let categories = {
@@ -18,6 +19,7 @@ let categories = {
   startprocess: nodes.StartProcessSystemTaskNode,
   abortprocess: nodes.AbortProcessSystemTaskNode,
   formrequest: nodes.FormRequestNode,
+  signal: nodes.EventNode
 };
 
 function getNodeTypes() {
