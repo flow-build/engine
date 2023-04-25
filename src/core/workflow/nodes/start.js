@@ -21,6 +21,12 @@ class StartNode extends Node {
             input_schema: { type: "object" },
             timeout: { type: "integer" },
             duration: { type: "string" },
+            target: {
+              type: "object",
+              properties: {
+                definition: { type: "string" }
+              }
+            }
           },
         },
       },

@@ -9,6 +9,7 @@ const types = {
   usertask: nodes.UserTaskNode,
   systemtask: nodes.SystemTaskNode,
   subprocess: nodes.SubProcessNode,
+  event: nodes.EventNode,
 };
 
 let categories = {
@@ -19,6 +20,12 @@ let categories = {
   abortprocess: nodes.AbortProcessSystemTaskNode,
   formrequest: nodes.FormRequestNode,
 };
+
+let eventCategories = {
+  signal: nodes.EventNode,
+  timer: nodes.EventNode,
+  message: nodes.EventNode,
+}
 
 function getNodeTypes() {
   return types;
@@ -40,12 +47,17 @@ function getNode(nodeSpec) {
     throw new Error(`Invalid node, unknow type ${nodeType}`);
   }
 
-  if (nodeClass === nodes.SystemTaskNode) {
+  if (nodeClass === nodes.SystemTaskNode || nodeClass === nodes.EventNode) {
     const nodeCategory = nodeSpec.category?.toLowerCase();
     if (!nodeCategory) {
       throw new Error("Invalid service task, missing category on spec");
     }
-    nodeClass = categories[nodeCategory];
+
+    if (nodeClass === nodes.SystemTaskNode) {
+      nodeClass = categories[nodeCategory];
+    } else if (nodeClass === nodes.EventNode) {
+      nodeClass = eventCategories[nodeCategory];
+    }
 
     if (!nodeClass) {
       throw new Error(`Invalid service task, unknown category ${nodeCategory}`);

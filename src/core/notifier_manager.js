@@ -16,9 +16,20 @@ function setActivityManagerNotifier(notifier) {
   activity_manager_notifier = notifier;
 }
 
+let node_event_notifier = null;
+function getEventNodeNotifier() {
+  return node_event_notifier;
+}
+
+function setEventNodeNotifier(notifier) {
+  node_event_notifier = notifier;
+}
+
 module.exports = {
   getProcessStateNotifier: getProcessStateNotifier,
   setProcessStateNotifier: setProcessStateNotifier,
   getActivityManagerNotifier: getActivityManagerNotifier,
   setActivityManagerNotifier: setActivityManagerNotifier,
+  getEventNodeNotifier: getEventNodeNotifier,
+  setEventNodeNotifier: setEventNodeNotifier
 };
