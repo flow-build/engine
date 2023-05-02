@@ -1,3 +1,16 @@
+## [2.25.0](https://github.com/flow-build/engine/compare/v2.24.5...v2.25.0) (2023-04-25)
+
+
+### Features
+
+* adds 'events' on node specs and setter to listen to EventNode notifications ([68c5355](https://github.com/flow-build/engine/commit/68c53556621f1852c7c1f376b00d1cd33d9c0e6d))
+* updates start node spec to add 'events' ([6a03839](https://github.com/flow-build/engine/commit/6a03839b010e988278dfd4d50d6a116380d38bad))
+
+
+### Bug Fixes
+
+* adjustments on Event Node ([7452b6d](https://github.com/flow-build/engine/commit/7452b6d524d6f72cb2de2676a05b1300243728ea))
+
 ### [2.24.5](https://github.com/flow-build/engine/compare/v2.24.4...v2.24.5) (2023-03-29)
 
 
