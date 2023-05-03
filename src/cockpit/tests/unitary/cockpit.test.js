@@ -169,6 +169,17 @@ describe("getProcessStateExecutionHistory works", () => {
     expect(myHistoryData.max_step_number).toBe(0)
     expect(myHistoryData.execution).toHaveLength(0)
   });
+
+  test("getProcessStateExecutionHistory works with 'fromStep' filter", async () => {
+    const myWorkflow = await engine.saveWorkflow("sample", "sample", blueprints_.identity_system_task);
+    let myProcess = await engine.createProcess(myWorkflow.id, actors_.simpleton);
+    myProcess = await engine.runProcess(myProcess.id, actors_.simpleton);
+    const myHistoryData = await cockpit.getProcessStateExecutionHistory(myProcess.id, { fromStep: 3 });
+
+    expect(myHistoryData.current_status).toBe("finished")
+    expect(myHistoryData.max_step_number).toBe(4)
+    expect(myHistoryData.execution).toHaveLength(2)
+  });
 });
 
 describe("getWorkflows", () => { });
