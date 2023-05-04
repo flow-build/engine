@@ -7,6 +7,7 @@ const { Engine } = require("../engine/engine");
 const { ProcessState } = require("../core/workflow/process_state");
 const { ActivityManager } = require("../core/workflow/activity_manager");
 const { Timer } = require("../core/workflow/timer");
+const { prepare } = require("../core/utils/input");
 
 class Cockpit {
   static get instance() {
@@ -164,6 +165,51 @@ class Cockpit {
 
     const result = await ProcessState.fetchByNodeId(processId, nodeId);
     return result;
+  }
+
+  async fetchStateExecutionContext(stateId) {
+    if (!stateId) {
+      throw new Error("[fetchStateExecutionContext] stateId not provided");
+    }
+
+    try {
+      const state = await ProcessState.fetch(stateId);
+      if (state) {
+        const processId = state.process_id;
+        const step_number = state.step_number;
+
+        let previousState;
+        if (step_number > 1) {
+          previousState = await ProcessState.fetchByStepNumber(processId, step_number - 1);
+        } else {
+          previousState = {}
+        }
+        const process = await Process.fetch(processId);
+        const nodes = process?._blueprint_spec?.nodes || []
+        const currentNode = nodes.find((node) => node.id === state._node_id);
+        if (currentNode) {
+          const executionData = prepare(currentNode.parameters?.input || {}, {
+            bag: previousState._bag || {},
+            result: previousState._result || {},
+            actor_data: previousState._actor_data || state._actor_data,
+            environment: previousState.environment || {},
+          })
+          return {
+            stepNumber: state.step_number,
+            nodeSpec: currentNode,
+            executionData: executionData,
+            previousState: previousState._id
+              ? ProcessState.serialize(previousState)
+              : {},
+            currentState: ProcessState.serialize(state)
+          }
+        }
+        throw new Error("[fetchStateExecutionContext] could not find node");
+      }
+      throw new Error("[fetchStateExecutionContext] state not found");
+    } catch (error) {
+      throw error
+    }
   }
 
   async _filterForAllowedWorkflows(workflows_data, actor_data) {
