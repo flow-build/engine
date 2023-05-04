@@ -167,44 +167,59 @@ class Cockpit {
     return result;
   }
 
+  async fetchPreviousState(processId, state) {
+    const step_number = state.step_number;
+    if (step_number > 1) {
+      return await ProcessState.fetchByStepNumber(processId, step_number - 1);
+    } else {
+      return {
+        bag: {},
+        result: {},
+        actor_data: {},
+        environment: {}
+      }
+    }
+  }
+
+  async mountExecutionData({
+    nodeSpec,
+    previousState,
+    currentState
+  }) {
+    const executionData = prepare(nodeSpec.parameters?.input || {}, {
+      bag: previousState._bag,
+      result: previousState._result,
+      actor_data: previousState._actor_data,
+      environment: previousState.environment,
+    })
+    return {
+      stepNumber: currentState.step_number,
+      nodeSpec: nodeSpec,
+      executionData: executionData,
+      previousState: previousState._id
+        ? ProcessState.serialize(previousState)
+        : {},
+      currentState: ProcessState.serialize(currentState)
+    }
+  }
+
   async fetchStateExecutionContext(stateId) {
     if (!stateId) {
       throw new Error("[fetchStateExecutionContext] stateId not provided");
     }
 
     try {
-      const state = await ProcessState.fetch(stateId);
-      if (state) {
-        const processId = state.process_id;
-        const step_number = state.step_number;
+      const currentState = await ProcessState.fetch(stateId);
+      if (currentState) {
+        const processId = currentState.process_id;
 
-        let previousState;
-        if (step_number > 1) {
-          previousState = await ProcessState.fetchByStepNumber(processId, step_number - 1);
-        } else {
-          previousState = {}
-        }
+        const previousState = await this.fetchPreviousState(processId, currentState)
+
         const process = await Process.fetch(processId);
         const nodes = process?._blueprint_spec?.nodes || []
-        const currentNode = nodes.find((node) => node.id === state._node_id);
-        if (currentNode) {
-          const executionData = prepare(currentNode.parameters?.input || {}, {
-            bag: previousState._bag || {},
-            result: previousState._result || {},
-            actor_data: previousState._actor_data || state._actor_data,
-            environment: previousState.environment || {},
-          })
-          return {
-            stepNumber: state.step_number,
-            nodeSpec: currentNode,
-            executionData: executionData,
-            previousState: previousState._id
-              ? ProcessState.serialize(previousState)
-              : {},
-            currentState: ProcessState.serialize(state)
-          }
-        }
-        throw new Error("[fetchStateExecutionContext] could not find node");
+        const nodeSpec = nodes.find((node) => node.id === currentState._node_id);
+
+        return this.mountExecutionData({ nodeSpec, previousState, currentState })
       }
       throw new Error("[fetchStateExecutionContext] state not found");
     } catch (error) {
