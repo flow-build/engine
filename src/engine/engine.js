@@ -470,10 +470,10 @@ class Engine {
     return await Process.fetch(process_id);
   }
 
-  async fetchProcessStateHistory(process_id) {
+  async fetchProcessStateHistory(process_id, filters = {}) {
     const process = await Process.fetch(process_id);
     if (process) {
-      return await Process.fetchStateHistory(process_id);
+      return await Process.fetchStateHistory(process_id, filters);
     }
     return undefined;
   }

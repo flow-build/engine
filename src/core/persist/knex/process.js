@@ -85,8 +85,15 @@ class ProcessKnexPersist extends KnexPersist {
     });
   }
 
-  getStateHistoryByProcess(id) {
-    return this._db.select("*").from(this._state_table).where("process_id", id).orderBy("step_number", "desc");
+  getStateHistoryByProcess(id, filters = null) {
+    return this._db.select("*").from(this._state_table).where("process_id", id).orderBy("step_number", "desc")
+      .modify((builder) => {
+        if (filters) {
+          if (filters.fromStep) {
+            builder.where("step_number", ">=", filters.fromStep);
+          }
+        }
+      });
   }
 
   getLastStateByProcess(id, trx = false) {
@@ -96,7 +103,7 @@ class ProcessKnexPersist extends KnexPersist {
       .innerJoin(this._state_table, "process_state.id", "current_state_id")
       .where("process.id", id)
       .first();
-    if(trx) {
+    if (trx) {
       return query.transacting(trx);
     }
     return query;
@@ -105,7 +112,7 @@ class ProcessKnexPersist extends KnexPersist {
   async getLastStepNumber(id, trx = false) {
     const query = this._db(this._state_table).max("step_number").where("process_id", id).first();
     let result;
-    if(trx) {
+    if (trx) {
       result = await query.transacting(trx);
     } else {
       result = await query;

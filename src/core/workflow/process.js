@@ -99,8 +99,8 @@ class Process extends PersistedEntity {
     return _.map(processes, (process) => Process.deserialize(process));
   }
 
-  static async fetchStateHistory(process_id) {
-    const states = await this.getPersist().getStateHistoryByProcess(process_id);
+  static async fetchStateHistory(process_id, filters = {}) {
+    const states = await this.getPersist().getStateHistoryByProcess(process_id, filters);
     return _.map(states, (state) => ProcessState.deserialize(state));
   }
 
