@@ -76,6 +76,34 @@ class Cockpit {
     return await Process.getPersist().getStateHistoryByProcess(process_id);
   }
 
+  async getProcessStateExecutionHistory(process_id, filters = {}) {
+    const states = await Process.getPersist().getStateHistoryByProcess(process_id, filters);
+    return states.reduce((acc, state, idx) => {
+      if (idx === 0) {
+        acc.current_status = state.status
+        acc.max_step_number = state.step_number
+      }
+      const { node_id, status, step_number, created_at } = state
+      const foundState = acc.execution.find((exec) => exec.node_id === node_id)
+      if (foundState) {
+        foundState.step_numbers.push(step_number)
+        return acc
+      }
+
+      acc.execution.push({
+        node_id: node_id,
+        last_created_at: created_at,
+        last_status: status,
+        step_numbers: [step_number],
+      })
+      return acc
+    }, {
+      current_status: '',
+      max_step_number: 0,
+      execution: []
+    });
+  }
+
   async getWorkflows() {
     return await Workflow.getPersist().getAll();
   }
