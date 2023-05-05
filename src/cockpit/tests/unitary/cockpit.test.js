@@ -182,6 +182,31 @@ describe("getProcessStateExecutionHistory works", () => {
   });
 });
 
+describe("fetchStateExecutionContext works", () => {
+  test("fetchStateExecutionContext when there are states for the process", async () => {
+    const myWorkflow = await engine.saveWorkflow("sample", "sample", blueprints_.identity_system_task);
+    let myProcess = await engine.createProcess(myWorkflow.id, actors_.simpleton);
+    myProcess = await engine.runProcess(myProcess.id, actors_.simpleton);
+    myProcessHistory = await engine.fetchProcessStateHistory(myProcess.id);
+    const lastState = myProcessHistory[1]
+    const previousState = myProcessHistory[2]
+    const myHistoryData = await cockpit.fetchStateExecutionContext(lastState._id);
+    expect(myHistoryData.stepNumber).toBe(3)
+    expect(myHistoryData.executionData).toStrictEqual({})
+    expect(myHistoryData.currentState.id).toBe(lastState._id)
+    expect(myHistoryData.previousState.id).toBe(previousState._id)
+  });
+
+  test("fetchStateExecutionContext should return error for no state", async () => {
+    const myWorkflow = await engine.saveWorkflow("sample", "sample", blueprints_.identity_system_task);
+    let myProcess = await engine.createProcess(myWorkflow.id, actors_.admin);
+    await engine.runProcess(myProcess.id, actors_.admin);
+    await expect(cockpit.fetchStateExecutionContext(uuid())).rejects.toThrowError(
+      "[fetchStateExecutionContext] state not found"
+    );
+  });
+});
+
 describe("getWorkflows", () => { });
 
 describe("getWorkflowsForActor works", () => {

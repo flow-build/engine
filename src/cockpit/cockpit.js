@@ -7,6 +7,7 @@ const { Engine } = require("../engine/engine");
 const { ProcessState } = require("../core/workflow/process_state");
 const { ActivityManager } = require("../core/workflow/activity_manager");
 const { Timer } = require("../core/workflow/timer");
+const { prepare } = require("../core/utils/input");
 
 class Cockpit {
   static get instance() {
@@ -164,6 +165,66 @@ class Cockpit {
 
     const result = await ProcessState.fetchByNodeId(processId, nodeId);
     return result;
+  }
+
+  async fetchPreviousState(processId, state) {
+    const step_number = state.step_number;
+    if (step_number > 1) {
+      return await ProcessState.fetchByStepNumber(processId, step_number - 1);
+    } else {
+      return {
+        bag: {},
+        result: {},
+        actor_data: {},
+        environment: {}
+      }
+    }
+  }
+
+  async mountExecutionData({
+    nodeSpec,
+    previousState,
+    currentState
+  }) {
+    const executionData = prepare(nodeSpec.parameters?.input || {}, {
+      bag: previousState._bag,
+      result: previousState._result,
+      actor_data: previousState._actor_data,
+      environment: previousState.environment,
+    })
+    return {
+      stepNumber: currentState.step_number,
+      nodeSpec: nodeSpec,
+      executionData: executionData,
+      previousState: previousState._id
+        ? ProcessState.serialize(previousState)
+        : {},
+      currentState: ProcessState.serialize(currentState)
+    }
+  }
+
+  async fetchStateExecutionContext(stateId) {
+    if (!stateId) {
+      throw new Error("[fetchStateExecutionContext] stateId not provided");
+    }
+
+    try {
+      const currentState = await ProcessState.fetch(stateId);
+      if (currentState) {
+        const processId = currentState.process_id;
+
+        const previousState = await this.fetchPreviousState(processId, currentState)
+
+        const process = await Process.fetch(processId);
+        const nodes = process?._blueprint_spec?.nodes || []
+        const nodeSpec = nodes.find((node) => node.id === currentState._node_id);
+
+        return this.mountExecutionData({ nodeSpec, previousState, currentState })
+      }
+      throw new Error("[fetchStateExecutionContext] state not found");
+    } catch (error) {
+      throw error
+    }
   }
 
   async _filterForAllowedWorkflows(workflows_data, actor_data) {
