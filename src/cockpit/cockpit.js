@@ -208,23 +208,19 @@ class Cockpit {
       throw new Error("[fetchStateExecutionContext] stateId not provided");
     }
 
-    try {
-      const currentState = await ProcessState.fetch(stateId);
-      if (currentState) {
-        const processId = currentState.process_id;
+    const currentState = await ProcessState.fetch(stateId);
+    if (currentState) {
+      const processId = currentState.process_id;
 
-        const previousState = await this.fetchPreviousState(processId, currentState)
+      const previousState = await this.fetchPreviousState(processId, currentState)
 
-        const process = await Process.fetch(processId);
-        const nodes = process?._blueprint_spec?.nodes || []
-        const nodeSpec = nodes.find((node) => node.id === currentState._node_id);
+      const process = await Process.fetch(processId);
+      const nodes = process?._blueprint_spec?.nodes || []
+      const nodeSpec = nodes.find((node) => node.id === currentState._node_id);
 
-        return this.mountExecutionData({ nodeSpec, previousState, currentState })
-      }
-      throw new Error("[fetchStateExecutionContext] state not found");
-    } catch (error) {
-      throw error
+      return this.mountExecutionData({ nodeSpec, previousState, currentState })
     }
+    throw new Error("[fetchStateExecutionContext] state not found");
   }
 
   async _filterForAllowedWorkflows(workflows_data, actor_data) {
