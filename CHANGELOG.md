@@ -1,3 +1,17 @@
+## [2.26.0](https://github.com/flow-build/engine/compare/v2.25.0...v2.26.0) (2023-05-08)
+
+
+### Features
+
+* adds 'fetchStateExecutionContext' method ([00e5125](https://github.com/flow-build/engine/commit/00e5125c8b50125e829abe35277c8cce92858ffe))
+* adds 'filters' input on fetchStateHistory method ([477d6d5](https://github.com/flow-build/engine/commit/477d6d5d246b6e12b5dc087169aa2af3f1eb17d1))
+* adds 'getProcessStateExecutionHistory' method on cockpit ([597f74b](https://github.com/flow-build/engine/commit/597f74bdf46939b7c2eedfa2b7ea71c9de7a93b3))
+
+
+### Bug Fixes
+
+* adjust code smells ([242c98d](https://github.com/flow-build/engine/commit/242c98dcdb1e945dff4571ee19c40fbf0e9ac959))
+
 ## [2.25.0](https://github.com/flow-build/engine/compare/v2.24.5...v2.25.0) (2023-04-25)
 
 
