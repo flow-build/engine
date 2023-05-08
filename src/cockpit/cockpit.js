@@ -7,6 +7,7 @@ const { Engine } = require("../engine/engine");
 const { ProcessState } = require("../core/workflow/process_state");
 const { ActivityManager } = require("../core/workflow/activity_manager");
 const { Timer } = require("../core/workflow/timer");
+const { prepare } = require("../core/utils/input");
 
 class Cockpit {
   static get instance() {
@@ -76,6 +77,34 @@ class Cockpit {
     return await Process.getPersist().getStateHistoryByProcess(process_id);
   }
 
+  async getProcessStateExecutionHistory(process_id, filters = {}) {
+    const states = await Process.getPersist().getStateHistoryByProcess(process_id, filters);
+    return states.reduce((acc, state, idx) => {
+      if (idx === 0) {
+        acc.current_status = state.status
+        acc.max_step_number = state.step_number
+      }
+      const { node_id, status, step_number, created_at } = state
+      const foundState = acc.execution.find((exec) => exec.node_id === node_id)
+      if (foundState) {
+        foundState.step_numbers.push(step_number)
+        return acc
+      }
+
+      acc.execution.push({
+        node_id: node_id,
+        last_created_at: created_at,
+        last_status: status,
+        step_numbers: [step_number],
+      })
+      return acc
+    }, {
+      current_status: '',
+      max_step_number: 0,
+      execution: []
+    });
+  }
+
   async getWorkflows() {
     return await Workflow.getPersist().getAll();
   }
@@ -136,6 +165,62 @@ class Cockpit {
 
     const result = await ProcessState.fetchByNodeId(processId, nodeId);
     return result;
+  }
+
+  async fetchPreviousState(processId, state) {
+    const step_number = state.step_number;
+    if (step_number > 1) {
+      return await ProcessState.fetchByStepNumber(processId, step_number - 1);
+    } else {
+      return {
+        bag: {},
+        result: {},
+        actor_data: {},
+        environment: {}
+      }
+    }
+  }
+
+  async mountExecutionData({
+    nodeSpec,
+    previousState,
+    currentState
+  }) {
+    const executionData = prepare(nodeSpec.parameters?.input || {}, {
+      bag: previousState._bag,
+      result: previousState._result,
+      actor_data: previousState._actor_data,
+      environment: previousState.environment,
+    })
+    return {
+      stepNumber: currentState.step_number,
+      nodeSpec: nodeSpec,
+      executionData: executionData,
+      previousState: previousState._id
+        ? ProcessState.serialize(previousState)
+        : {},
+      currentState: ProcessState.serialize(currentState)
+    }
+  }
+
+  async fetchStateExecutionContext(stateId) {
+    if (!stateId) {
+      throw new Error("[fetchStateExecutionContext] stateId not provided");
+    }
+
+    const currentState = await ProcessState.fetch(stateId);
+    if (currentState) {
+      const processId = currentState.process_id;
+
+      const previousState = await this.fetchPreviousState(processId, currentState)
+
+      const process = await Process.fetch(processId);
+      const nodes = process?._blueprint_spec?.nodes || []
+      const nodeSpec = nodes.find((node) => node.id === currentState._node_id);
+
+      return this.mountExecutionData({ nodeSpec, previousState, currentState })
+    }
+    throw new Error("[fetchStateExecutionContext] state not found");
   }
 
   async _filterForAllowedWorkflows(workflows_data, actor_data) {

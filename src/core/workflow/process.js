@@ -99,8 +99,8 @@ class Process extends PersistedEntity {
     return _.map(processes, (process) => Process.deserialize(process));
   }
 
-  static async fetchStateHistory(process_id) {
-    const states = await this.getPersist().getStateHistoryByProcess(process_id);
+  static async fetchStateHistory(process_id, filters = {}) {
+    const states = await this.getPersist().getStateHistoryByProcess(process_id, filters);
     return _.map(states, (state) => ProcessState.deserialize(state));
   }
 
@@ -413,11 +413,12 @@ class Process extends PersistedEntity {
 
     const next_step_number = await this.getNextStepNumber(trx);
     let max_step_number;
+    const spec_max_step_number = this._blueprint?._spec?.parameters?.max_step_number;
 
-    if (process.env.MAX_STEP_NUMBER || (this._blueprint._spec.parameters || {}).max_step_number) {
+    if (process.env.MAX_STEP_NUMBER || spec_max_step_number) {
       max_step_number = parseInt(process.env.MAX_STEP_NUMBER);
 
-      if ((this._blueprint._spec.parameters || {}).max_step_number) {
+      if (spec_max_step_number) {
         max_step_number = parseInt(this._blueprint._spec.parameters.max_step_number);
       }
 
