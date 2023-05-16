@@ -91,9 +91,9 @@ test("Engine create process with missing data but run fails", async () => {
 });
 
 describe("Run existing process", () => {
-  async function createProcess(blueprint, actor_data) {
+  async function createProcess(blueprint, actor_data, input) {
     const workflow = await engine.saveWorkflow("sample", "sample", blueprint);
-    return await engine.createProcess(workflow.id, actor_data);
+    return await engine.createProcess(workflow.id, actor_data, input);
   }
 
   test("Engine run process with timers", async () => {
@@ -161,7 +161,7 @@ describe("Run existing process", () => {
   });
 
   test("Engine run process with timeout", async () => {
-    const process = await createProcess(blueprints_.start_with_timeout, actors_.simpleton);
+    const process = await createProcess(blueprints_.start_with_timeout, actors_.simpleton, { abort_this_process: true });
     await engine.runProcess(process.id, actors_.simpleton);
 
     await Engine._beat();
@@ -172,6 +172,7 @@ describe("Run existing process", () => {
     const result_process = await engine.fetchProcess(process.id);
 
     expect(result_process.status).toEqual(ProcessStatus.EXPIRED);
+    expect(result_process.state.bag).toEqual({ abort_this_process: true });
     const activity_managers = await engine.fetchAvailableActivitiesForActor(actors_.simpleton);
     expect(activity_managers).toHaveLength(0);
   });

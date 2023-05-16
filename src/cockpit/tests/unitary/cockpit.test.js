@@ -426,7 +426,7 @@ describe("expireProcess", () => {
   let myProcess;
   beforeEach(async () => {
     const myWorkflow = await cockpit.saveWorkflow("sample", "sample", blueprints_.identity_user_task);
-    myProcess = await cockpit.createProcess(myWorkflow.id, actors_.simpleton);
+    myProcess = await cockpit.createProcess(myWorkflow.id, actors_.simpleton, { expire_this_process: true });
     await engine.runProcess(myProcess.id, actors_.simpleton);
     await utils.sleep(1000);
   });
@@ -437,6 +437,7 @@ describe("expireProcess", () => {
     expect(myHistory[0].status).toEqual("expired");
     expect(myHistory[0].result.foo).toBeDefined();
     expect(myHistory[0].actor_data.actor_id).toEqual(actors_.admin.actor_id);
+    expect(myHistory[0].bag).toEqual({ expire_this_process: true });
   });
 
   test("expireProcess should deactivate existing timer", async () => {

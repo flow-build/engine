@@ -85,13 +85,12 @@ describe("Process test", () => {
 
         const engine = new Engine(...settings.persist_options);
         const workflow = await engine.saveWorkflow("sample", "sample", blueprints_.timer);
-        let process = await engine.createProcess(workflow.id, actors_.simpleton);
+        let process = await engine.createProcess(workflow.id, actors_.simpleton, { abort_this_process: true });
         const process_id = process.id;
         engine.runProcess(process_id, actors_.simpleton).catch(() => {});
         await wait();
         process = await engine.fetchProcess(process_id);
         expect(process.status).toEqual(ProcessStatus.PENDING);
-
         await engine.abortProcess(process_id, actors_.simpleton);
 
         process = await engine.fetchProcess(process_id);
@@ -102,6 +101,7 @@ describe("Process test", () => {
 
         process = await engine.fetchProcess(process_id);
         expect(process.status).toEqual(ProcessStatus.INTERRUPTED);
+        expect(process.state.bag).toEqual({ abort_this_process: true });
       } finally {
         jest.useRealTimers();
       }
