@@ -2,6 +2,27 @@ const _ = require("lodash");
 const { Blueprint } = require("../../../workflow/blueprint");
 const { blueprints_ } = require("./blueprint_samples");
 const allNodeTypes = require("../examples/allNodeTypes");
+const { PersistorProvider } = require("../../../persist/provider");
+const { EnvironmentVariable } = require("../../../workflow/environment_variable");
+const settings = require("../../../../../settings/tests/settings");
+
+beforeAll(async () => {
+  await _clean();
+});
+
+afterAll(async () => {
+  await _clean();
+  if (settings.persist_options[0] === "knex") {
+    const persist = EnvironmentVariable.getPersist();
+    await persist._db.destroy();
+  }
+});
+
+const _clean = async () => {
+  const persistor = PersistorProvider.getPersistor(...settings.persist_options);
+  const environment_variable_persist = persistor.getPersistInstance("EnvironmentVariable");
+  await environment_variable_persist.deleteAll();
+};
 
 test("constructor works for valid spec", () => {
   expect(() => {
@@ -283,5 +304,18 @@ describe("prepareSpec", () => {
       process.env.NODE_ENV = original_node_env;
       process.env.API_HOST = original_api_host;
     }
+  });
+
+  test("Change environment values to values on environment_variable table", async () => {
+    process.env.NODE_ENV = "test";
+    process.env.API_HOST = "localhost";
+  
+    await new EnvironmentVariable("NODE_ENV", "test_env", "string").save();
+    await new EnvironmentVariable("API_HOST", "0.0.0.0", "string").save();
+    const environment_variables = await EnvironmentVariable.fetchAll();
+  
+    const result_spec = Blueprint.parseSpec(blueprints_.environment, environment_variables);
+    expect(result_spec.environment.node_env).toEqual("test_env");
+    expect(result_spec.environment.host).toEqual("0.0.0.0");
   });
 });

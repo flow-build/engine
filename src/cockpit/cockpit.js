@@ -7,6 +7,7 @@ const { Engine } = require("../engine/engine");
 const { ProcessState } = require("../core/workflow/process_state");
 const { ActivityManager } = require("../core/workflow/activity_manager");
 const { Timer } = require("../core/workflow/timer");
+const { EnvironmentVariable } = require("../core/workflow/environment_variable");
 const { prepare } = require("../core/utils/input");
 
 class Cockpit {
@@ -280,6 +281,23 @@ class Cockpit {
       };
     }
     return am;
+  }
+
+  async fetchAllEnvironmentVariables() {
+    return await EnvironmentVariable.fetchAll();
+  }
+
+  async fetchEnvironmentVariable(key) {
+    return await EnvironmentVariable.fetch(key);
+  }
+
+  async saveEnvironmentVariable(key, value, type) {
+    const environment_variable = new EnvironmentVariable(key, value, type);
+    return await environment_variable.save();
+  }
+
+  async deleteEnvironmentVariable(key) {
+    return await EnvironmentVariable.delete(key);
   }
 }
 

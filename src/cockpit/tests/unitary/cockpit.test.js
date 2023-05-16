@@ -475,3 +475,36 @@ describe("expireActivityManager", () => {
     expect(myHistory[1].result.is_continue).toBeTruthy();
   });
 });
+
+describe("Environment Variables", () => {
+  test("saveEnvironmentVariable should work", async () => {
+    const environmentVariable = await cockpit.saveEnvironmentVariable("API_HOST", "0.0.0.0", "string");
+    expect(environmentVariable.key).toEqual("API_HOST");
+    expect(environmentVariable.value).toEqual("0.0.0.0");
+    expect(environmentVariable.type).toEqual("string");
+  });
+
+  test("fetchEnvironmentVariable should work", async () => {
+    await cockpit.saveEnvironmentVariable("API_HOST", "0.0.0.0", "string");
+    const result = await cockpit.fetchEnvironmentVariable("API_HOST");
+    expect(result.key).toEqual("API_HOST");
+    expect(result.value).toEqual("0.0.0.0");
+    expect(result.type).toEqual("string");
+  });
+
+  test("fetchAllEnvironmentVariables should work", async () => {
+    const environmentVariable_1 = await cockpit.saveEnvironmentVariable("API_HOST", "0.0.0.0", "string");
+    const environmentVariable_2 = await cockpit.saveEnvironmentVariable("NODE_EV", "test_env", "string");
+    const result = await cockpit.fetchAllEnvironmentVariables();
+    expect(result).toHaveLength(2);
+    expect(result[0].key).toEqual(environmentVariable_2.key);
+    expect(result[1].key).toEqual(environmentVariable_1.key);
+  });
+
+  test("deleteEnvironmentVariable should work", async () => {
+    await cockpit.saveEnvironmentVariable("NODE_EV", "test_env", "string");
+    await cockpit.deleteEnvironmentVariable("NODE_EV");
+    const result = await cockpit.fetchAllEnvironmentVariables();
+    expect(result).toHaveLength(0);
+  });
+});

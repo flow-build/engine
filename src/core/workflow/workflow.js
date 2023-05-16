@@ -1,6 +1,7 @@
 const { PersistedEntity } = require("./base");
 const { Process } = require("./process");
 const { Blueprint } = require("./blueprint");
+const { EnvironmentVariable } = require("./environment_variable");
 const JSum = require("jsum");
 const { v1: uuid } = require("uuid");
 class Workflow extends PersistedEntity {
@@ -54,7 +55,7 @@ class Workflow extends PersistedEntity {
     super();
 
     if (blueprint_spec) {
-      //Blueprint.assert_is_valid(blueprint_spec);
+      //await Blueprint.assert_is_valid(blueprint_spec);
       this._blueprint_hash = JSum.digest(blueprint_spec, "SHA256", "hex");
     }
 
@@ -77,7 +78,8 @@ class Workflow extends PersistedEntity {
   }
 
   async createProcess(actor_data, initial_bag = {}) {
-    return await new Process({ id: this._id, name: this._name }, Blueprint.parseSpec(this._blueprint_spec)).create(
+    const environment_variables = await EnvironmentVariable.fetchAll();
+    return await new Process({ id: this._id, name: this._name }, Blueprint.parseSpec(this._blueprint_spec, environment_variables)).create(
       actor_data,
       initial_bag
     );
