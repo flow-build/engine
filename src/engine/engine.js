@@ -55,6 +55,7 @@ class Engine {
   }
 
   constructor(persist_mode, persist_args, logger_level) {
+    this.id = ENGINE_ID;
     const heartBeat = readEnvironmentVariableAsBool("ENGINE_HEARTBEAT", true);
     createLogger(logger_level);
     if (Engine.instance) {
