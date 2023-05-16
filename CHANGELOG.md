@@ -1,3 +1,10 @@
+## [2.27.0](https://github.com/flow-build/engine/compare/v2.26.0...v2.27.0) (2023-05-16)
+
+
+### Features
+
+* avoid abort & expire to generate process state without bag ([235aac8](https://github.com/flow-build/engine/commit/235aac8fd60855613552519b6537721401b0e94d))
+
 ## [2.26.0](https://github.com/flow-build/engine/compare/v2.25.0...v2.26.0) (2023-05-08)
 
 
