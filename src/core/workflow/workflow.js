@@ -1,7 +1,6 @@
 const { PersistedEntity } = require("./base");
 const { Process } = require("./process");
 const { Blueprint } = require("./blueprint");
-const { EnvironmentVariable } = require("./environment_variable");
 const JSum = require("jsum");
 const { v1: uuid } = require("uuid");
 class Workflow extends PersistedEntity {
@@ -77,8 +76,8 @@ class Workflow extends PersistedEntity {
   }
 
   async createProcess(actor_data, initial_bag = {}) {
-    const environment_variables = await EnvironmentVariable.fetchAll();
-    return await new Process({ id: this._id, name: this._name }, Blueprint.parseSpec(this._blueprint_spec, environment_variables)).create(
+    const parsedBlueprint = await Blueprint.parseSpec(this._blueprint_spec);
+    return await new Process({ id: this._id, name: this._name }, parsedBlueprint).create(
       actor_data,
       initial_bag
     );

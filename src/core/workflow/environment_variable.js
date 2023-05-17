@@ -1,3 +1,4 @@
+require("dotenv").config();
 const { PersistedEntity } = require("./base");
 const _ = require('lodash');
 
@@ -51,7 +52,10 @@ class EnvironmentVariable extends PersistedEntity {
   }
 
   static async fetch(key) {
-    const serialized = await this.getPersist().get(key);
+    let serialized = await this.getPersist().get(key);
+    if (!serialized && process.env[key]) {
+      serialized = new EnvironmentVariable(key, process.env[key])
+    }
     return this.deserialize(serialized);
   }
 

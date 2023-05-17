@@ -1,3 +1,4 @@
+require("dotenv").config();
 const lodash = require("lodash");
 const assert = require("assert");
 const bpu = require("../utils/blueprint");
@@ -63,23 +64,20 @@ class Blueprint {
     return [true, null];
   }
 
-  static validate_environment_variable(spec, env_variables) {
+  static async validate_environment_variable(spec) {
     let validate_info = {
       nodes: [],
       ambient: [],
     };
     const nodesString = JSON.stringify(spec.nodes);
-    for (const variable in spec.environment) {
-      const spec_var = spec?.environment[variable];
-      const env_var = env_variables?.find((env_var) => env_var?.key === spec_var);
-      if ((!process.env[spec_var] && spec_var?.toLowerCase() === variable) && !env_var) {
-        if (!process.env[variable.toUpperCase()]) {
-          const error_message = `Environment variable ${variable} not found in ambient`;
-          validate_info.ambient.push(error_message);
-        }
+    for await (const [key, value] of Object.entries(spec.environment)) {
+      const variable = await EnvironmentVariable.fetch(value);
+      if (!variable && key === value.toLowerCase()) {
+        const error_message = `Environment variable ${key} not found in ambient`;
+        validate_info.ambient.push(error_message);
       }
-      if (!nodesString.includes(`environment.${variable}`)) {
-        const error_message = `Environment variable ${variable} not found in nodes`;
+      if (!nodesString.includes(`environment.${key}`)) {
+        const error_message = `Environment variable ${key} not found in nodes`;
         validate_info.nodes.push(error_message);
       }
     }
@@ -90,7 +88,7 @@ class Blueprint {
     }
   }
 
-  static validate(spec, environment_variables) {
+  static async validate(spec) {
     const [is_valid, error] = new Validator(this.rules).validate(spec);
     if (!is_valid) {
       return [false, error];
@@ -99,7 +97,7 @@ class Blueprint {
     if (!is_nodes_valid) {
       return [false, nodes_error];
     }
-    const blueprint_env_status = Blueprint.validate_environment_variable(spec, environment_variables);
+    const blueprint_env_status = await Blueprint.validate_environment_variable(spec);
     if (!lodash.isEmpty(blueprint_env_status.nodes) && !lodash.isEmpty(blueprint_env_status.ambient)) {
       emitter.emit("BLUEPRINT.UNUSED_VARIABLES", "UNUSED ENVIRONMENT VARIABLES", {
         nodes: blueprint_env_status.nodes,
@@ -124,19 +122,16 @@ class Blueprint {
   }
 
   static async assert_is_valid(spec) {
-    const environment_variables = await EnvironmentVariable.fetchAll();
-    const [is_valid, error] = Blueprint.validate(spec, environment_variables);
+    const [is_valid, error] = await Blueprint.validate(spec);
     assert(is_valid, error);
   }
 
-  static parseSpec(blueprint_spec, env_variables) {
+  static async parseSpec(blueprint_spec) {
     const result_spec = lodash.cloneDeep(blueprint_spec);
-    for (const [key, value] of Object.entries(result_spec.environment)) {
-      const env_var = env_variables?.find((variable) => variable?.key === value);
-      if (env_var) {
-        result_spec.environment[key] = env_var.value;
-      } else {
-        result_spec.environment[key] = process.env[value];
+    for await (const [key, value] of Object.entries(result_spec.environment)) {
+      const variable = await EnvironmentVariable.fetch(value);
+      if (variable) {
+        result_spec.environment[key] = variable.value;
       }
     }
     return result_spec;

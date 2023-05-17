@@ -55,7 +55,6 @@ test("update works", async () => {
   let created_environment_variable = new EnvironmentVariable("API_HOST", "127.0.1.1");
   created_environment_variable = await created_environment_variable.save();
   let updated_environment_variable = await EnvironmentVariable.update("API_HOST", "0.0.0.0");
-  console.error(updated_environment_variable)
   expect(updated_environment_variable.key).toBe(created_environment_variable.key);
   expect(updated_environment_variable.value).toBe("0.0.0.0");
   expect(updated_environment_variable.type).toBe("string");
@@ -104,6 +103,26 @@ test("fetch boolean variable works", async () => {
   expect(fetched_variable.key).toBe("MQTT");
   expect(fetched_variable.value).toEqual(false);
   expect(fetched_variable.type).toEqual("boolean");
+});
+
+test("fetch variable resolves from environment works", async () => {
+  process.env.API_HOST = "127.0.0.1";
+
+  const fetched_variable = await EnvironmentVariable.fetch("API_HOST");
+  expect(fetched_variable.key).toBe("API_HOST");
+  expect(fetched_variable.value).toBe("127.0.0.1");
+  expect(fetched_variable.type).toBe("string");
+});
+
+test("fetch variable resolves from table before environment works", async () => {
+  process.env.API_HOST = "127.0.0.1";
+  const environment_variable = new EnvironmentVariable("API_HOST", "0.0.0.0");
+  await environment_variable.save();
+
+  const fetched_variable = await EnvironmentVariable.fetch("API_HOST");
+  expect(fetched_variable.key).toBe("API_HOST");
+  expect(fetched_variable.value).toBe("0.0.0.0");
+  expect(fetched_variable.type).toBe("string");
 });
 
 test("delete works", async () => {
