@@ -32,7 +32,7 @@ class EnvironmentVariable extends PersistedEntity {
   static _deserialized(data) {
     const variable = new EnvironmentVariable(data.key, data.value, data.type);
     variable._key = data.key;
-    variable._value = data.value;
+    variable._value = this.deserializeMap(data.type, data.value);
     variable._type = data.type;
     variable._created_at = data.created_at;
     variable._updated_at = data.updated_at;
@@ -54,12 +54,28 @@ class EnvironmentVariable extends PersistedEntity {
     return await this.getPersist().delete(key);
   }
 
-  constructor(key, value, type) {
+  static deserializeMap(type, value) {
+    const mapper = {
+      number: Number(value),
+      boolean: value === "false" ? false : true,
+      string: value,
+      array: value,
+    };
+
+    return mapper[type];
+  }
+
+  constructor(key, value) {
     super();
 
     this._key = key;
-    this._value = value;
-    this._type = type;
+    this._value = String(value);
+
+    if (typeof value === 'string' && value.split(",").length > 1) {
+      this._type = "array";
+    } else {
+      this._type = typeof value;
+    }
   }
 
   get key() {

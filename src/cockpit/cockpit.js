@@ -291,8 +291,8 @@ class Cockpit {
     return await EnvironmentVariable.fetch(key);
   }
 
-  async saveEnvironmentVariable(key, value, type) {
-    const environment_variable = new EnvironmentVariable(key, value, type);
+  async saveEnvironmentVariable(key, value) {
+    const environment_variable = new EnvironmentVariable(key, value);
     return await environment_variable.save();
   }
 

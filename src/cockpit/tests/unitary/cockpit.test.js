@@ -478,23 +478,23 @@ describe("expireActivityManager", () => {
 
 describe("Environment Variables", () => {
   test("saveEnvironmentVariable should work", async () => {
-    const environmentVariable = await cockpit.saveEnvironmentVariable("API_HOST", "0.0.0.0", "string");
+    const environmentVariable = await cockpit.saveEnvironmentVariable("API_HOST", "0.0.0.0");
     expect(environmentVariable.key).toEqual("API_HOST");
     expect(environmentVariable.value).toEqual("0.0.0.0");
     expect(environmentVariable.type).toEqual("string");
   });
 
   test("fetchEnvironmentVariable should work", async () => {
-    await cockpit.saveEnvironmentVariable("API_HOST", "0.0.0.0", "string");
-    const result = await cockpit.fetchEnvironmentVariable("API_HOST");
-    expect(result.key).toEqual("API_HOST");
-    expect(result.value).toEqual("0.0.0.0");
-    expect(result.type).toEqual("string");
+    await cockpit.saveEnvironmentVariable("MAX_LIMIT", 9999);
+    const result = await cockpit.fetchEnvironmentVariable("MAX_LIMIT");
+    expect(result.key).toEqual("MAX_LIMIT");
+    expect(result.value).toEqual(9999);
+    expect(result.type).toEqual("number");
   });
 
   test("fetchAllEnvironmentVariables should work", async () => {
-    const environmentVariable_1 = await cockpit.saveEnvironmentVariable("API_HOST", "0.0.0.0", "string");
-    const environmentVariable_2 = await cockpit.saveEnvironmentVariable("NODE_EV", "test_env", "string");
+    const environmentVariable_1 = await cockpit.saveEnvironmentVariable("API_HOST", "0.0.0.0");
+    const environmentVariable_2 = await cockpit.saveEnvironmentVariable("MAX_LIMIT", 9999);
     const result = await cockpit.fetchAllEnvironmentVariables();
     expect(result).toHaveLength(2);
     expect(result[0].key).toEqual(environmentVariable_2.key);
@@ -502,7 +502,7 @@ describe("Environment Variables", () => {
   });
 
   test("deleteEnvironmentVariable should work", async () => {
-    await cockpit.saveEnvironmentVariable("NODE_EV", "test_env", "string");
+    await cockpit.saveEnvironmentVariable("NODE_EV", "test_env");
     await cockpit.deleteEnvironmentVariable("NODE_EV");
     const result = await cockpit.fetchAllEnvironmentVariables();
     expect(result).toHaveLength(0);

@@ -307,15 +307,15 @@ describe("prepareSpec", () => {
   });
 
   test("Change environment values to values on environment_variable table", async () => {
-    process.env.NODE_ENV = "test";
     process.env.API_HOST = "localhost";
+    process.env.MAX_LIMIT = 99;
   
-    await new EnvironmentVariable("NODE_ENV", "test_env", "string").save();
-    await new EnvironmentVariable("API_HOST", "0.0.0.0", "string").save();
+    await new EnvironmentVariable("API_HOST", "0.0.0.0").save();
+    await new EnvironmentVariable("MAX_LIMIT", 999).save();
     const environment_variables = await EnvironmentVariable.fetchAll();
   
     const result_spec = Blueprint.parseSpec(blueprints_.environment, environment_variables);
-    expect(result_spec.environment.node_env).toEqual("test_env");
     expect(result_spec.environment.host).toEqual("0.0.0.0");
+    expect(result_spec.environment.limit).toEqual(999);
   });
 });
