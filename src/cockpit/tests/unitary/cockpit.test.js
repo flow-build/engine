@@ -502,14 +502,14 @@ describe("Environment Variables", () => {
     expect(result.type).toEqual("number");
   });
 
-  test("fetchEnvironmentVariable resolving from table before environment should work", async () => {
+  test("fetchEnvironmentVariable resolving environment should work", async () => {
     process.env.MQTT_HOST = "localhost";
     const result = await cockpit.fetchEnvironmentVariable("MQTT_HOST");
     expect(result.key).toEqual("MQTT_HOST");
     expect(result.value).toEqual("localhost");
   });
 
-  test("fetchEnvironmentVariable resolving environment should work", async () => {
+  test("fetchEnvironmentVariable resolving from table before environment should work", async () => {
     process.env.API_HOST = "0.0.0.0";
     await cockpit.createEnvironmentVariable("API_HOST", "127.0.0.1");
     const result = await cockpit.fetchEnvironmentVariable("API_HOST");
