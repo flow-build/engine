@@ -65,7 +65,7 @@ test("update works", async () => {
 
 test("fetch all works", async () => {
   let environment_variable = new EnvironmentVariable("LIMIT", 9999);
-  environment_variable = await environment_variable.save();
+  await environment_variable.save();
   const fetched_variables = await EnvironmentVariable.fetchAll();
   expect(fetched_variables[0].key).toBe("LIMIT");
   expect(fetched_variables[0].value).toBe(9999);
@@ -74,7 +74,7 @@ test("fetch all works", async () => {
 
 test("fetch string variable works", async () => {
   let environment_variable = new EnvironmentVariable("API_HOST", "0.0.0.0");
-  environment_variable = await environment_variable.save();
+  await environment_variable.save();
   const fetched_variable = await EnvironmentVariable.fetch("API_HOST");
   expect(fetched_variable.key).toBe("API_HOST");
   expect(fetched_variable.value).toBe("0.0.0.0");
@@ -82,7 +82,7 @@ test("fetch string variable works", async () => {
 
 test("fetch number variable works", async () => {
   let environment_variable = new EnvironmentVariable("MAX_LIMIT", 123456);
-  environment_variable = await environment_variable.save();
+  await environment_variable.save();
   const fetched_variable = await EnvironmentVariable.fetch("MAX_LIMIT");
   expect(fetched_variable.key).toBe("MAX_LIMIT");
   expect(fetched_variable.value).toBe(123456);
@@ -90,7 +90,7 @@ test("fetch number variable works", async () => {
 
 test("fetch array variable works", async () => {
   let environment_variable = new EnvironmentVariable("RESPONSE_CODES", "200,202,400");
-  environment_variable = await environment_variable.save();
+  await environment_variable.save();
   const fetched_variable = await EnvironmentVariable.fetch("RESPONSE_CODES");
   expect(fetched_variable.key).toBe("RESPONSE_CODES");
   expect(fetched_variable.value).toEqual("200,202,400");
@@ -99,7 +99,7 @@ test("fetch array variable works", async () => {
 
 test("fetch boolean variable works", async () => {
   let environment_variable = new EnvironmentVariable("MQTT", false);
-  environment_variable = await environment_variable.save();
+  await environment_variable.save();
   const fetched_variable = await EnvironmentVariable.fetch("MQTT");
   expect(fetched_variable.key).toBe("MQTT");
   expect(fetched_variable.value).toEqual(false);
@@ -108,7 +108,7 @@ test("fetch boolean variable works", async () => {
 
 test("delete works", async () => {
   let environment_variable = new EnvironmentVariable("LIMIT", 9999);
-  environment_variable = await environment_variable.save();
+  await environment_variable.save();
   await EnvironmentVariable.delete("LIMIT");
   const fetched_variable = await EnvironmentVariable.fetch("LIMIT");
   expect(fetched_variable).toBeUndefined();

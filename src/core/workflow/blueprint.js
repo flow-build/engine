@@ -73,7 +73,7 @@ class Blueprint {
       const spec_var = spec?.environment[variable];
       const env_var = env_variables?.find((env_var) => env_var?.key === spec_var);
       if ((!process.env[spec_var] && spec_var?.toLowerCase() === variable) && !env_var) {
-        if (!process.env[variable.toUpperCase()] && !env_var) {
+        if (!process.env[variable.toUpperCase()]) {
           const error_message = `Environment variable ${variable} not found in ambient`;
           validate_info.ambient.push(error_message);
         }

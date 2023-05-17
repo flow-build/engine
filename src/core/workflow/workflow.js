@@ -55,7 +55,6 @@ class Workflow extends PersistedEntity {
     super();
 
     if (blueprint_spec) {
-      //await Blueprint.assert_is_valid(blueprint_spec);
       this._blueprint_hash = JSum.digest(blueprint_spec, "SHA256", "hex");
     }
 
