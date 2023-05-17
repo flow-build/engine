@@ -1,5 +1,4 @@
 const { PersistedEntity } = require("./base");
-const { v4: uuid } = require("uuid");
 const _ = require('lodash');
 
 class EnvironmentVariable extends PersistedEntity {
@@ -30,7 +29,7 @@ class EnvironmentVariable extends PersistedEntity {
   }
 
   static _deserialized(data) {
-    const variable = new EnvironmentVariable(data.key, data.value, data.type);
+    const variable = new EnvironmentVariable(data.key, data.value);
     variable._key = data.key;
     variable._value = this.deserializeMap(data.type, data.value);
     variable._type = data.type;
