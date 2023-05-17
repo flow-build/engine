@@ -112,6 +112,7 @@ test("fetch variable resolves from environment works", async () => {
   expect(fetched_variable.key).toBe("API_HOST");
   expect(fetched_variable.value).toBe("127.0.0.1");
   expect(fetched_variable.type).toBe("string");
+  expect(fetched_variable._origin).toBe("environment");
 });
 
 test("fetch variable resolves from table before environment works", async () => {
@@ -123,6 +124,7 @@ test("fetch variable resolves from table before environment works", async () => 
   expect(fetched_variable.key).toBe("API_HOST");
   expect(fetched_variable.value).toBe("0.0.0.0");
   expect(fetched_variable.type).toBe("string");
+  expect(fetched_variable._origin).toBe("table");
 });
 
 test("delete works", async () => {

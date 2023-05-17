@@ -507,6 +507,7 @@ describe("Environment Variables", () => {
     const result = await cockpit.fetchEnvironmentVariable("MQTT_HOST");
     expect(result.key).toEqual("MQTT_HOST");
     expect(result.value).toEqual("localhost");
+    expect(result._origin).toEqual("environment");
   });
 
   test("fetchEnvironmentVariable resolving from table before environment should work", async () => {
@@ -515,6 +516,7 @@ describe("Environment Variables", () => {
     const result = await cockpit.fetchEnvironmentVariable("API_HOST");
     expect(result.key).toEqual("API_HOST");
     expect(result.value).toEqual("127.0.0.1");
+    expect(result._origin).toEqual("table");
   });
 
   test("fetchAllEnvironmentVariables should work", async () => {

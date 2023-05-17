@@ -36,6 +36,7 @@ class EnvironmentVariable extends PersistedEntity {
     variable._type = data.type;
     variable._created_at = data.created_at;
     variable._updated_at = data.updated_at;
+    variable._origin = data.origin || 'table';
 
     return variable;
   }
@@ -54,7 +55,8 @@ class EnvironmentVariable extends PersistedEntity {
   static async fetch(key) {
     let serialized = await this.getPersist().get(key);
     if (!serialized && process.env[key]) {
-      serialized = new EnvironmentVariable(key, process.env[key])
+      serialized = new EnvironmentVariable(key, process.env[key]);
+      serialized.origin = 'environment';
     }
     return this.deserialize(serialized);
   }
