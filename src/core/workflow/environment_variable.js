@@ -39,6 +39,12 @@ class EnvironmentVariable extends PersistedEntity {
     return variable;
   }
 
+  static async update(key, value) {
+    const type = this.getValueType(value);
+    const [serialized] = await this.getPersist().update(key, value, type);
+    return this.deserialize(serialized);
+  }
+
   static async fetchAll() {
     const serialized = await this.getPersist().getAll();
     return this.deserialize(serialized);
@@ -64,17 +70,20 @@ class EnvironmentVariable extends PersistedEntity {
     return mapper[type];
   }
 
+  static getValueType(value) {
+    if (typeof value === 'string' && value.split(",").length > 1) {
+      return "array";
+    } else {
+      return typeof value;
+    }
+  }
+
   constructor(key, value) {
     super();
 
     this._key = key;
     this._value = String(value);
-
-    if (typeof value === 'string' && value.split(",").length > 1) {
-      this._type = "array";
-    } else {
-      this._type = typeof value;
-    }
+    this._type = EnvironmentVariable.getValueType(value);
   }
 
   get key() {

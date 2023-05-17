@@ -477,15 +477,25 @@ describe("expireActivityManager", () => {
 });
 
 describe("Environment Variables", () => {
-  test("saveEnvironmentVariable should work", async () => {
-    const environmentVariable = await cockpit.saveEnvironmentVariable("API_HOST", "0.0.0.0");
+  test("createEnvironmentVariable should work", async () => {
+    const environmentVariable = await cockpit.createEnvironmentVariable("API_HOST", "0.0.0.0");
     expect(environmentVariable.key).toEqual("API_HOST");
     expect(environmentVariable.value).toEqual("0.0.0.0");
     expect(environmentVariable.type).toEqual("string");
   });
 
+  test("updateEnvironmentVariable should work", async () => {
+    const environmentVariable = await cockpit.createEnvironmentVariable("API_HOST", "0.0.0.0");
+    const updatedEnvironmentVariable = await cockpit.updateEnvironmentVariable("API_HOST", "localhost");
+    expect(updatedEnvironmentVariable.key).toEqual("API_HOST");
+    expect(updatedEnvironmentVariable.value).toEqual("localhost");
+    expect(updatedEnvironmentVariable.type).toEqual("string");
+    expect(updatedEnvironmentVariable.created_at).toEqual(environmentVariable.created_at);
+    expect(updatedEnvironmentVariable._updated_at).toBeDefined();
+  });
+
   test("fetchEnvironmentVariable should work", async () => {
-    await cockpit.saveEnvironmentVariable("MAX_LIMIT", 9999);
+    await cockpit.createEnvironmentVariable("MAX_LIMIT", 9999);
     const result = await cockpit.fetchEnvironmentVariable("MAX_LIMIT");
     expect(result.key).toEqual("MAX_LIMIT");
     expect(result.value).toEqual(9999);
@@ -493,8 +503,8 @@ describe("Environment Variables", () => {
   });
 
   test("fetchAllEnvironmentVariables should work", async () => {
-    const environmentVariable_1 = await cockpit.saveEnvironmentVariable("API_HOST", "0.0.0.0");
-    const environmentVariable_2 = await cockpit.saveEnvironmentVariable("MAX_LIMIT", 9999);
+    const environmentVariable_1 = await cockpit.createEnvironmentVariable("API_HOST", "0.0.0.0");
+    const environmentVariable_2 = await cockpit.createEnvironmentVariable("MAX_LIMIT", 9999);
     const result = await cockpit.fetchAllEnvironmentVariables();
     expect(result).toHaveLength(2);
     expect(result[0].key).toEqual(environmentVariable_2.key);
@@ -502,7 +512,7 @@ describe("Environment Variables", () => {
   });
 
   test("deleteEnvironmentVariable should work", async () => {
-    await cockpit.saveEnvironmentVariable("NODE_EV", "test_env");
+    await cockpit.createEnvironmentVariable("NODE_EV", "test_env");
     await cockpit.deleteEnvironmentVariable("NODE_EV");
     const result = await cockpit.fetchAllEnvironmentVariables();
     expect(result).toHaveLength(0);

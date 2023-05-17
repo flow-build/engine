@@ -1,7 +1,6 @@
 const settings = require("../../../../../settings/tests/settings");
 const { EnvironmentVariable } = require("../../../workflow/environment_variable");
 const { PersistorProvider } = require("../../../persist/provider");
-const { blueprints_ } = require("./blueprint_samples");
 
 beforeEach(async () => {
   await _clean();
@@ -20,7 +19,7 @@ test("constructor works", () => {
   expect(environment_variable).toBeInstanceOf(EnvironmentVariable);
 });
 
-test("save string variable works (create)", async () => {
+test("save string variable works", async () => {
   const environment_variable = new EnvironmentVariable("API_HOST", "127.0.1.1");
   const variable = await environment_variable.save();
   expect(variable.key).toBe("API_HOST");
@@ -28,7 +27,7 @@ test("save string variable works (create)", async () => {
   expect(variable.type).toBe("string");
 });
 
-test("save number variable works (create)", async () => {
+test("save number variable works", async () => {
   const environment_variable = new EnvironmentVariable("MAX_LIMIT", 123456);
   const variable = await environment_variable.save();
   expect(variable.key).toBe("MAX_LIMIT");
@@ -36,7 +35,7 @@ test("save number variable works (create)", async () => {
   expect(variable.type).toBe("number");
 });
 
-test("save array variable works (create)", async () => {
+test("save array variable works", async () => {
   const environment_variable = new EnvironmentVariable("RESPONSE_CODES", "200,202,400");
   const variable = await environment_variable.save();
   expect(variable.key).toBe("RESPONSE_CODES");
@@ -44,7 +43,7 @@ test("save array variable works (create)", async () => {
   expect(variable.type).toBe("array");
 });
 
-test("save boolean variable works (create)", async () => {
+test("save boolean variable works", async () => {
   const environment_variable = new EnvironmentVariable("MQTT", true);
   const variable = await environment_variable.save();
   expect(variable.key).toBe("MQTT");
@@ -52,14 +51,16 @@ test("save boolean variable works (create)", async () => {
   expect(variable.type).toBe("boolean");
 });
 
-test("save works (update)", async () => {
+test("update works", async () => {
   let created_environment_variable = new EnvironmentVariable("API_HOST", "127.0.1.1");
   created_environment_variable = await created_environment_variable.save();
-  let updated_environment_variable = new EnvironmentVariable("API_HOST", "0.0.0.0");
-  updated_environment_variable = await updated_environment_variable.save();
+  let updated_environment_variable = await EnvironmentVariable.update("API_HOST", "0.0.0.0");
+  console.error(updated_environment_variable)
   expect(updated_environment_variable.key).toBe(created_environment_variable.key);
   expect(updated_environment_variable.value).toBe("0.0.0.0");
   expect(updated_environment_variable.type).toBe("string");
+  expect(updated_environment_variable.created_at).toEqual(created_environment_variable.created_at);
+  expect(updated_environment_variable._updated_at).toBeDefined();
 });
 
 test("fetch all works", async () => {
