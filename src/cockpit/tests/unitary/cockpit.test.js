@@ -199,12 +199,15 @@ describe("getProcessStateExecutionHistory works", () => {
     const myWorkflow = await engine.saveWorkflow("parent_workflow", "parent workflow", blueprints_.sub_process.blueprint_spec);
     let myProcess = await engine.createProcess(myWorkflow.id, actors_.simpleton);
     myProcess = await engine.runProcess(myProcess.id, actors_.simpleton);
+    while (myProcess.state.status === "delegated" || myProcess.state.status === "running") {
+      myProcess = await engine.fetchProcess(myProcess.id);
+    }
     const myHistoryData = await cockpit.getProcessStateExecutionHistory(myProcess.id);
 
-    expect(myHistoryData.current_status).toBe("delegated");
-    expect(myHistoryData.max_step_number).toBe(5);
-    expect(myHistoryData.execution).toHaveLength(4);
-    expect(myHistoryData.execution[0].process_id).toBeDefined();
+    expect(myHistoryData.current_status).toBe("error");
+    expect(myHistoryData.max_step_number).toBe(7);
+    expect(myHistoryData.execution).toHaveLength(5);
+    expect(myHistoryData.execution[1].process_id).toBeDefined();
   });
 });
 

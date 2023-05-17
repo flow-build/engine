@@ -6,7 +6,6 @@ const persistor = PersistorProvider.getPersistor(...settings.persist_options);
 const activity_persist = persistor.getPersistInstance("Activity");
 const activity_manager_persist = persistor.getPersistInstance("ActivityManager");
 const process_persist = persistor.getPersistInstance("Process");
-const process_state_persist = persistor.getPersistInstance("ProcessState");
 const workflow_persist = persistor.getPersistInstance("Workflow");
 const timer_persist = persistor.getPersistInstance("Timer");
 
@@ -18,8 +17,6 @@ async function _clean() {
   await activity_persist.deleteAll();
   await sleep(10);
   await activity_manager_persist.deleteAll();
-  await sleep(10);
-  await process_state_persist.deleteAll();
   await sleep(10);
   await process_persist.deleteAll();
   await sleep(10);
