@@ -725,6 +725,8 @@ class Process extends PersistedEntity {
         {
           ...this.state.serialize(),
           workflow_name: this.workflow_name,
+          workflow_id: this._workflow_id,
+          process_created_at: this._created_at,
         },
         actor_data
       );

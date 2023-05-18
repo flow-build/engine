@@ -85,7 +85,7 @@ class Cockpit {
         acc.current_status = state.status
         acc.max_step_number = state.step_number
       }
-      const { node_id, status, step_number, created_at } = state
+      const { node_id, status, step_number, created_at, result } = state
       const foundState = acc.execution.find((exec) => exec.node_id === node_id)
       if (foundState) {
         foundState.step_numbers.push(step_number)
@@ -97,6 +97,7 @@ class Cockpit {
         last_created_at: created_at,
         last_status: status,
         step_numbers: [step_number],
+        process_id: result?.process_id || result?.sub_process_id,
       })
       return acc
     }, {
