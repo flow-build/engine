@@ -1,3 +1,10 @@
+## [2.28.0](https://github.com/flow-build/engine/compare/v2.27.0...v2.28.0) (2023-05-18)
+
+
+### Features
+
+* adds extra data to notifyProcessState input ([0eafda8](https://github.com/flow-build/engine/commit/0eafda88eceef2026bffb6391a51c1828d79e4f8))
+
 ## [2.27.0](https://github.com/flow-build/engine/compare/v2.26.0...v2.27.0) (2023-05-16)
 
 
