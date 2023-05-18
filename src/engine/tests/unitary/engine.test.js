@@ -28,8 +28,8 @@ afterAll(async () => {
   }
 });
 
-async function createRunProcess(engine, workflow_id, actor_data) {
-  let process = await engine.createProcess(workflow_id, actor_data);
+async function createRunProcess(engine, workflow_id, actor_data, input) {
+  let process = await engine.createProcess(workflow_id, actor_data, input);
   if (process.id) {
     process = await engine.runProcess(process.id, actor_data);
   }
@@ -314,8 +314,9 @@ describe("continueProcess", () => {
 describe("abortProcess", () => {
   test("abortProcess works", async () => {
     try {
-      const workflow = await engine.saveWorkflow("sample", "sample", blueprints_.identity_user_task);
-      let process = await createRunProcess(engine, workflow.id, actors_.admin);
+      const workflow = await engine.saveWorkflow("sample", "sample", blueprints_.start_with_data);
+      const create_data = { number: 9999, name: "createName" };
+      let process = await createRunProcess(engine, workflow.id, actors_.admin, create_data);
       expect(process.status).toBe(ProcessStatus.WAITING);
 
       const mock_process_state_notifier = jest.fn();
@@ -323,6 +324,7 @@ describe("abortProcess", () => {
 
       process = await engine.abortProcess(process.id);
       expect(process.status).toBe(ProcessStatus.INTERRUPTED);
+      expect(process.state.bag).toEqual(create_data);
 
       expect(mock_process_state_notifier).toHaveBeenCalledTimes(1);
       const notify_call_args = mock_process_state_notifier.mock.calls[0];
