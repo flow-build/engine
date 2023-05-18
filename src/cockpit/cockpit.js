@@ -86,8 +86,13 @@ class Cockpit {
       }
       const { node_id, status, step_number, created_at, result } = state
       const foundState = acc.execution.find((exec) => exec.node_id === node_id)
+      let processId
+      if (result && !result?.timeout) {
+        processId = result?.process_id || result?.sub_process_id
+      }
       if (foundState) {
         foundState.step_numbers.push(step_number)
+        foundState.process_id = processId
         return acc
       }
 
@@ -96,7 +101,7 @@ class Cockpit {
         last_created_at: created_at,
         last_status: status,
         step_numbers: [step_number],
-        process_id: result?.process_id || result?.sub_process_id,
+        process_id: processId,
       })
       return acc
     }, {
