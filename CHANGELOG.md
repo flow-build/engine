@@ -1,3 +1,10 @@
+## [2.29.0](https://github.com/flow-build/engine/compare/v2.28.0...v2.29.0) (2023-05-18)
+
+
+### Features
+
+* add process_id on getProcessStateExecutionHistory cockpit method ([29945e0](https://github.com/flow-build/engine/commit/29945e0c20463ec717052d1abf38fc76b8e051a5))
+
 ## [2.28.0](https://github.com/flow-build/engine/compare/v2.27.0...v2.28.0) (2023-05-18)
 
 
