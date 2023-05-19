@@ -73,7 +73,7 @@ class Blueprint {
     for await (const [key, value] of Object.entries(spec.environment)) {
       const variable = await EnvironmentVariable.fetch(value);
       if (!variable && key === value.toLowerCase()) {
-        const error_message = `Environment variable ${key} not found in ambient`;
+        const error_message = `Variable ${key} not found in environment`;
         validate_info.ambient.push(error_message);
       }
       if (!nodesString.includes(`environment.${key}`)) {

@@ -147,7 +147,7 @@ describe("test validate_environment_variable", async () => {
     spec.environment = { inexistent: "INEXISTENT" };
     const error = await Blueprint.validate(spec);
     expect(error[0]).toBeTruthy();
-    expect(error[1][0]).toBe("Environment variable inexistent not found in ambient");
+    expect(error[1][0]).toBe("Variable inexistent not found in environment");
     expect(error[2][0]).toBe("Environment variable inexistent not found in nodes");
   });
 
@@ -155,7 +155,7 @@ describe("test validate_environment_variable", async () => {
     const spec = _.cloneDeep(blueprints_.inexistent_environment_variable);
     const error = await Blueprint.validate(spec);
     expect(error[0]).toBeFalsy();
-    expect(error[1][0]).toBe("Environment variable inexistent not found in ambient");
+    expect(error[1][0]).toBe("Variable inexistent not found in environment");
   });
 });
 
