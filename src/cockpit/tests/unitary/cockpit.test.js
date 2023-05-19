@@ -6,6 +6,14 @@ const { Engine } = require("../../../engine/engine");
 const { blueprints_, actors_ } = require("../../../core/workflow/tests/unitary/blueprint_samples");
 const extra_nodes = require("../../../engine/tests/utils/extra_nodes");
 const utils = require("./cockpitUtils");
+const { SSMClient, GetParametersCommand, GetParameterCommand,
+PutParameterCommand, DeleteParameterCommand } = require("@aws-sdk/client-ssm");
+const { mockClient } = require("aws-sdk-client-mock");
+const { putParameterResponse, getParameterResponse, getParametersResponse,
+  deleteParameterResponse } = require("./parametersUtils");
+const { beforeAll } = require("@jest/globals");
+
+const ssmMock = mockClient(SSMClient);
 
 const cockpit = new Cockpit(...utils.persistOptions);
 const engine = new Engine(...utils.persistOptions);
@@ -502,5 +510,50 @@ describe("expireActivityManager", () => {
     const myHistory = await engine.fetchProcessStateHistory(myProcess.id);
     expect(myHistory[1].status).toEqual("running");
     expect(myHistory[1].result.is_continue).toBeTruthy();
+  });
+});
+
+describe("Environment Variables (aws ssm)", () => {
+  beforeAll(() => {
+    ssmMock.on(PutParameterCommand).resolves(putParameterResponse);
+    ssmMock.on(GetParameterCommand).resolves(getParameterResponse);
+    ssmMock.on(GetParametersCommand).resolves(getParametersResponse);
+    ssmMock.on(DeleteParameterCommand).resolves(deleteParameterResponse);
+  });
+
+  test("saveParameter of type String should work", async () => {
+    const response = await cockpit.saveParameter("API_HOST", "http://localhost:3000");
+
+    expect(response.httpStatusCode).toBe(200);
+  });
+
+  test("saveParameter of type StringList should work", async () => {
+    const response = await cockpit.saveParameter("RESPONSE_CODES", "200,202,204");
+
+    expect(response.httpStatusCode).toBe(200);
+  });
+
+  test("fetchParameter should work", async () => {
+    const response = await cockpit.fetchParameter("RESPONSE_CODES");
+
+    expect(response).toBeDefined();
+    expect(response.Name).toEqual("RESPONSE_CODES");
+    expect(response.Value).toEqual("200,202,204");
+  });
+
+  test("fetchParameters should work", async () => {
+    const response = await cockpit.fetchParameters(["API_HOST", "RESPONSE_CODES"]);
+
+    expect(response).toHaveLength(2);
+    expect(response[0].Name).toEqual("API_HOST");
+    expect(response[0].Value).toEqual("http://localhost:3000");
+    expect(response[1].Name).toEqual("RESPONSE_CODES");
+    expect(response[1].Value).toEqual("200,202,204");
+  });
+
+  test("deleteParameter should work", async () => {
+    const response = await cockpit.deleteParameter("RESPONSE_CODES");
+
+    expect(response.httpStatusCode).toBe(200);
   });
 });

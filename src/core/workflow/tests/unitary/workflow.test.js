@@ -5,6 +5,9 @@ const { ProcessStatus } = require("../../../workflow/process_state");
 const { PersistorProvider } = require("../../../persist/provider");
 const { blueprints_, actors_ } = require("./blueprint_samples");
 const JSum = require("jsum");
+const { SSMClient, GetParameterCommand } = require("@aws-sdk/client-ssm");
+const { mockClient } = require("aws-sdk-client-mock");
+const { getParameterResponse } = require("../../../../cockpit/tests/unitary/parametersUtils");
 
 beforeEach(async () => {
   await _clean();
@@ -206,6 +209,24 @@ describe("createProcess", () => {
       process.env.NODE_ENV = original_node_env;
       process.env.API_HOST = original_api_host;
     }
+  });
+
+  test("process spec should contain environment from aws ssm", async () => {
+    const ssmMock = mockClient(SSMClient);
+    const getParameterMock = _.cloneDeep(getParameterResponse);
+    getParameterMock.Parameter.Name = "NODE_ENV";
+    getParameterMock.Parameter.Value = "valid";
+    ssmMock.on(GetParameterCommand).resolves(getParameterMock);
+
+    process.env.NODE_ENV = "invalid";
+
+    let workflow = new Workflow("sample", "sample", blueprints_.environment);
+    workflow = await workflow.save();
+    const _process = await workflow.createProcess(actors_.simpleton);
+
+    expect(_process._blueprint_spec).toBeDefined();
+    expect(_process._blueprint_spec.environment).toBeDefined();
+    expect(_process._blueprint_spec.environment.node_env).toEqual("valid");
   });
 });
 

@@ -54,7 +54,6 @@ class Workflow extends PersistedEntity {
     super();
 
     if (blueprint_spec) {
-      //Blueprint.assert_is_valid(blueprint_spec);
       this._blueprint_hash = JSum.digest(blueprint_spec, "SHA256", "hex");
     }
 
@@ -77,7 +76,8 @@ class Workflow extends PersistedEntity {
   }
 
   async createProcess(actor_data, initial_bag = {}) {
-    return await new Process({ id: this._id, name: this._name }, Blueprint.parseSpec(this._blueprint_spec)).create(
+    const parsedBlueprint = await Blueprint.parseSpec(this._blueprint_spec);
+    return await new Process({ id: this._id, name: this._name }, parsedBlueprint).create(
       actor_data,
       initial_bag
     );

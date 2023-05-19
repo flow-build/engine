@@ -8,6 +8,7 @@ const { ProcessState } = require("../core/workflow/process_state");
 const { ActivityManager } = require("../core/workflow/activity_manager");
 const { Timer } = require("../core/workflow/timer");
 const { prepare } = require("../core/utils/input");
+const { getParameters, getParameter, putParameter, deleteParameter } = require("./utils/parametersClient");
 
 class Cockpit {
   static get instance() {
@@ -281,6 +282,29 @@ class Cockpit {
       };
     }
     return am;
+  }
+
+  async saveParameter(name, value) {
+    let type;
+    if (typeof value === "string" && value.split(",").length > 1) {
+      type = "StringList";
+    } else {
+      type = "String";
+    }
+
+    return await putParameter(name, value, type);
+  }
+
+  async fetchParameters(keys) {
+    return await getParameters(keys);
+  }
+
+  async fetchParameter(key) {
+    return await getParameter(key);
+  }
+
+  async deleteParameter(key) {
+    return await deleteParameter(key);
   }
 }
 
