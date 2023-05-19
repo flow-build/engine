@@ -85,11 +85,15 @@ class Cockpit {
         acc.max_step_number = state.step_number
       }
       const { node_id, status, step_number, created_at, result } = state
-      const foundState = acc.execution.find((exec) => exec.node_id === node_id)
+
       let processId
-      if (result && !result?.timeout) {
-        processId = result?.process_id || result?.sub_process_id
+      if (result?.process_id && result?.process_id !== process_id) {
+        processId = result.process_id
+      } else if (result?.sub_process_id) {
+        processId = result.sub_process_id
       }
+
+      const foundState = acc.execution.find((exec) => exec.node_id === node_id)
       if (foundState) {
         foundState.step_numbers.push(step_number)
         foundState.process_id = processId
