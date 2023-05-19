@@ -86,6 +86,7 @@ class Cockpit {
       }
       const { node_id, status, step_number, created_at, result } = state
 
+      // retrieve process_id from startProcess & subProcess nodes
       let processId
       if (result?.process_id && result?.process_id !== process_id) {
         processId = result.process_id
