@@ -899,9 +899,9 @@ describe("Run process extract in nodes", () => {
 
     workflow_process = await processPromise;
     expect(workflow_process.state.status).toBe("finished");
-    expect(workflow_process.state.node_id).toBe("FINISH-SUCCESS");
+    expect(workflow_process.state.node_id).toBe("END");
     expect(workflow_process.state.bag.activity.extracted).toBeTruthy();
-    expect(workflow_process.state.bag.start_process_data.process_id).toBeDefined();
+    expect(workflow_process.state.bag.startProcessData.process_id).toBeDefined();
   });
 });
 

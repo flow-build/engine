@@ -5,23 +5,23 @@ module.exports = {
   prepare: [],
   nodes: [
     {
-      id: "START",
+      id: "START-NODE-EXTRACT",
       type: "Start",
       name: "Start extract node process",
-      next: "START-PROCESS-NODE",
+      next: "NODE-TO-START-PROCESS",
       lane_id: "true",
       parameters: {
         input_schema: {},
       },
     },
     {
-      id: "START-PROCESS-NODE",
-      name: "start proces node",
-      next: "USER-TASK-NODE",
+      id: "NODE-TO-START-PROCESS",
+      name: "node to start proces",
+      next: "NODE-OF-USER-TASK",
       type: "systemTask",
       category: "startProcess",
       lane_id: "true",
-      extract: "start_process_data",
+      extract: "startProcessData",
       parameters: {
         input: {},
         workflow_name: "blueprint_spec_son",
@@ -31,9 +31,9 @@ module.exports = {
       }
     },
     {
-      id: "USER-TASK-NODE",
+      id: "NODE-OF-USER-TASK",
       name: "user task",
-      next: "FLOW",
+      next: "END",
       type: "userTask",
       lane_id: "true",
       extract: "activity",
@@ -43,36 +43,12 @@ module.exports = {
       }
     },
     {
-      id: "FLOW",
-      name: "flow node",
-      next: {
-        true: "FINISH-SUCCESS",
-        default: "FINISH-ERROR"
-      },
-      type: "flow",
-      lane_id: "true",
-      parameters: {
-        input: {
-          decision_key: {
-            $ref: "bag.activity.extracted"
-          }
-        }
-      }
-    },
-    {
-      id: "FINISH-SUCCESS",
-      name: "Finish - success",
+      id: "END",
+      name: "Finish",
       next: null,
       type: "Finish",
       lane_id: "true"
-    },
-    {
-      id: "FINISH-ERROR",
-      name: "Finish - error",
-      next: null,
-      type: "Finish",
-      lane_id: "true"
-    },
+    }
   ],
   lanes,
   environment: {},
