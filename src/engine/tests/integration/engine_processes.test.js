@@ -876,6 +876,35 @@ describe("Run process with _extract true", () => {
   });
 });
 
+describe("Run process extract in nodes", () => {
+  test("process with extract in nodes works", async () => {
+    await engine.saveWorkflow("blueprint_spec_son", "child workflow", blueprints_.minimal);
+    const workflow = await engine.saveWorkflow("sample", "sample", blueprints_.extract_node_blueprint);
+
+    let workflow_process = await engine.createProcess(workflow.id, actors_.simpleton);
+    expect(workflow_process.state.status).toEqual("unstarted");
+
+    workflow_process = await engine.runProcess(workflow_process.id, actors_.simpleton);
+    workflow_process = await Process.fetch(workflow_process.id);
+    expect(workflow_process.state.status).toEqual("waiting");
+
+    let activity_manager = await engine.fetchAvailableActivityForProcess(workflow_process.id, actors_.simpleton);
+    const activity_data = { extracted: true };
+    const { processPromise, error } = await engine.submitActivity(
+      activity_manager.id,
+      actors_.simpleton,
+      activity_data
+    );
+    expect(error).toBeUndefined();
+
+    workflow_process = await processPromise;
+    expect(workflow_process.state.status).toBe("finished");
+    expect(workflow_process.state.node_id).toBe("FINISH-SUCCESS");
+    expect(workflow_process.state.bag.activity.extracted).toBeTruthy();
+    expect(workflow_process.state.bag.start_process_data.process_id).toBeDefined();
+  });
+});
+
 test.skip("Push activity should return error to an non-existant activity manager", async () => {
   await engine.saveWorkflow("sample", "sample", blueprints_.notify_and_2_user_task);
 
