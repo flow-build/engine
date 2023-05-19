@@ -85,7 +85,7 @@ class StartProcessSystemTaskNode extends SystemTaskNode {
 
       return {
         node_id: this.id,
-        bag: this._setBag(bag, result),
+        bag: this._setBag(bag, result, parameters?._extract),
         external_input: external_input,
         result: result,
         error: result.error,

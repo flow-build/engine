@@ -60,7 +60,7 @@ class Node {
 
       return {
         node_id: this.id,
-        bag: this._setBag(bag, result),
+        bag: this._setBag(bag, result, parameters?._extract),
         external_input: external_input,
         result: result,
         error: null,
@@ -84,7 +84,28 @@ class Node {
     return { ...bag, ...input, actor_data, environment, parameters };
   }
 
-  _setBag(bag, result) {
+  _setBag(bag, result, _extract = false) {
+    if (_extract) {
+      const bag_property = this.id.toLowerCase().replaceAll("-", "_").replaceAll(" ", "_");
+      switch (this.constructor.name) {
+        case "TimerSystemTaskNode":
+          break;
+        case "StartNode":
+          break;
+        case "FinishNode":
+          break;
+        case "UserTaskNode":
+          bag[bag_property] = result?.activities?.[0]?.data;
+          break;
+        case "HttpSystemTaskNode":
+          bag[bag_property] = result?.data;
+          break;
+        default:
+          bag[bag_property] = result;
+          break;
+      } 
+    }
+
     return bag;
   }
 

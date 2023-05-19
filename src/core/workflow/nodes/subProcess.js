@@ -114,7 +114,7 @@ class SubProcessNode extends ParameterizedNode {
 
         return {
           node_id: this.id,
-          bag: bag,
+          bag: this._setBag(bag, result, parameters?._extract),
           external_input: external_input, //external_input is always null here
           result: result,
           error: null,

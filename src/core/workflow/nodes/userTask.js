@@ -161,17 +161,17 @@ class UserTaskNode extends ParameterizedNode {
         }
       }
     }
-    return await this._postRun(bag, input, external_input, lisp);
+    return await this._postRun(bag, input, external_input, lisp, parameters?._extract);
   }
 
   async _preRun(execution_data) {
     return [execution_data, ProcessStatus.WAITING];
   }
 
-  async _postRun(bag, input, external_input) {
+  async _postRun(bag, input, external_input, lisp, _extract = false) {
     return {
       node_id: this.id,
-      bag: bag,
+      bag: this._setBag(bag, external_input, _extract),
       external_input: external_input,
       result: external_input,
       error: null,

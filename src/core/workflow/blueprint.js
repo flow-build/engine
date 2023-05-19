@@ -114,7 +114,10 @@ class Blueprint {
     }
 
     if (spec.parameters) {
-      ajvValidator.validateBlueprintParameters(spec.parameters);
+      const invalid = ajvValidator.validateBlueprintParameters(spec.parameters);
+      if (invalid) {
+        return [false, invalid.message];
+      }
     }
 
     return Blueprint.validate_lanes(spec);
