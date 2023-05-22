@@ -8,7 +8,8 @@ const { ProcessState } = require("../core/workflow/process_state");
 const { ActivityManager } = require("../core/workflow/activity_manager");
 const { Timer } = require("../core/workflow/timer");
 const { prepare } = require("../core/utils/input");
-const { getParameters, getParameter, putParameter, deleteParameter } = require("./utils/parametersClient");
+const { getAllParameters, getParameters, getParameter,
+  putParameter, deleteParameter } = require("./utils/parametersClient");
 
 class Cockpit {
   static get instance() {
@@ -297,6 +298,10 @@ class Cockpit {
 
   async fetchParameters(keys) {
     return await getParameters(keys);
+  }
+
+  async fetchAllParameters(keys) {
+    return await getAllParameters(keys);
   }
 
   async fetchParameter(key) {

@@ -6,8 +6,8 @@ const { Engine } = require("../../../engine/engine");
 const { blueprints_, actors_ } = require("../../../core/workflow/tests/unitary/blueprint_samples");
 const extra_nodes = require("../../../engine/tests/utils/extra_nodes");
 const utils = require("./cockpitUtils");
-const { SSMClient, GetParametersCommand, GetParameterCommand,
-PutParameterCommand, DeleteParameterCommand } = require("@aws-sdk/client-ssm");
+const { SSMClient, GetParametersCommand, GetParameterCommand, GetParametersByPathCommand,
+  PutParameterCommand, DeleteParameterCommand } = require("@aws-sdk/client-ssm");
 const { mockClient } = require("aws-sdk-client-mock");
 const { putParameterResponse, getParameterResponse, getParametersResponse,
   deleteParameterResponse } = require("./parametersUtils");
@@ -518,6 +518,7 @@ describe("Environment Variables (aws ssm)", () => {
     ssmMock.on(PutParameterCommand).resolves(putParameterResponse);
     ssmMock.on(GetParameterCommand).resolves(getParameterResponse);
     ssmMock.on(GetParametersCommand).resolves(getParametersResponse);
+    ssmMock.on(GetParametersByPathCommand).resolves(getParametersResponse);
     ssmMock.on(DeleteParameterCommand).resolves(deleteParameterResponse);
   });
 
@@ -543,6 +544,16 @@ describe("Environment Variables (aws ssm)", () => {
 
   test("fetchParameters should work", async () => {
     const response = await cockpit.fetchParameters(["API_HOST", "RESPONSE_CODES"]);
+
+    expect(response).toHaveLength(2);
+    expect(response[0].Name).toEqual("API_HOST");
+    expect(response[0].Value).toEqual("http://localhost:3000");
+    expect(response[1].Name).toEqual("RESPONSE_CODES");
+    expect(response[1].Value).toEqual("200,202,204");
+  });
+
+  test("fetchAllParameters should work", async () => {
+    const response = await cockpit.fetchAllParameters();
 
     expect(response).toHaveLength(2);
     expect(response[0].Name).toEqual("API_HOST");

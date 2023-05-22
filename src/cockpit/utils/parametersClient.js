@@ -1,5 +1,5 @@
 require("dotenv").config();
-const { SSMClient, GetParametersCommand, GetParameterCommand,
+const { SSMClient, GetParametersCommand, GetParameterCommand, GetParametersByPathCommand,
   PutParameterCommand, DeleteParameterCommand } = require("@aws-sdk/client-ssm");
 
 const client = new SSMClient({
@@ -42,6 +42,22 @@ async function getParameters(names) {
   }
 };
 
+async function getAllParameters() {
+  try {
+    const input = {
+      Recursive: true,
+      Path: "/",
+      WithDecryption: true,
+    }
+
+    const command = new GetParametersByPathCommand(input);
+    const response = await client.send(command);
+    return response.Parameters;
+  } catch (error) {
+    return [];
+  }
+};
+
 async function getParameter(name) {
   try {
     const input = {
@@ -76,4 +92,5 @@ module.exports = {
   getParameter,
   putParameter,
   deleteParameter,
+  getAllParameters,
 };
