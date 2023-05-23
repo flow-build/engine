@@ -196,6 +196,16 @@ test("are_all_lanes_present constraint works", () => {
   expect(error).toBe("are_all_lanes_present");
 });
 
+test("validation of spec with _extract in parameters works", () => {
+  const spec = _.cloneDeep(blueprints_.minimal);
+  spec.parameters = {
+    _extract: "invalid",
+  };
+  const [is_valid, error] = Blueprint.validate(spec);
+  expect(is_valid).toBe(false);
+  expect(error).toBe("data/_extract must be boolean");
+});
+
 describe("Blueprint.validate", () => {
   test("fails if node_id repeats", () => {
     const blueprint_spec = _.cloneDeep(blueprints_.minimal);
