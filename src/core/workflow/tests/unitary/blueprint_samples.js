@@ -6,6 +6,7 @@ const createProcessWithRestrictedInputSchema = require("../examples/createProces
 const custom_node = require("../examples/customNode");
 const extra_nodes = require("../examples/customNodes");
 const extract_blueprint = require("../examples/extractBlueprint");
+const extract_node_blueprint = require("../examples/extractNodeBlueprint");
 const environment = require("../examples/environment");
 const reference_environment = require("../examples/environmentReference");
 const existent_environment_variable = require("../examples/existingEnvironmentVariable");
@@ -52,6 +53,7 @@ const blueprints_ = {
   existent_environment_variable,
   extra_nodes,
   extract_blueprint,
+  extract_node_blueprint,
   http_retries,
   identity_system_task,
   identity_user_task,

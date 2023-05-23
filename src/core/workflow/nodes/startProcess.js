@@ -82,10 +82,11 @@ class StartProcessSystemTaskNode extends SystemTaskNode {
 
       const hrt_run_interval = process.hrtime(hrt_run_start);
       const time_elapsed = Math.ceil(hrt_run_interval[0] * 1000 + hrt_run_interval[1] / 1000000);
+      const node_extract = this._spec?.extract;
 
       return {
         node_id: this.id,
-        bag: this._setBag(bag, result, parameters?._extract),
+        bag: this._setBag(bag, result, parameters?._extract, node_extract),
         external_input: external_input,
         result: result,
         error: result.error,

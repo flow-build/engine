@@ -21,6 +21,7 @@ class Node {
         parameters: {
           type: "object",
         },
+        extract: { type: "string" },
       },
     };
   }
@@ -57,10 +58,11 @@ class Node {
 
       const hrt_run_interval = process.hrtime(hrt_run_start);
       const time_elapsed = Math.ceil(hrt_run_interval[0] * 1000 + hrt_run_interval[1] / 1000000);
+      const node_extract = this._spec?.extract;
 
       return {
         node_id: this.id,
-        bag: this._setBag(bag, result, parameters?._extract),
+        bag: this._setBag(bag, result, parameters?._extract, node_extract),
         external_input: external_input,
         result: result,
         error: null,
@@ -84,8 +86,20 @@ class Node {
     return { ...bag, ...input, actor_data, environment, parameters };
   }
 
-  _setBag(bag, result, _extract = false) {
-    if (_extract) {
+  _setBag(bag, result, _extract = false, node_extract = "") {
+    if (node_extract?.length > 0) {
+      switch (this.constructor.name) {
+        case "UserTaskNode":
+          _.set(bag, node_extract, result?.activities?.[0]?.data);
+          break;
+        case "HttpSystemTaskNode":
+          _.set(bag, node_extract, result?.data);
+          break;
+        default:
+          _.set(bag, node_extract, result);
+          break;
+      }
+    } else if (_extract) {
       const bag_property = this.id.toLowerCase().replaceAll("-", "_").replaceAll(" ", "_");
       switch (this.constructor.name) {
         case "TimerSystemTaskNode":

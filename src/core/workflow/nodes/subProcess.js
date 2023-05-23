@@ -111,10 +111,11 @@ class SubProcessNode extends ParameterizedNode {
           result = { sub_process_id: "", error: "workflow not found" };
           status = ProcessStatus.ERROR;
         }
+        const node_extract = this._spec?.extract;
 
         return {
           node_id: this.id,
-          bag: this._setBag(bag, result, parameters?._extract),
+          bag: this._setBag(bag, result, parameters?._extract, node_extract),
           external_input: external_input, //external_input is always null here
           result: result,
           error: null,
