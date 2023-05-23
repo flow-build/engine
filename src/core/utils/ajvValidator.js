@@ -91,6 +91,7 @@ function validateBlueprintParameters(data) {
     type: "object",
     properties: {
       max_step_number: { type: "integer" },
+      _extract: { type: "boolean" },
     },
   };
 

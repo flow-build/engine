@@ -228,7 +228,17 @@ test("are_all_lanes_present constraint works", async () => {
   expect(error).toBe("are_all_lanes_present");
 });
 
-describe("await Blueprint.validate", async () => {
+test("validation of spec with _extract in parameters works", async () => {
+  const spec = _.cloneDeep(blueprints_.minimal);
+  spec.parameters = {
+    _extract: "invalid",
+  };
+  const [is_valid, error] = await Blueprint.validate(spec);
+  expect(is_valid).toBe(false);
+  expect(error).toBe("data/_extract must be boolean");
+});
+
+describe("Blueprint.validate", () => {
   test("fails if node_id repeats", async () => {
     const blueprint_spec = _.cloneDeep(blueprints_.minimal);
     blueprint_spec.nodes.push({
