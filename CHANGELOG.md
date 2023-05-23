@@ -1,3 +1,11 @@
+## [2.30.0](https://github.com/flow-build/engine/compare/v2.29.0...v2.30.0) (2023-05-23)
+
+
+### Features
+
+* add possible _extract parameter on blueprint_spec ([fafc4f9](https://github.com/flow-build/engine/commit/fafc4f9789e331cbe5b965bbb4cf6a518e8d9f26))
+* add possible extract parameter on node spec ([9d93d01](https://github.com/flow-build/engine/commit/9d93d011b08c99d42caff5d0c56c1784a2403c2b))
+
 ## [2.29.0](https://github.com/flow-build/engine/compare/v2.28.0...v2.29.0) (2023-05-18)
 
 
