@@ -77,10 +77,6 @@ class StartNode extends Node {
     return [is_valid, error];
   }
 
-  _setBag(bag) {
-    return bag;
-  }
-
   _preProcessing({ bag, input, actor_data, environment, parameters = {} }) {
     let timeout;
     if (this._spec.parameters.timeout) {
@@ -135,6 +131,10 @@ class StartNode extends Node {
       timeout: execution_data.timeout,
     };
     return [result, ProcessStatus.RUNNING];
+  }
+
+  _setBag(bag) {
+    return bag;
   }
 }
 
