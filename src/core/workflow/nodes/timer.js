@@ -57,6 +57,10 @@ class TimerSystemTaskNode extends SystemTaskNode {
     return TimerSystemTaskNode.validate(this._spec);
   }
 
+  _setBag(bag) {
+    return bag;
+  }
+
   _preProcessing({ bag, input, actor_data, environment, parameters = {} }) {
     let timeout;
     if (this._spec.parameters.timeout) {

@@ -50,4 +50,13 @@ describe("Validate", () => {
     expect(isValid).toBeFalsy();
     expect(error).toMatch("must have required property 'lane_id'");
   });
+
+  test("If has property extract should validate schema properly", () => {
+    const spec = _.cloneDeep(minimal);
+    spec.extract = "http data";
+    const node = new Node(spec);
+    const [isValid, error] = node.validate();
+    expect(isValid).toBeFalsy();
+    expect(error).toMatch("must match pattern \\\"^[a-zA-Z0-9_.]+$\\\"")
+  });
 });

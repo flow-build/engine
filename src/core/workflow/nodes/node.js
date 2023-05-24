@@ -21,7 +21,7 @@ class Node {
         parameters: {
           type: "object",
         },
-        extract: { type: "string" },
+        extract: { type: "string", pattern: "^[a-zA-Z0-9_.]+$" },
       },
     };
   }
@@ -86,38 +86,21 @@ class Node {
     return { ...bag, ...input, actor_data, environment, parameters };
   }
 
+  _parseNodeId() {
+    return this.id.toLowerCase().replaceAll("-", "_").replaceAll(" ", "_");
+  }
+
+  _mapResult(result) {
+    return result;
+  }
+
   _setBag(bag, result, _extract = false, node_extract = "") {
+    const mapped_result = this._mapResult(result);
     if (node_extract?.length > 0) {
-      switch (this.constructor.name) {
-        case "UserTaskNode":
-          _.set(bag, node_extract, result?.activities?.[0]?.data);
-          break;
-        case "HttpSystemTaskNode":
-          _.set(bag, node_extract, result?.data);
-          break;
-        default:
-          _.set(bag, node_extract, result);
-          break;
-      }
+      _.set(bag, node_extract.toLowerCase(), mapped_result);
     } else if (_extract) {
-      const bag_property = this.id.toLowerCase().replaceAll("-", "_").replaceAll(" ", "_");
-      switch (this.constructor.name) {
-        case "TimerSystemTaskNode":
-          break;
-        case "StartNode":
-          break;
-        case "FinishNode":
-          break;
-        case "UserTaskNode":
-          bag[bag_property] = result?.activities?.[0]?.data;
-          break;
-        case "HttpSystemTaskNode":
-          bag[bag_property] = result?.data;
-          break;
-        default:
-          bag[bag_property] = result;
-          break;
-      } 
+      const bag_property = this._parseNodeId();
+      _.set(bag, bag_property, mapped_result);
     }
 
     return bag;

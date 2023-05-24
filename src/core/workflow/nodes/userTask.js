@@ -90,6 +90,10 @@ class UserTaskNode extends ParameterizedNode {
     return UserTaskNode.validate(this._spec);
   }
 
+  _mapResult(result){
+    return result?.activities?.[0]?.data;
+  }
+
   async run({ bag, input, external_input = null, actor_data, environment = {}, parameters = {} }, lisp) {
     try {
       if (!external_input) {
