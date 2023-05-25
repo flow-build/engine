@@ -209,6 +209,20 @@ describe("getProcessStateExecutionHistory works", () => {
     expect(myHistoryData.execution).toHaveLength(5);
     expect(myHistoryData.execution[1].process_id).toBeDefined();
   });
+
+  test("getProcessStateExecutionHistory returns process_id on subProcess nodes (when aborted process)", async () => {
+    await engine.saveWorkflow("blueprint_spec_son", "child workflow", blueprints_.minimal);
+    const myWorkflow = await engine.saveWorkflow("parent_workflow", "parent workflow", blueprints_.sub_process.blueprint_spec);
+    let myProcess = await engine.createProcess(myWorkflow.id, actors_.simpleton);
+    myProcess = await engine.runProcess(myProcess.id, actors_.simpleton);
+    myProcess = await engine.abortProcess(myProcess.id);
+    const myHistoryData = await cockpit.getProcessStateExecutionHistory(myProcess.id);
+
+    expect(myHistoryData.current_status).toBe("interrupted");
+    expect(myHistoryData.max_step_number).toBe(6);
+    expect(myHistoryData.execution).toHaveLength(4);
+    expect(myHistoryData.execution[0].process_id).toBeDefined();
+  });
 });
 
 describe("fetchStateExecutionContext works", () => {
