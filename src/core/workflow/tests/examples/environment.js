@@ -49,5 +49,6 @@ module.exports = {
   environment: {
     node_env: "NODE_ENV",
     host: "API_HOST",
+    limit: "MAX_LIMIT"
   },
 };

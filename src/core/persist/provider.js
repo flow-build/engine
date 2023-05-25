@@ -13,6 +13,7 @@ const { ProcessStateKnexPersist } = require("./knex/processState");
 const { PersistorSingleton } = require("../persist/persist");
 const { WorkflowKnexPersist } = require("./knex/workflow");
 const { ProcessKnexPersist } = require("./knex/process");
+const { EnvironmentVariableKnexPersist } = require("./knex/environmentVariable");
 
 class PersistorProvider {
   static getPersistor(persist_mode, ...args) {
@@ -42,6 +43,7 @@ class PersistorProvider {
           Activity: [ActivityKnexPersist, db],
           Timer: [TimerKnexPersist, db],
           ProcessState: [ProcessStateKnexPersist, db],
+          EnvironmentVariable: [EnvironmentVariableKnexPersist, db],
         };
         break;
       default:

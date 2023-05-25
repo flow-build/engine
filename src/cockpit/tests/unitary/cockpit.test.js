@@ -518,3 +518,63 @@ describe("expireActivityManager", () => {
     expect(myHistory[1].result.is_continue).toBeTruthy();
   });
 });
+
+describe("Environment Variables", () => {
+  test("createEnvironmentVariable should work", async () => {
+    const environmentVariable = await cockpit.createEnvironmentVariable("API_HOST", "0.0.0.0");
+    expect(environmentVariable.key).toEqual("API_HOST");
+    expect(environmentVariable.value).toEqual("0.0.0.0");
+    expect(environmentVariable.type).toEqual("string");
+  });
+
+  test("updateEnvironmentVariable should work", async () => {
+    const environmentVariable = await cockpit.createEnvironmentVariable("API_HOST", "0.0.0.0");
+    const updatedEnvironmentVariable = await cockpit.updateEnvironmentVariable("API_HOST", "localhost");
+    expect(updatedEnvironmentVariable.key).toEqual("API_HOST");
+    expect(updatedEnvironmentVariable.value).toEqual("localhost");
+    expect(updatedEnvironmentVariable.type).toEqual("string");
+    expect(updatedEnvironmentVariable.created_at).toEqual(environmentVariable.created_at);
+    expect(updatedEnvironmentVariable._updated_at).toBeDefined();
+  });
+
+  test("fetchEnvironmentVariable should work", async () => {
+    await cockpit.createEnvironmentVariable("MAX_LIMIT", 9999);
+    const result = await cockpit.fetchEnvironmentVariable("MAX_LIMIT");
+    expect(result.key).toEqual("MAX_LIMIT");
+    expect(result.value).toEqual(9999);
+    expect(result.type).toEqual("number");
+  });
+
+  test("fetchEnvironmentVariable resolving environment should work", async () => {
+    process.env.MQTT_HOST = "localhost";
+    const result = await cockpit.fetchEnvironmentVariable("MQTT_HOST");
+    expect(result.key).toEqual("MQTT_HOST");
+    expect(result.value).toEqual("localhost");
+    expect(result._origin).toEqual("environment");
+  });
+
+  test("fetchEnvironmentVariable resolving from table before environment should work", async () => {
+    process.env.API_HOST = "0.0.0.0";
+    await cockpit.createEnvironmentVariable("API_HOST", "127.0.0.1");
+    const result = await cockpit.fetchEnvironmentVariable("API_HOST");
+    expect(result.key).toEqual("API_HOST");
+    expect(result.value).toEqual("127.0.0.1");
+    expect(result._origin).toEqual("table");
+  });
+
+  test("fetchAllEnvironmentVariables should work", async () => {
+    const environmentVariable_1 = await cockpit.createEnvironmentVariable("API_HOST", "0.0.0.0");
+    const environmentVariable_2 = await cockpit.createEnvironmentVariable("MAX_LIMIT", 9999);
+    const result = await cockpit.fetchAllEnvironmentVariables();
+    expect(result).toHaveLength(2);
+    expect(result[0].key).toEqual(environmentVariable_2.key);
+    expect(result[1].key).toEqual(environmentVariable_1.key);
+  });
+
+  test("deleteEnvironmentVariable should work", async () => {
+    await cockpit.createEnvironmentVariable("NODE_EV", "test_env");
+    await cockpit.deleteEnvironmentVariable("NODE_EV");
+    const result = await cockpit.fetchAllEnvironmentVariables();
+    expect(result).toHaveLength(0);
+  });
+});

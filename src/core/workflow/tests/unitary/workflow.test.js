@@ -2,6 +2,7 @@ const _ = require("lodash");
 const settings = require("../../../../../settings/tests/settings");
 const { Workflow } = require("../../../workflow/workflow");
 const { ProcessStatus } = require("../../../workflow/process_state");
+const { EnvironmentVariable } = require("../../../workflow/environment_variable");
 const { PersistorProvider } = require("../../../persist/provider");
 const { blueprints_, actors_ } = require("./blueprint_samples");
 const JSum = require("jsum");
@@ -207,6 +208,23 @@ describe("createProcess", () => {
       process.env.API_HOST = original_api_host;
     }
   });
+
+  test("process spec should contain environment from environment_variables table", async () => {
+    process.env.NODE_ENV = "invalid";
+    process.env.API_HOST = "127.0.1.1";
+
+    await new EnvironmentVariable("NODE_ENV", "valid", "string").save();
+    await new EnvironmentVariable("API_HOST", "0.0.0.0", "string").save();
+
+    let workflow = new Workflow("sample", "sample", blueprints_.environment);
+    workflow = await workflow.save();
+    const _process = await workflow.createProcess(actors_.simpleton);
+
+    expect(_process._blueprint_spec).toBeDefined();
+    expect(_process._blueprint_spec.environment).toBeDefined();
+    expect(_process._blueprint_spec.environment.node_env).toEqual("valid");
+    expect(_process._blueprint_spec.environment.host).toEqual("0.0.0.0");
+  });
 });
 
 const _clean = async () => {
@@ -215,8 +233,10 @@ const _clean = async () => {
   const activity_manager_persist = persistor.getPersistInstance("ActivityManager");
   const process_persist = persistor.getPersistInstance("Process");
   const workflow_persist = persistor.getPersistInstance("Workflow");
+  const environment_variable_persist = persistor.getPersistInstance("EnvironmentVariable");
   await activity_persist.deleteAll();
   await activity_manager_persist.deleteAll();
   await process_persist.deleteAll();
   await workflow_persist.deleteAll();
+  await environment_variable_persist.deleteAll();
 };
