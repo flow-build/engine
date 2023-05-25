@@ -1,3 +1,10 @@
+## [2.32.0](https://github.com/flow-build/engine/compare/v2.31.1...v2.32.0) (2023-05-25)
+
+
+### Features
+
+* improvements on node's extract property ([6ac35aa](https://github.com/flow-build/engine/commit/6ac35aadf7167813e70a5d73fe8373f42447d18a))
+
 ### [2.31.1](https://github.com/flow-build/engine/compare/v2.31.0...v2.31.1) (2023-05-25)
 
 
