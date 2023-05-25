@@ -1,3 +1,10 @@
+## [2.31.0](https://github.com/flow-build/engine/compare/v2.30.0...v2.31.0) (2023-05-25)
+
+
+### Features
+
+* add EnvironmentVariable entity with methods & migrations ([0e3c1e1](https://github.com/flow-build/engine/commit/0e3c1e170cea56b6907f8df4ca53ab7547e5bd86))
+
 ## [2.30.0](https://github.com/flow-build/engine/compare/v2.29.0...v2.30.0) (2023-05-23)
 
 
