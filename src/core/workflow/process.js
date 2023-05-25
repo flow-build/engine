@@ -145,7 +145,7 @@ class Process extends PersistedEntity {
   }
 
   async create(actor_data, initial_bag) {
-    Blueprint.assert_is_valid(this._blueprint_spec);
+    await Blueprint.assert_is_valid(this._blueprint_spec);
 
     const custom_lisp = await Packages._fetchPackages(this._blueprint_spec.requirements, this._blueprint_spec.prepare);
 

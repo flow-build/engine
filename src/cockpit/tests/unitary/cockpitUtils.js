@@ -8,6 +8,7 @@ const activity_manager_persist = persistor.getPersistInstance("ActivityManager")
 const process_persist = persistor.getPersistInstance("Process");
 const workflow_persist = persistor.getPersistInstance("Workflow");
 const timer_persist = persistor.getPersistInstance("Timer");
+const environment_variable_persist = persistor.getPersistInstance("EnvironmentVariable");
 
 function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -23,6 +24,8 @@ async function _clean() {
   await workflow_persist.deleteAll();
   await sleep(10);
   await timer_persist.deleteAll();
+  await sleep(10);
+  await environment_variable_persist.deleteAll();
 }
 
 async function loadTimers() {

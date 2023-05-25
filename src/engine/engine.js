@@ -518,7 +518,7 @@ class Engine {
       }
     }
 
-    Blueprint.assert_is_valid(blueprint_spec);
+    await Blueprint.assert_is_valid(blueprint_spec);
 
     return await new Workflow(name, description, blueprint_spec, workflow_id).save();
   }
