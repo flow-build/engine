@@ -34,6 +34,10 @@ class KnexPersist {
     return await this._db.select("*").from(this._table).where("id", obj_id).first();
   }
 
+  async getAll() {
+    return await this._db.select("*").from(this._table).orderBy("updated_at", "desc");
+  }
+
   async _create(obj, trx = false) {
     if (trx) {
       await this._db(this._table).transacting(trx).insert(obj);

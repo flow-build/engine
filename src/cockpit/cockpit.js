@@ -7,6 +7,7 @@ const { Engine } = require("../engine/engine");
 const { ProcessState } = require("../core/workflow/process_state");
 const { ActivityManager } = require("../core/workflow/activity_manager");
 const { Timer } = require("../core/workflow/timer");
+const { EnvironmentVariable } = require("../core/workflow/environment_variable");
 const { prepare } = require("../core/utils/input");
 
 class Cockpit {
@@ -85,9 +86,19 @@ class Cockpit {
         acc.max_step_number = state.step_number
       }
       const { node_id, status, step_number, created_at, result } = state
+
+      // retrieve process_id from startProcess & subProcess nodes
+      let processId
+      if (result?.process_id && result?.process_id !== process_id) {
+        processId = result.process_id
+      } else if (result?.sub_process_id) {
+        processId = result.sub_process_id
+      }
+
       const foundState = acc.execution.find((exec) => exec.node_id === node_id)
       if (foundState) {
         foundState.step_numbers.push(step_number)
+        foundState.process_id = processId
         return acc
       }
 
@@ -96,7 +107,7 @@ class Cockpit {
         last_created_at: created_at,
         last_status: status,
         step_numbers: [step_number],
-        process_id: result?.process_id || result?.sub_process_id,
+        process_id: processId,
       })
       return acc
     }, {
@@ -281,6 +292,27 @@ class Cockpit {
       };
     }
     return am;
+  }
+
+  async fetchAllEnvironmentVariables() {
+    return await EnvironmentVariable.fetchAll();
+  }
+
+  async fetchEnvironmentVariable(key) {
+    return await EnvironmentVariable.fetch(key);
+  }
+
+  async createEnvironmentVariable(key, value) {
+    const environment_variable = new EnvironmentVariable(key, value);
+    return await environment_variable.save();
+  }
+
+  async updateEnvironmentVariable(key, value) {
+    return await EnvironmentVariable.update(key, value);
+  }
+
+  async deleteEnvironmentVariable(key) {
+    return await EnvironmentVariable.delete(key);
   }
 }
 

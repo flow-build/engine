@@ -209,6 +209,20 @@ describe("getProcessStateExecutionHistory works", () => {
     expect(myHistoryData.execution).toHaveLength(5);
     expect(myHistoryData.execution[1].process_id).toBeDefined();
   });
+
+  test("getProcessStateExecutionHistory returns process_id on subProcess nodes (when aborted process)", async () => {
+    await engine.saveWorkflow("blueprint_spec_son", "child workflow", blueprints_.minimal);
+    const myWorkflow = await engine.saveWorkflow("parent_workflow", "parent workflow", blueprints_.sub_process.blueprint_spec);
+    let myProcess = await engine.createProcess(myWorkflow.id, actors_.simpleton);
+    myProcess = await engine.runProcess(myProcess.id, actors_.simpleton);
+    myProcess = await engine.abortProcess(myProcess.id);
+    const myHistoryData = await cockpit.getProcessStateExecutionHistory(myProcess.id);
+
+    expect(myHistoryData.current_status).toBe("interrupted");
+    expect(myHistoryData.max_step_number).toBe(6);
+    expect(myHistoryData.execution).toHaveLength(4);
+    expect(myHistoryData.execution[0].process_id).toBeDefined();
+  });
 });
 
 describe("fetchStateExecutionContext works", () => {
@@ -502,5 +516,65 @@ describe("expireActivityManager", () => {
     const myHistory = await engine.fetchProcessStateHistory(myProcess.id);
     expect(myHistory[1].status).toEqual("running");
     expect(myHistory[1].result.is_continue).toBeTruthy();
+  });
+});
+
+describe("Environment Variables", () => {
+  test("createEnvironmentVariable should work", async () => {
+    const environmentVariable = await cockpit.createEnvironmentVariable("API_HOST", "0.0.0.0");
+    expect(environmentVariable.key).toEqual("API_HOST");
+    expect(environmentVariable.value).toEqual("0.0.0.0");
+    expect(environmentVariable.type).toEqual("string");
+  });
+
+  test("updateEnvironmentVariable should work", async () => {
+    const environmentVariable = await cockpit.createEnvironmentVariable("API_HOST", "0.0.0.0");
+    const updatedEnvironmentVariable = await cockpit.updateEnvironmentVariable("API_HOST", "localhost");
+    expect(updatedEnvironmentVariable.key).toEqual("API_HOST");
+    expect(updatedEnvironmentVariable.value).toEqual("localhost");
+    expect(updatedEnvironmentVariable.type).toEqual("string");
+    expect(updatedEnvironmentVariable.created_at).toEqual(environmentVariable.created_at);
+    expect(updatedEnvironmentVariable._updated_at).toBeDefined();
+  });
+
+  test("fetchEnvironmentVariable should work", async () => {
+    await cockpit.createEnvironmentVariable("MAX_LIMIT", 9999);
+    const result = await cockpit.fetchEnvironmentVariable("MAX_LIMIT");
+    expect(result.key).toEqual("MAX_LIMIT");
+    expect(result.value).toEqual(9999);
+    expect(result.type).toEqual("number");
+  });
+
+  test("fetchEnvironmentVariable resolving environment should work", async () => {
+    process.env.MQTT_HOST = "localhost";
+    const result = await cockpit.fetchEnvironmentVariable("MQTT_HOST");
+    expect(result.key).toEqual("MQTT_HOST");
+    expect(result.value).toEqual("localhost");
+    expect(result._origin).toEqual("environment");
+  });
+
+  test("fetchEnvironmentVariable resolving from table before environment should work", async () => {
+    process.env.API_HOST = "0.0.0.0";
+    await cockpit.createEnvironmentVariable("API_HOST", "127.0.0.1");
+    const result = await cockpit.fetchEnvironmentVariable("API_HOST");
+    expect(result.key).toEqual("API_HOST");
+    expect(result.value).toEqual("127.0.0.1");
+    expect(result._origin).toEqual("table");
+  });
+
+  test("fetchAllEnvironmentVariables should work", async () => {
+    const environmentVariable_1 = await cockpit.createEnvironmentVariable("API_HOST", "0.0.0.0");
+    const environmentVariable_2 = await cockpit.createEnvironmentVariable("MAX_LIMIT", 9999);
+    const result = await cockpit.fetchAllEnvironmentVariables();
+    expect(result).toHaveLength(2);
+    expect(result[0].key).toEqual(environmentVariable_2.key);
+    expect(result[1].key).toEqual(environmentVariable_1.key);
+  });
+
+  test("deleteEnvironmentVariable should work", async () => {
+    await cockpit.createEnvironmentVariable("NODE_EV", "test_env");
+    await cockpit.deleteEnvironmentVariable("NODE_EV");
+    const result = await cockpit.fetchAllEnvironmentVariables();
+    expect(result).toHaveLength(0);
   });
 });
