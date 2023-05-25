@@ -95,6 +95,10 @@ class TimerSystemTaskNode extends SystemTaskNode {
     };
   }
 
+  _setBag(bag) {
+    return bag;
+  }
+
   // eslint-disable-next-line no-unused-vars
   async _run(execution_data = {}) {
     if (!execution_data.timeout) {

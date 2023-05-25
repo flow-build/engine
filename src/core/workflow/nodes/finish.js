@@ -29,6 +29,10 @@ class FinishNode extends Node {
     return FinishNode.validate(this._spec);
   }
 
+  _setBag(bag) {
+    return bag;
+  }
+
   // eslint-disable-next-line no-unused-vars
   _run(execution_data, lisp) {
     return [execution_data, ProcessStatus.FINISHED];

@@ -64,6 +64,10 @@ class HttpSystemTaskNode extends SystemTaskNode {
     return [validation, JSON.stringify(validate.errors)];
   }
 
+  _mapResult(result){
+    return result?.data;
+  }
+
   static includesHTTPCode(code_array, answer_code) {
     const target_codes = code_array.map((code) => code.toString());
     const input_code = answer_code.toString();

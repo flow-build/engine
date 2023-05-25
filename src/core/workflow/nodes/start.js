@@ -132,6 +132,10 @@ class StartNode extends Node {
     };
     return [result, ProcessStatus.RUNNING];
   }
+
+  _setBag(bag) {
+    return bag;
+  }
 }
 
 module.exports = {

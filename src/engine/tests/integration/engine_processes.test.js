@@ -901,7 +901,7 @@ describe("Run process extract in nodes", () => {
     expect(workflow_process.state.status).toBe("finished");
     expect(workflow_process.state.node_id).toBe("END");
     expect(workflow_process.state.bag.activity.extracted).toBeTruthy();
-    expect(workflow_process.state.bag.startProcessData.process_id).toBeDefined();
+    expect(workflow_process.state.bag.startprocessdata.process_id).toBeDefined();
   });
 });
 

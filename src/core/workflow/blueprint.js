@@ -32,19 +32,23 @@ class Blueprint {
 
   static validate_nodes(spec) {
     const nodeSet = new Set();
+    const warnings = [];
     for (const node_spec of spec.nodes) {
       if (nodeSet.has(node_spec.id)) {
         return [false, `found existing node_id ${node_spec.id}`];
       }
       nodeSet.add(node_spec.id);
       const [is_valid, error] = Blueprint._parseNode(node_spec).validate();
+      const node_id = node_spec.id;
       if (!is_valid) {
-        const node_id = node_spec.id;
         const error_message = `node ${node_id}: ${error}`;
         return [false, error_message];
       }
+      if (node_spec?.extract !== node_spec?.extract?.toLowerCase()) {
+        warnings.push(`node ${node_id}: extract will be saved in lower case - ${node_spec?.extract?.toLowerCase()}`);
+      }
     }
-    return [true, null];
+    return [true, null, warnings];
   }
 
   static validate_lanes(spec) {
@@ -89,24 +93,26 @@ class Blueprint {
   }
 
   static async validate(spec) {
+    const warnings = {};
     const [is_valid, error] = new Validator(this.rules).validate(spec);
     if (!is_valid) {
       return [false, error];
     }
-    const [is_nodes_valid, nodes_error] = Blueprint.validate_nodes(spec);
+    const [is_nodes_valid, nodes_error, nodes_warnings] = Blueprint.validate_nodes(spec);
     if (!is_nodes_valid) {
       return [false, nodes_error];
     }
+    warnings.nodes = nodes_warnings;
     const blueprint_env_status = await Blueprint.validate_environment_variable(spec);
     if (!lodash.isEmpty(blueprint_env_status.nodes) && !lodash.isEmpty(blueprint_env_status.ambient)) {
       emitter.emit("BLUEPRINT.UNUSED_VARIABLES", "UNUSED ENVIRONMENT VARIABLES", {
         nodes: blueprint_env_status.nodes,
         ambient: blueprint_env_status.ambient,
       });
-      return [true, blueprint_env_status.ambient, blueprint_env_status.nodes];
+      return [true, blueprint_env_status.ambient, blueprint_env_status.nodes, warnings];
     } else if (!lodash.isEmpty(blueprint_env_status.nodes)) {
       emitter.emit("BLUEPRINT.UNUSED_VARIABLES", "UNUSED ENVIRONMENT VARIABLES", { nodes: blueprint_env_status.nodes });
-      return [true, blueprint_env_status.nodes];
+      return [true, blueprint_env_status.nodes, warnings];
     } else if (!lodash.isEmpty(blueprint_env_status.ambient)) {
       emitter.emit("BLUEPRINT.NON_EXISTENT_VARIABLES", "NON EXISTENT ENVIRONMENT VARIABLES", {
         ambient: blueprint_env_status.ambient,
@@ -121,7 +127,12 @@ class Blueprint {
       }
     }
 
-    return Blueprint.validate_lanes(spec);
+    const [is_lanes_valid, lanes_error] = Blueprint.validate_lanes(spec);
+    if (!is_lanes_valid) {
+      return [false, lanes_error];
+    }
+
+    return [true, null, warnings];
   }
 
   static async assert_is_valid(spec) {

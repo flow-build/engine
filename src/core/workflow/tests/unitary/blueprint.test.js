@@ -238,6 +238,16 @@ test("validation of spec with _extract in parameters works", async () => {
   expect(error).toBe("data/_extract must be boolean");
 });
 
+test("throw warning when using upper case in node extract", async () => {
+  const spec = _.cloneDeep(blueprints_.extract_node_blueprint);
+
+  const [is_valid, error, warnings] = await Blueprint.validate(spec);
+  expect(is_valid).toBeTruthy();
+  expect(error).toBeNull();
+  expect(warnings.nodes).toHaveLength(1);
+  expect(warnings.nodes[0]).toEqual("node NODE-TO-START-PROCESS: extract will be saved in lower case - startprocessdata");
+});
+
 describe("Blueprint.validate", () => {
   test("fails if node_id repeats", async () => {
     const blueprint_spec = _.cloneDeep(blueprints_.minimal);
