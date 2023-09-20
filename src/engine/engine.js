@@ -85,7 +85,7 @@ class Engine {
 
   static async _beat() {
     const TIMER_BATCH = process.env.TIMER_BATCH || 40;
-    const READY_PROCESS_BATCH = process.env.READY_PROCESS_BATCH || 10;
+    const PROCESS_BATCH = process.env.PROCESS_BATCH || 10;
     emitter.emit("ENGINE.HEARTBEAT", `HEARTBEAT @ [${new Date().toISOString()}]`);
 
     const max_connection_pool = Timer.getPersist()._db.context.client.pool.max
@@ -125,50 +125,50 @@ class Engine {
       }
     }
 
-    const ready_processes = await Process.getPersist()._db.transaction(async (trx) => {
+    const processes = await Process.getPersist()._db.transaction(async (trx) => {
       try {
-        emitter.emit("ENGINE.READY_PROCESSES_FETCHING", `FETCHING READY PROCESSES ON HEARTBEAT BATCH [${READY_PROCESS_BATCH}]`);
-        const locked_ready_processes = await trx("process")
+        emitter.emit("ENGINE.PROCESSES_FETCHING", `FETCHING PROCESSES ON HEARTBEAT BATCH [${PROCESS_BATCH}]`);
+        const locked_processes = await trx("process")
           .select("process.*")
           .join("process_state", "process_state.id", "process.current_state_id")
           .where("engine_id", "!=", ENGINE_ID)
           .where("current_status", "running")
-          .limit(READY_PROCESS_BATCH)
+          .limit(PROCESS_BATCH)
           .forUpdate()
           .skipLocked();
-        emitter.emit("ENGINE.READY_PROCESSES_FETCHED", `  FETCHED [${locked_ready_processes.length}] READY PROCESSES ON HEARTBEAT`, {
-          ready_processes: locked_ready_processes.length,
+        emitter.emit("ENGINE.PROCESSES_FETCHED", `  FETCHED [${locked_processes.length}] PROCESSES ON HEARTBEAT`, {
+          processes: locked_processes.length,
         });
         return await Promise.all(
-          locked_ready_processes.map(async (ready_process) => {
-            emitter.emit("ENGINE.READY_PROCESS_FETCHING", `  FETCHING PS FOR READY PROCESS [${ready_process.id}] ON HEARTBEAT`, {
-              process_id: ready_process.id,
+          locked_processes.map(async (process) => {
+            emitter.emit("ENGINE.PROCESS_FETCHING", `  FETCHING PS FOR PROCESS [${process.id}] ON HEARTBEAT`, {
+              process_id: process.id,
             });
-            ready_process.state = await trx("process_state")
+            process.state = await trx("process_state")
               .select()
-              .where("id", ready_process.current_state_id)
+              .where("id", process.current_state_id)
               .where("engine_id", "!=", ENGINE_ID)
               .forUpdate()
               .noWait()
               .first();
-            emitter.emit("ENGINE.READY_PROCESS_FETCHED", `  FETCHED PS FOR READY PROCESS [${ready_process.id}] ON HEARTBEAT`, {
-              process_id: ready_process.id,
+            emitter.emit("ENGINE.PROCESS_FETCHED", `  FETCHED PS FOR PROCESS [${process.id}] ON HEARTBEAT`, {
+              process_id: process.id,
             });
-            if (ready_process.state) {
-              return Process.deserialize(ready_process);
+            if (process.state) {
+              return Process.deserialize(process);
             }
           })
         );
       } catch (e) {
-        emitter.emit("ENGINE.READY_PROCESS.ERROR", "  ERROR FETCHING READY PROCESSES ON HEARTBEAT", { error: e });
+        emitter.emit("ENGINE.PROCESS.ERROR", "  ERROR FETCHING PROCESSES ON HEARTBEAT", { error: e });
         throw new Error(e);
       }
     });
-    const continue_promises = ready_processes.map((process) => {
+    const continue_promises = processes.map((process) => {
       if (process) {
         emitter.emit(
-          "ENGINE.READY_PROCESS.CONTINUE",
-          `    START CONTINUE READY PROCESS PID [${process.id}] AND STATE [${process.state.id}] ON HEARTBEAT`,
+          "ENGINE.PROCESS.CONTINUE",
+          `    START CONTINUE PROCESS PID [${process.id}] AND STATE [${process.state.id}] ON HEARTBEAT`,
           {
             process_id: process.id,
             process_state_id: process.state.id,
