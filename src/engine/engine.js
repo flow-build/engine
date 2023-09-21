@@ -85,7 +85,7 @@ class Engine {
 
   static async _beat() {
     const TIMER_BATCH = process.env.TIMER_BATCH || 40;
-    const ORPHAN_BATCH = process.env.ORPHAN_BATCH || 10;
+    const PROCESS_BATCH = process.env.PROCESS_BATCH || 10;
     emitter.emit("ENGINE.HEARTBEAT", `HEARTBEAT @ [${new Date().toISOString()}]`);
 
     const max_connection_pool = Timer.getPersist()._db.context.client.pool.max
@@ -125,50 +125,50 @@ class Engine {
       }
     }
 
-    const orphan_process = await Process.getPersist()._db.transaction(async (trx) => {
+    const processes = await Process.getPersist()._db.transaction(async (trx) => {
       try {
-        emitter.emit("ENGINE.ORPHANS_FETCHING", `FETCHING ORPHAN PROCESSES ON HEARTBEAT BATCH [${ORPHAN_BATCH}]`);
-        const locked_orphans = await trx("process")
+        emitter.emit("ENGINE.PROCESSES_FETCHING", `FETCHING PROCESSES ON HEARTBEAT BATCH [${PROCESS_BATCH}]`);
+        const locked_processes = await trx("process")
           .select("process.*")
           .join("process_state", "process_state.id", "process.current_state_id")
           .where("engine_id", "!=", ENGINE_ID)
           .where("current_status", "running")
-          .limit(ORPHAN_BATCH)
+          .limit(PROCESS_BATCH)
           .forUpdate()
           .skipLocked();
-        emitter.emit("ENGINE.ORPHANS_FETCHED", `  FETCHED [${locked_orphans.length}] ORPHANS ON HEARTBEAT`, {
-          orphans: locked_orphans.length,
+        emitter.emit("ENGINE.PROCESSES_FETCHED", `  FETCHED [${locked_processes.length}] PROCESSES ON HEARTBEAT`, {
+          processes: locked_processes.length,
         });
         return await Promise.all(
-          locked_orphans.map(async (orphan) => {
-            emitter.emit("ENGINE.ORPHAN_FETCHING", `  FETCHING PS FOR ORPHAN [${orphan.id}] ON HEARTBEAT`, {
-              process_id: orphan.id,
+          locked_processes.map(async (process) => {
+            emitter.emit("ENGINE.PROCESS_FETCHING", `  FETCHING PS FOR PROCESS [${process.id}] ON HEARTBEAT`, {
+              process_id: process.id,
             });
-            orphan.state = await trx("process_state")
+            process.state = await trx("process_state")
               .select()
-              .where("id", orphan.current_state_id)
+              .where("id", process.current_state_id)
               .where("engine_id", "!=", ENGINE_ID)
               .forUpdate()
               .noWait()
               .first();
-            emitter.emit("ENGINE.ORPHAN_FETCHED", `  FETCHED PS FOR ORPHAN [${orphan.id}] ON HEARTBEAT`, {
-              process_id: orphan.id,
+            emitter.emit("ENGINE.PROCESS_FETCHED", `  FETCHED PS FOR PROCESS [${process.id}] ON HEARTBEAT`, {
+              process_id: process.id,
             });
-            if (orphan.state) {
-              return Process.deserialize(orphan);
+            if (process.state) {
+              return Process.deserialize(process);
             }
           })
         );
       } catch (e) {
-        emitter.emit("ENGINE.ORPHANS.ERROR", "  ERROR FETCHING ORPHANS ON HEARTBEAT", { error: e });
+        emitter.emit("ENGINE.PROCESS.ERROR", "  ERROR FETCHING PROCESSES ON HEARTBEAT", { error: e });
         throw new Error(e);
       }
     });
-    const continue_promises = orphan_process.map((process) => {
+    const continue_promises = processes.map((process) => {
       if (process) {
         emitter.emit(
-          "ENGINE.ORPHAN.CONTINUE",
-          `    START CONTINUE ORPHAN PID [${process.id}] AND STATE [${process.state.id}] ON HEARTBEAT`,
+          "ENGINE.PROCESS.CONTINUE",
+          `    START CONTINUE PROCESS PID [${process.id}] AND STATE [${process.state.id}] ON HEARTBEAT`,
           {
             process_id: process.id,
             process_state_id: process.state.id,
