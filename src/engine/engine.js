@@ -18,6 +18,7 @@ const { ProcessStatus } = require("./../core/workflow/process_state");
 const { validateTimeInterval } = require("../core/utils/ajvValidator");
 const { validate: uuidValidate } = require("uuid");
 const { readEnvironmentVariableAsBool, readEnvironmentVariableAsNumber } = require("../core/utils/environment");
+const { engineHeartBeat } = require("./heartbeat/base");
 
 function getActivityManagerFromData(activity_manager_data) {
   const activity_manager = ActivityManager.deserialize(activity_manager_data);
@@ -54,6 +55,14 @@ class Engine {
     return Engine._heart;
   }
 
+  static set beat(beat) {
+    Engine._beat = beat;
+  }
+
+  static get beat() {
+    return Engine._beat;
+  }
+
   constructor(persist_mode, persist_args, logger_level) {
     const heartBeat = readEnvironmentVariableAsBool("ENGINE_HEARTBEAT", true);
     createLogger(logger_level);
@@ -66,6 +75,7 @@ class Engine {
     Engine.instance = this;
     this.emitter = emitter;
     if (heartBeat) {
+      Engine.beat = engineHeartBeat;
       if (process.env.TIMER_BATCH && process.env.TIMER_BATCH > 0 && process.env.TIMER_QUEUE) {
         emitter.emit("ENGINE.CONTRUCTOR", "BOTH BATCH AND QUEUE ACTIVE", {
           batch: process.env.TIMER_BATCH,
@@ -81,103 +91,6 @@ class Engine {
     } else {
       emitter.emit("ENGINE.CONTRUCTOR", "HEARTBEAT NOT INITIALIZED", {});
     }
-  }
-
-  static async _beat() {
-    const TIMER_BATCH = process.env.TIMER_BATCH || 40;
-    const PROCESS_BATCH = process.env.PROCESS_BATCH || 10;
-    emitter.emit("ENGINE.HEARTBEAT", `HEARTBEAT @ [${new Date().toISOString()}]`);
-
-    const max_connection_pool = Timer.getPersist()._db.context.client.pool.max
-    const connections = Timer.getPersist()._db.context.client.pool.free.length
-
-    const minConnections = 1
-    if (connections >= max_connection_pool - minConnections) {
-      throw new Error('MAX POOL CONNECTIONS REACHED')
-    }
-
-    if (TIMER_BATCH > 0) {
-      emitter.emit("ENGINE.FETCHING_TIMERS", `  FETCHING TIMERS ON HEARTBEAT BATCH [${TIMER_BATCH}]`);
-      const timerTrx = await Timer.openTransaction();
-      try {
-        let locked_timers = await Timer.batchLock(TIMER_BATCH, timerTrx);
-        emitter.emit("ENGINE.TIMERS", `  FETCHED [${locked_timers.length}] TIMERS ON HEARTBEAT`, {
-          timers: locked_timers.length,
-        });
-
-        if (connections + (locked_timers.length) >= max_connection_pool - 1) {
-          const maxTimers = max_connection_pool - minConnections - 1 - connections
-          locked_timers = locked_timers.slice(0, maxTimers)
-        }
-
-        await Promise.all(
-          locked_timers.map((t_lock) => {
-            emitter.emit("ENGINE.FIRING_TIMER", `  FIRING TIMER [${t_lock.id}] ON HEARTBEAT`, {
-              timer_id: t_lock.id,
-            });
-            return Timer.fire(t_lock, timerTrx);
-          })
-        );
-        await timerTrx.commit();
-      } catch (e) {
-        await timerTrx.rollback();
-        throw new Error(e);
-      }
-    }
-
-    const processes = await Process.getPersist()._db.transaction(async (trx) => {
-      try {
-        emitter.emit("ENGINE.PROCESSES_FETCHING", `FETCHING PROCESSES ON HEARTBEAT BATCH [${PROCESS_BATCH}]`);
-        const locked_processes = await trx("process")
-          .select("process.*")
-          .join("process_state", "process_state.id", "process.current_state_id")
-          .where("engine_id", "!=", ENGINE_ID)
-          .where("current_status", "running")
-          .limit(PROCESS_BATCH)
-          .forUpdate()
-          .skipLocked();
-        emitter.emit("ENGINE.PROCESSES_FETCHED", `  FETCHED [${locked_processes.length}] PROCESSES ON HEARTBEAT`, {
-          processes: locked_processes.length,
-        });
-        return await Promise.all(
-          locked_processes.map(async (process) => {
-            emitter.emit("ENGINE.PROCESS_FETCHING", `  FETCHING PS FOR PROCESS [${process.id}] ON HEARTBEAT`, {
-              process_id: process.id,
-            });
-            process.state = await trx("process_state")
-              .select()
-              .where("id", process.current_state_id)
-              .where("engine_id", "!=", ENGINE_ID)
-              .forUpdate()
-              .noWait()
-              .first();
-            emitter.emit("ENGINE.PROCESS_FETCHED", `  FETCHED PS FOR PROCESS [${process.id}] ON HEARTBEAT`, {
-              process_id: process.id,
-            });
-            if (process.state) {
-              return Process.deserialize(process);
-            }
-          })
-        );
-      } catch (e) {
-        emitter.emit("ENGINE.PROCESS.ERROR", "  ERROR FETCHING PROCESSES ON HEARTBEAT", { error: e });
-        throw new Error(e);
-      }
-    });
-    const continue_promises = processes.map((process) => {
-      if (process) {
-        emitter.emit(
-          "ENGINE.PROCESS.CONTINUE",
-          `    START CONTINUE PROCESS PID [${process.id}] AND STATE [${process.state.id}] ON HEARTBEAT`,
-          {
-            process_id: process.id,
-            process_state_id: process.state.id,
-          }
-        );
-        return process.continue({}, process.state._actor_data);
-      }
-    });
-    await Promise.all(continue_promises);
   }
 
   static setNextHeartBeat() {
