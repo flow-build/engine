@@ -27,6 +27,15 @@ class ProcessStateKnexPersist extends KnexPersist {
       })
       .first();
   }
+
+  async getLocked(processStateId, trx) {
+    return await trx(this._table)
+      .select()
+      .where("id", processStateId)
+      .forUpdate()
+      .noWait()
+      .first();
+  }
 }
 
 module.exports = { ProcessStateKnexPersist };
