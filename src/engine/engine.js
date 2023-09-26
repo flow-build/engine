@@ -75,6 +75,8 @@ class Engine {
     Engine.instance = this;
     this.emitter = emitter;
     if (heartBeat) {
+      Engine.instance.beat_instances = process.env.HEARTBEAT_INSTANCES || 'TIMER,PROCESS';
+      Engine.instance.beat_instance = Engine.instance.beat_instances?.split(',')?.[0];
       Engine.beat = engineHeartBeat;
       if (process.env.TIMER_BATCH && process.env.TIMER_BATCH > 0 && process.env.TIMER_QUEUE) {
         emitter.emit("ENGINE.CONTRUCTOR", "BOTH BATCH AND QUEUE ACTIVE", {
@@ -96,7 +98,7 @@ class Engine {
   static setNextHeartBeat() {
     return setTimeout(async () => {
       try {
-        await Engine._beat();
+        await Engine._beat(Engine.instance);
       } catch (e) {
         emitter.emit("ENGINE.HEART.ERROR", `HEART FAILURE @ ENGINE_ID [${ENGINE_ID}]`, {
           engine_id: ENGINE_ID,
