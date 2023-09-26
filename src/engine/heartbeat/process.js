@@ -1,21 +1,14 @@
 
 const emitter = require("../../core/utils/emitter");
 const { Process } = require("../../core/workflow/process");
-const { ENGINE_ID } = require("../../core/workflow/process_state");
+const { ProcessState } = require("../../core/workflow/process_state");
 
 const processHeartBeat = async () => {
   const PROCESS_BATCH = process.env.PROCESS_BATCH || 10;
   const processes = await Process.getPersist()._db.transaction(async (trx) => {
     try {
       emitter.emit("ENGINE.PROCESSES_FETCHING", `  FETCHING PROCESSES ON HEARTBEAT BATCH [${PROCESS_BATCH}]`);
-      const locked_processes = await trx("process")
-        .select("process.*")
-        .join("process_state", "process_state.id", "process.current_state_id")
-        .where("engine_id", "!=", ENGINE_ID)
-        .where("current_status", "running")
-        .limit(PROCESS_BATCH)
-        .forUpdate()
-        .skipLocked();
+      const locked_processes = await Process.fetchAndLockBatch(PROCESS_BATCH, trx);
       emitter.emit("ENGINE.PROCESSES_FETCHED", `  FETCHED [${locked_processes.length}] PROCESSES ON HEARTBEAT`, {
         processes: locked_processes.length,
       });
@@ -24,18 +17,12 @@ const processHeartBeat = async () => {
           emitter.emit("ENGINE.PROCESS_FETCHING", `  FETCHING PS FOR PROCESS [${process.id}] ON HEARTBEAT`, {
             process_id: process.id,
           });
-          process.state = await trx("process_state")
-            .select()
-            .where("id", process.current_state_id)
-            .where("engine_id", "!=", ENGINE_ID)
-            .forUpdate()
-            .noWait()
-            .first();
+          process.state = await ProcessState.fetchAndLock(process._current_state_id, trx);
           emitter.emit("ENGINE.PROCESS_FETCHED", `  FETCHED PS FOR PROCESS [${process.id}] ON HEARTBEAT`, {
             process_id: process.id,
           });
           if (process.state) {
-            return Process.deserialize(process);
+            return process;
           }
         })
       );

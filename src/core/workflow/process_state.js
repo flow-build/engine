@@ -93,6 +93,11 @@ class ProcessState extends PersistedEntity {
     return ProcessState.deserialize(state);
   }
 
+  static async fetchAndLock(processStateId, trx) {
+    const state = await this.getPersist().getAndLock(processStateId, trx);
+    return ProcessState.deserialize(state);
+  }
+
   constructor(
     process_id,
     step_number,

@@ -198,6 +198,27 @@ class ProcessKnexPersist extends KnexPersist {
     }
   }
 
+  async lockBatch(batch, trx) {
+    return await trx(this._table)
+      .select(`${this._table}.*`)
+      .join(this._state_table, "process_state.id", "process.current_state_id")
+      .where("current_status", "running")
+      .limit(batch)
+      .forUpdate()
+      .skipLocked();
+  }
+
+  async getAndLock(id, processStateId, trx) {
+    return await trx(this._table)
+      .select("id", "current_state_id")
+      .from("process")
+      .where("id", id)
+      .where("current_state_id", processStateId)
+      .first()
+      .forUpdate()
+      .noWait();
+  }
+
   _getTasks(filters) {
     return this._db
       .select(

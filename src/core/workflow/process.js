@@ -108,6 +108,11 @@ class Process extends PersistedEntity {
     return last_step_number + 1;
   }
 
+  static async fetchAndLockBatch(batch, trx) {
+    const processes = await Process.getPersist().lockBatch(batch, trx);
+    return _.map(processes, (process) => Process.deserialize(process));
+  }
+
   constructor(workflow_data, blueprint_spec) {
     super();
 
@@ -380,14 +385,7 @@ class Process extends PersistedEntity {
   }
 
   async __inerLoop(current_state_id, { custom_lisp, actor_data }, trx) {
-    const p_lock = await trx
-      .select("id", "current_state_id")
-      .from("process")
-      .where("id", this.id)
-      .where("current_state_id", current_state_id)
-      .first()
-      .forUpdate()
-      .noWait();
+    const p_lock = await this.getPersist().getAndLock(this.id, current_state_id, trx);
     if (!p_lock) {
       throw new Error(`No process found for lock, process_id [${this.id}] current_state_id [${current_state_id}]`);
     }
@@ -395,13 +393,7 @@ class Process extends PersistedEntity {
       process_id: p_lock.id,
     });
 
-    const ps_lock = await trx
-      .select("id")
-      .from("process_state")
-      .first()
-      .where("id", current_state_id)
-      .forUpdate()
-      .noWait();
+    const ps_lock = await ProcessState.getPersist().getAndLock(current_state_id, trx);
     if (!ps_lock) {
       throw new Error(`No lock for process state [${current_state_id}]`);
     }
