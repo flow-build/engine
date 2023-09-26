@@ -385,7 +385,7 @@ class Process extends PersistedEntity {
   }
 
   async __inerLoop(current_state_id, { custom_lisp, actor_data }, trx) {
-    const p_lock = await this.getPersist().getLocked(this.id, current_state_id, trx);
+    const p_lock = await this.getPersist().getAndLock(this.id, current_state_id, trx);
     if (!p_lock) {
       throw new Error(`No process found for lock, process_id [${this.id}] current_state_id [${current_state_id}]`);
     }
@@ -393,7 +393,7 @@ class Process extends PersistedEntity {
       process_id: p_lock.id,
     });
 
-    const ps_lock = await ProcessState.getPersist().getLocked(current_state_id, trx);
+    const ps_lock = await ProcessState.getPersist().getAndLock(current_state_id, trx);
     if (!ps_lock) {
       throw new Error(`No lock for process state [${current_state_id}]`);
     }

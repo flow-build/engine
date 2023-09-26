@@ -208,7 +208,7 @@ class ProcessKnexPersist extends KnexPersist {
       .skipLocked();
   }
 
-  async getLocked(id, processStateId, trx) {
+  async getAndLock(id, processStateId, trx) {
     return await trx(this._table)
       .select("id", "current_state_id")
       .from("process")
