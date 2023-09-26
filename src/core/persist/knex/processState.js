@@ -28,7 +28,7 @@ class ProcessStateKnexPersist extends KnexPersist {
       .first();
   }
 
-  async getLocked(processStateId, trx) {
+  async getAndLock(processStateId, trx) {
     return await trx(this._table)
       .select()
       .where("id", processStateId)

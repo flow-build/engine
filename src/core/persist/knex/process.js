@@ -198,7 +198,7 @@ class ProcessKnexPersist extends KnexPersist {
     }
   }
 
-  async getAllLocked(batch, trx) {
+  async lockBatch(batch, trx) {
     return await trx(this._table)
       .select(`${this._table}.*`)
       .join(this._state_table, "process_state.id", "process.current_state_id")

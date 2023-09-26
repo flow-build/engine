@@ -108,8 +108,8 @@ class Process extends PersistedEntity {
     return last_step_number + 1;
   }
 
-  static async fetchLocked(batch, trx) {
-    const processes = await Process.getPersist().getAllLocked(batch, trx);
+  static async fetchAndLockBatch(batch, trx) {
+    const processes = await Process.getPersist().lockBatch(batch, trx);
     return _.map(processes, (process) => Process.deserialize(process));
   }
 

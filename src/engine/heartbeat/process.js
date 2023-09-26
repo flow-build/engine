@@ -8,7 +8,7 @@ const processHeartBeat = async () => {
   const processes = await Process.getPersist()._db.transaction(async (trx) => {
     try {
       emitter.emit("ENGINE.PROCESSES_FETCHING", `  FETCHING PROCESSES ON HEARTBEAT BATCH [${PROCESS_BATCH}]`);
-      const locked_processes = await Process.fetchLocked(PROCESS_BATCH, trx);
+      const locked_processes = await Process.fetchAndLockBatch(PROCESS_BATCH, trx);
       emitter.emit("ENGINE.PROCESSES_FETCHED", `  FETCHED [${locked_processes.length}] PROCESSES ON HEARTBEAT`, {
         processes: locked_processes.length,
       });
@@ -17,7 +17,7 @@ const processHeartBeat = async () => {
           emitter.emit("ENGINE.PROCESS_FETCHING", `  FETCHING PS FOR PROCESS [${process.id}] ON HEARTBEAT`, {
             process_id: process.id,
           });
-          process.state = await ProcessState.fetchLocked(process._current_state_id, trx);
+          process.state = await ProcessState.fetchAndLock(process._current_state_id, trx);
           emitter.emit("ENGINE.PROCESS_FETCHED", `  FETCHED PS FOR PROCESS [${process.id}] ON HEARTBEAT`, {
             process_id: process.id,
           });
