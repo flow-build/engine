@@ -99,6 +99,38 @@ class TimerSystemTaskNode extends SystemTaskNode {
     return bag;
   }
 
+  async run({ bag = {}, input = {}, external_input = {}, actor_data = {}, environment = {}, parameters = {} }, lisp) {
+    const hrt_run_start = process.hrtime();
+    try {
+      const execution_data = this._preProcessing({ bag, input, actor_data, environment, parameters });
+      const [result, status] = await this._run(execution_data, lisp);
+
+      let next_node_id = this.next(result);
+      if (status === ProcessStatus.PENDING) {
+        next_node_id = this.id;
+      }
+
+      const hrt_run_interval = process.hrtime(hrt_run_start);
+      const time_elapsed = Math.ceil(hrt_run_interval[0] * 1000 + hrt_run_interval[1] / 1000000);
+      const node_extract = this._spec?.extract;
+
+      return {
+        node_id: this.id,
+        bag: this._setBag(bag, result, parameters?._extract, node_extract),
+        external_input: external_input,
+        result: result,
+        error: null,
+        status: status,
+        next_node_id: next_node_id,
+        time_elapsed: time_elapsed,
+      };
+    } catch (err) {
+      const hrt_run_interval = process.hrtime(hrt_run_start);
+      const time_elapsed = Math.ceil(hrt_run_interval[0] * 1000 + hrt_run_interval[1] / 1000000);
+      return this._processError(err, { bag, external_input, time_elapsed });
+    }
+  }
+
   // eslint-disable-next-line no-unused-vars
   async _run(execution_data = {}) {
     if (!execution_data.timeout) {
