@@ -1,4 +1,4 @@
-require('dotenv').config();
+require("dotenv").config();
 const emitter = require("../../core/utils/emitter");
 const { timerHeartBeat } = require("./timer");
 const { processHeartBeat } = require("./process");
