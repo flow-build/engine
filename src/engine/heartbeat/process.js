@@ -3,8 +3,8 @@ const emitter = require("../../core/utils/emitter");
 const { Process } = require("../../core/workflow/process");
 const { ProcessState } = require("../../core/workflow/process_state");
 
-const processHeartBeat = async () => {
-  const PROCESS_BATCH = process.env.PROCESS_BATCH || 10;
+const processHeartBeat = async (PROCESS_BATCH) => {
+  emitter.emit("ENGINE.HEARTBEAT", `HEARTBEAT INSTANCE PROCESS`);
   const processes = await Process.getPersist()._db.transaction(async (trx) => {
     try {
       emitter.emit("ENGINE.PROCESSES_FETCHING", `  FETCHING PROCESSES ON HEARTBEAT BATCH [${PROCESS_BATCH}]`);
