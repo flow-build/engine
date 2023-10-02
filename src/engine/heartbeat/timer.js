@@ -1,8 +1,8 @@
 const emitter = require("../../core/utils/emitter");
 const { Timer } = require("../../core/workflow/timer");
 
-const timerHeartBeat = async () => {
-  const TIMER_BATCH = process.env.TIMER_BATCH || 40;
+const timerHeartBeat = async (TIMER_BATCH) => {
+  emitter.emit("ENGINE.HEARTBEAT", `HEARTBEAT INSTANCE TIMER`);
 
   const max_connection_pool = Timer.getPersist()._db.context.client.pool.max
   const connections = Timer.getPersist()._db.context.client.pool.free.length
