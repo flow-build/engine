@@ -406,9 +406,9 @@ test("run process with http retries", async () => {
 
     workflow_process = await engine.runProcess(workflow_process.id, actors_.simpleton);
 
-    await sleep(5000);
+    await sleep(7000);
 
-    expect(process_state_history).toHaveLength(6);
+    expect(process_state_history).toHaveLength(8);
 
     let http_script = process_state_history[2];
     expect(http_script.node_id).toEqual("2");
@@ -420,23 +420,23 @@ test("run process with http retries", async () => {
       timeout: 1,
     });
 
-    http_script = process_state_history[3];
+    http_script = process_state_history[4];
     expect(http_script.node_id).toEqual("2");
     expect(http_script.result).toEqual({
       attempt: 2,
       data: "",
       status: 503,
-      step_number: 4,
+      step_number: 5,
       timeout: 1,
     });
 
-    http_script = process_state_history[4];
+    http_script = process_state_history[6];
     expect(http_script.node_id).toEqual("2");
     expect(http_script.result).toEqual({
       attempt: 3,
       data: "",
       status: 503,
-      step_number: 5,
+      step_number: 7,
       timeout: 1,
     });
   } finally {

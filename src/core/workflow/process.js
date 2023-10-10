@@ -693,7 +693,25 @@ class Process extends PersistedEntity {
       case ProcessStatus.EXPIRED:
         break;
       case ProcessStatus.PENDING:
-        await this.runPendingProcess(timer.params.actor_data, trx);
+        const step_number = await this.getNextStepNumber();
+        this.state.result.step_number = step_number;
+        const current_node = this._blueprint.fetchNode(this._state.node_id);
+        const next_node_id = current_node.next(this.state.result);
+        this.state = new ProcessState(
+          this.id,
+          step_number,
+          this._state.node_id,
+          this._state.bag,
+          null,
+          this.state.result,
+          null,
+          ProcessStatus.RUNNING,
+          next_node_id,
+          this._state.actor_data,
+          null
+        );
+        await this.save(trx);
+        await this._notifyProcessState({});
         break;
       case ProcessStatus.RUNNING:
         //TODO: Avaliar como expirar um processo running.
