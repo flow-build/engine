@@ -18,7 +18,7 @@ const { ProcessStatus } = require("./../core/workflow/process_state");
 const { validateTimeInterval } = require("../core/utils/ajvValidator");
 const { validate: uuidValidate } = require("uuid");
 const { readEnvironmentVariableAsBool, readEnvironmentVariableAsNumber } = require("../core/utils/environment");
-const { engineHeartBeat } = require("./heartbeat/base");
+const { engineHeartBeat, getBeatInstances } = require("./heartbeat/base");
 
 function getActivityManagerFromData(activity_manager_data) {
   const activity_manager = ActivityManager.deserialize(activity_manager_data);
@@ -75,8 +75,8 @@ class Engine {
     Engine.instance = this;
     this.emitter = emitter;
     if (heartBeat) {
-      Engine.instance.beat_instances = process.env.HEARTBEAT_INSTANCES || 'TIMER,PROCESS';
-      Engine.instance.beat_instance = Engine.instance.beat_instances?.split(',')?.[0];
+      Engine.instance.beat_instances = getBeatInstances();
+      Engine.instance.current_instance = Engine.instance?.beat_instances?.[0];
       Engine.beat = engineHeartBeat;
       if (process.env.TIMER_BATCH && process.env.TIMER_BATCH > 0 && process.env.TIMER_QUEUE) {
         emitter.emit("ENGINE.CONTRUCTOR", "BOTH BATCH AND QUEUE ACTIVE", {

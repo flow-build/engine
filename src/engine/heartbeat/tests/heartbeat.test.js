@@ -1,10 +1,9 @@
 const settings = require("../../../../settings/tests/settings");
-const { Engine } = require("../../engine");
 const { PersistorProvider } = require("../../../core/persist/provider");
 const { Process } = require("../../../core/workflow/process");
 const { processHeartBeat } = require("../process");
 const { timerHeartBeat } = require("../timer");
-const { engineHeartBeat } = require("../base");
+const { engineHeartBeat, getBeatInstances } = require("../base");
 
 jest.mock("../process", () => {
   const actualModule = jest.requireActual("../process");
@@ -27,17 +26,15 @@ beforeEach(async () => {
 });
 
 afterAll(async () => {
-  Engine.kill();
   await _clean();
   if (settings.persist_options[0] === "knex") {
     await Process.getPersist()._db.destroy();
   }
 });
 
-test("engineHeartBeat runs only for TIMER when beat_instance=TIMER", async () => {
+test("engineHeartBeat runs only for TIMER when current_instance=TIMER", async () => {
   const minimalEngine = {
-    beat_instance: 'TIMER',
-    beat_instances: 'TIMER',
+    current_instance: 'TIMER',
   }
   await engineHeartBeat(minimalEngine);
 
@@ -45,10 +42,9 @@ test("engineHeartBeat runs only for TIMER when beat_instance=TIMER", async () =>
   expect(processHeartBeat).not.toHaveBeenCalled();
 });
 
-test("engineHeartBeat runs only for PROCESS when beat_instance=PROCESS", async () => {
+test("engineHeartBeat runs only for PROCESS when current_instance=PROCESS", async () => {
   const minimalEngine = {
-    beat_instance: 'PROCESS',
-    beat_instances: 'PROCESS',
+    current_instance: 'PROCESS',
   }
   await engineHeartBeat(minimalEngine);
 
@@ -56,10 +52,10 @@ test("engineHeartBeat runs only for PROCESS when beat_instance=PROCESS", async (
   expect(timerHeartBeat).not.toHaveBeenCalled();
 });
 
-test("engineHeartBeat runs for both TIMER and PROCESS when beat_instance=TIMER,PROCESS", async () => {
+test("engineHeartBeat runs for both TIMER and PROCESS when beat_instances length is 2", async () => {
   const minimalEngine = {
-    beat_instance: 'TIMER',
-    beat_instances: 'TIMER,PROCESS',
+    current_instance: 'TIMER',
+    beat_instances: ['TIMER' , 'PROCESS'],
   }
 
   await engineHeartBeat(minimalEngine);
@@ -67,6 +63,33 @@ test("engineHeartBeat runs for both TIMER and PROCESS when beat_instance=TIMER,P
 
   expect(processHeartBeat).toHaveBeenCalled();
   expect(timerHeartBeat).toHaveBeenCalled();
+});
+
+test("getBeatInstances runs for TIMER_BATCH = 10", async () => {
+  process.env.TIMER_BATCH = 10;
+
+  const beatInstances = getBeatInstances();
+
+  expect(beatInstances).toHaveLength(1);
+  process.env.TIMER_BATCH = 0;
+});
+
+test("getBeatInstances runs for PROCESS_BATCH = 10", async () => {
+  process.env.PROCESS_BATCH = 10;
+
+  const beatInstances = getBeatInstances();
+
+  expect(beatInstances).toHaveLength(1);
+  process.env.PROCESS_BATCH = 0;
+});
+
+test("getBeatInstances runs for TIMER_BATCH = 10 and PROCESS_BATCH = 10", async () => {
+  process.env.TIMER_BATCH = 10;
+  process.env.PROCESS_BATCH = 10;
+
+  const beatInstances = getBeatInstances();
+
+  expect(beatInstances).toHaveLength(2);
 });
 
 const _clean = async () => {
