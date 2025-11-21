@@ -64,9 +64,12 @@ function validateData(schema, data) {
   }
 }
 
-function validateActivityManager(schema, data) {
+function validateActivityManager(schema, data, options = { ignoreRequired: false }) {
   let schemaValidate = _.cloneDeep(schema);
   schemaValidate.type = "object";
+  if (options.ignoreRequired) {
+    delete schemaValidate.required;
+  }
   const is_valid = ajv.validate(schemaValidate, data);
   if (!is_valid) {
     throw new Error(ajv.errorsText());

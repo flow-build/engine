@@ -64,6 +64,12 @@ class UserTaskNode extends ParameterizedNode {
             },
             activity_schema: { type: "object" },
             activity_manager: { type: "string", enum: ["commit", "notify"] },
+            activity_options: {
+              type: "object",
+              properties: {
+                ignore_required_on_commit: { type: "boolean" },
+              },
+            },
           },
         },
         events: { type: "array", items: eventSchema },
@@ -129,6 +135,9 @@ class UserTaskNode extends ParameterizedNode {
         }
         if (this._spec.parameters.activity_schema) {
           activity_manager.parameters.activity_schema = this._spec.parameters.activity_schema;
+        }
+        if (this._spec.parameters.activity_options) {
+          activity_manager.parameters.activity_options = this._spec.parameters.activity_options;
         }
         let next_node_id = this.id;
         let status = ProcessStatus.WAITING;
