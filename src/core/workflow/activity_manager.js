@@ -374,7 +374,7 @@ class ActivityManager extends PersistedEntity {
     return this.props.result;
   }
 
-  async commitActivity(process_id, actor_data, external_input, activity_schema) {
+  async commitActivity(process_id, actor_data, external_input, activity_schema, ignore_required_on_commit) {
     if (this.parameters.encrypted_data) {
       const crypto = crypto_manager.getCrypto();
       for (const encrypted_data of this.parameters.encrypted_data) {
@@ -387,7 +387,7 @@ class ActivityManager extends PersistedEntity {
     }
 
     if (activity_schema) {
-      ajvValidator.validateActivityManager(activity_schema, external_input);
+      ajvValidator.validateActivityManager(activity_schema, external_input, { ignoreRequired: ignore_required_on_commit });
     }
 
     const activity = await new Activity(this._id, actor_data, external_input, ActivityStatus.STARTED).save();

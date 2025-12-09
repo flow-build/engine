@@ -13,6 +13,7 @@ const workflow_persistor = persistor.getPersistInstance("Workflow");
 const process_persistor = persistor.getPersistInstance("Process");
 const process_state_persistor = persistor.getPersistInstance("ProcessState");
 const am_persistor = persistor.getPersistInstance("ActivityManager");
+const activity_persistor = persistor.getPersistInstance("Activity")
 
 const workflowId = uuid();
 const processId = uuid();
@@ -81,7 +82,310 @@ describe("ActivityManager", () => {
   });
 
   test("beginActivity", () => {});
-  test("commitActivity", () => {});
+
+  describe("commitActivity", () => {
+    test("should commit activity without schema validation", async () => {
+      const mySample = _.cloneDeep(samples.minimal);
+      const myAm = new ActivityManager(
+        mySample.process_state_id,
+        undefined,
+        mySample.props,
+        mySample.parameters
+      );
+      await myAm.save();
+
+      const actor_data = { actor_id: "TEST" };
+      const external_input = { data: "test_data" };
+      
+      const result = await myAm.commitActivity(
+        processId,
+        actor_data,
+        external_input,
+        null, // no schema
+        false
+      );
+      
+      expect(result).toBeDefined();
+      expect(result._activities.length).toBe(1);
+      expect(result._activities[0].data).toEqual(external_input);
+      expect(result._activities[0].actor_data).toEqual(actor_data);
+    });
+
+    test("should reject commit when required fields are missing and ignore_required_on_commit is false", async () => {
+      const mySample = _.cloneDeep(samples.minimal);
+      const myAm = new ActivityManager(
+        mySample.process_state_id,
+        undefined,
+        mySample.props,
+        mySample.parameters
+      );
+      await myAm.save();
+
+      const actor_data = { actor_id: "TEST" };
+      const external_input = { data: "test_data" }; // missing required field
+      const activity_schema = {
+        type: "object",
+        properties: {
+          data: { type: "string" },
+          requiredField: { type: "string" }
+        },
+        required: ["requiredField"]
+      };
+      
+      await expect(
+        myAm.commitActivity(
+          processId,
+          actor_data,
+          external_input,
+          activity_schema,
+          false // ignore_required_on_commit = false
+        )
+      ).rejects.toThrow();
+      
+      expect(myAm._activities.length).toBe(0);
+    });
+
+    test("should reject commit when required fields are missing and ignore_required_on_commit is not provided", async () => {
+      const mySample = _.cloneDeep(samples.minimal);
+      const myAm = new ActivityManager(
+        mySample.process_state_id,
+        undefined,
+        mySample.props,
+        mySample.parameters
+      );
+      await myAm.save();
+
+      const actor_data = { actor_id: "TEST" };
+      const external_input = { data: "test_data" }; // missing required field
+      const activity_schema = {
+        type: "object",
+        properties: {
+          data: { type: "string" },
+          requiredField: { type: "string" }
+        },
+        required: ["requiredField"]
+      };
+      
+      await expect(
+        myAm.commitActivity(
+          processId,
+          actor_data,
+          external_input,
+          activity_schema
+          // ignore_required_on_commit not provided (defaults to undefined/false)
+        )
+      ).rejects.toThrow();
+      
+      expect(myAm._activities.length).toBe(0);
+    });
+
+    test("should commit when required fields are missing but ignore_required_on_commit is true", async () => {
+      const mySample = _.cloneDeep(samples.minimal);
+      mySample.parameters.activity_options = { ignore_required_on_commit: true };
+      const myAm = new ActivityManager(
+        mySample.process_state_id,
+        undefined,
+        mySample.props,
+        mySample.parameters
+      );
+      await myAm.save();
+
+      const actor_data = { actor_id: "TEST" };
+      const external_input = { data: "test_data" }; // missing required field
+      const activity_schema = {
+        type: "object",
+        properties: {
+          data: { type: "string" },
+          requiredField: { type: "string" }
+        },
+        required: ["requiredField"]
+      };
+      
+      const result = await myAm.commitActivity(
+        processId,
+        actor_data,
+        external_input,
+        activity_schema,
+        true // ignore_required_on_commit = true
+      );
+      
+      expect(result).toBeDefined();
+      expect(result._activities.length).toBe(1);
+      expect(result._activities[0].data).toEqual(external_input);
+
+      const persistedAm = await ActivityManager.fetch(myAm._id);
+      expect(persistedAm.activities).toHaveLength(1);
+    });
+
+    test("should commit when all required fields are present regardless of ignore_required_on_commit", async () => {
+      const mySample = _.cloneDeep(samples.minimal);
+      const myAm = new ActivityManager(
+        mySample.process_state_id,
+        undefined,
+        mySample.props,
+        mySample.parameters
+      );
+      await myAm.save();
+
+      const actor_data = { actor_id: "TEST" };
+      const external_input = { 
+        data: "test_data",
+        requiredField: "required_value"
+      };
+      const activity_schema = {
+        type: "object",
+        properties: {
+          data: { type: "string" },
+          requiredField: { type: "string" }
+        },
+        required: ["requiredField"]
+      };
+      
+      const result = await myAm.commitActivity(
+        processId,
+        actor_data,
+        external_input,
+        activity_schema,
+        false // even with false, should work because all fields are present
+      );
+      
+      expect(result).toBeDefined();
+      expect(result._activities.length).toBe(1);
+      expect(result._activities[0].data).toEqual(external_input);
+    });
+
+    test("should commit when schema has no required fields and ignore_required_on_commit is false", async () => {
+      const mySample = _.cloneDeep(samples.minimal);
+      const myAm = new ActivityManager(
+        mySample.process_state_id,
+        undefined,
+        mySample.props,
+        mySample.parameters
+      );
+      await myAm.save();
+
+      const actor_data = { actor_id: "TEST" };
+      const external_input = { data: "test_data" };
+      const activity_schema = {
+        type: "object",
+        properties: {
+          data: { type: "string" },
+          optionalField: { type: "string" }
+        }
+        // no required array
+      };
+      
+      const result = await myAm.commitActivity(
+        processId,
+        actor_data,
+        external_input,
+        activity_schema,
+        false
+      );
+      
+      expect(result).toBeDefined();
+      expect(result._activities.length).toBe(1);
+      expect(result._activities[0].data).toEqual(external_input);
+    });
+
+    test("should still validate data types even when ignore_required_on_commit is true", async () => {
+      const mySample = _.cloneDeep(samples.minimal);
+      const myAm = new ActivityManager(
+        mySample.process_state_id,
+        undefined,
+        mySample.props,
+        mySample.parameters
+      );
+      await myAm.save();
+
+      const actor_data = { actor_id: "TEST" };
+      const external_input = { 
+        data: 123 // wrong type, should be string
+      };
+      const activity_schema = {
+        type: "object",
+        properties: {
+          data: { type: "string" },
+          requiredField: { type: "string" }
+        },
+        required: ["requiredField"]
+      };
+      
+      await expect(
+        myAm.commitActivity(
+          processId,
+          actor_data,
+          external_input,
+          activity_schema,
+          true // ignore_required_on_commit = true
+        )
+      ).rejects.toThrow();
+      
+      expect(myAm._activities.length).toBe(0);
+    });
+
+    test("should add activity to the beginning of activities array", async () => {
+      const mySample = _.cloneDeep(samples.minimal);
+      const myAm = new ActivityManager(
+        mySample.process_state_id,
+        undefined,
+        mySample.props,
+        mySample.parameters
+      );
+      await myAm.save();
+
+      const actor_data = { actor_id: "TEST" };
+      const external_input1 = { data: "first" };
+      const external_input2 = { data: "second" };
+      
+      await myAm.commitActivity(
+        processId,
+        actor_data,
+        external_input1,
+        null,
+        false
+      );
+      
+      await myAm.commitActivity(
+        processId,
+        actor_data,
+        external_input2,
+        null,
+        false
+      );
+      
+      expect(myAm._activities.length).toBe(2);
+      expect(myAm._activities[0].data).toEqual(external_input2); // most recent first
+      expect(myAm._activities[1].data).toEqual(external_input1);
+    });
+
+    test("should persist activity manager after commit", async () => {
+      const mySample = _.cloneDeep(samples.minimal);
+      const myAm = new ActivityManager(
+        mySample.process_state_id,
+        undefined,
+        mySample.props,
+        mySample.parameters
+      );
+      await myAm.save();
+
+      const actor_data = { actor_id: "TEST" };
+      const external_input = { data: "test_data" };
+      
+      await myAm.commitActivity(
+        processId,
+        actor_data,
+        external_input,
+        null,
+        false
+      );
+      
+      const persistedAm = await ActivityManager.fetch(myAm._id);
+      expect(persistedAm.activities).toHaveLength(1);
+      expect(persistedAm.activities[0].data).toEqual(external_input);
+    });
+  });
+
   test("pushActivity", () => {});
   test("interruptActivity", () => {});
   test("_validateActivity", () => {});
@@ -376,6 +680,7 @@ async function loadAm(am) {
 }
 
 async function cleanData() {
+  await activity_persistor._db.table(activity_persistor._table).del();
   await am_persistor._db.table(am_persistor._table).del();
   await process_state_persistor._db.table(process_state_persistor._table).del();
   await process_persistor._db.table(process_persistor._table).del();

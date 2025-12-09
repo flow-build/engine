@@ -239,7 +239,8 @@ class Engine {
           process_id,
           actor_data,
           external_input,
-          activity_manager._parameters.activity_schema
+          activity_manager._parameters.activity_schema,
+          activity_manager._parameters.activity_options?.ignore_required_on_commit || false
         );
       } else {
         return {
